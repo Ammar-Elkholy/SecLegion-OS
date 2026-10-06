@@ -84,6 +84,8 @@ wl-clipboard
 cliphist
 brightnessctl
 playerctl
+dunst
+copyq
 grim
 slurp
 
