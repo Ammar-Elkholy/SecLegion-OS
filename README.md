@@ -256,9 +256,15 @@ sudo dd if=output/AE_ARCH-*.iso of=/dev/rdiskN bs=4m
 
 ---
 
-## After Installing
+## Installation & Setup Guides
 
-Once you're booted into the installed system, follow the [First-Time Setup Guide](SETUP.md) to personalize everything — username, hostname, timezone, wallpaper, keybinds, monitors, SSH keys, and more. It's all in one place with copy-paste commands.
+Everything is documented in two dedicated guides:
+
+1. **[Complete Installation Guide (INSTALL_GUIDE.md)](INSTALL_GUIDE.md)**:
+   Covers USB preparation across Windows, macOS, and Linux (8GB is all you need!), BIOS/UEFI settings, booting into the SecLegion live environment, and a complete walkthrough of Calamares (including manual dual-boot partitioning alongside Windows).
+
+2. **[First-Time Personalization Guide (SETUP.md)](SETUP.md)**:
+   Covers post-installation customization once you boot into your installed system — user identity, hostname, timezone, keyboard layouts, Starship terminal prompt, Git config, SSH keys, AUR helper (`yay`), monitors, and autologin.
 
 ---
 

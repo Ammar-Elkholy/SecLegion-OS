@@ -24,11 +24,11 @@ images:
     productWelcome:      "/usr/share/backgrounds/seclegion.png"
 
 slideshow:               "show.qml"
-
 style:
-   SidebarBackground:    "#070d14"
-   SidebarText:          "#93c5fd"
-   SidebarTextCurrent:   "#00ff88"
+   SidebarBackground:        "#050a10"
+   SidebarText:              "#93c5fd"
+   SidebarTextCurrent:       "#00ff88"
    SidebarBackgroundCurrent: "#0d2030"
+   stylesheet:               "stylesheet.qss"
 
 slideshowAPI: 2

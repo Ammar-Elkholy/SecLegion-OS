@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+echo -e "\033[1;36mRanking fastest Arch Linux mirrors with reflector...\033[0m"
+if command -v reflector &>/dev/null; then
+    sudo reflector --protocol https --latest 20 --sort rate --save /etc/pacman.d/mirrorlist
+    echo -e "\033[1;32mMirrors updated successfully!\033[0m"
+else
+    echo -e "\033[1;33mReflector not present. Using default mirrors.\033[0m"
+fi

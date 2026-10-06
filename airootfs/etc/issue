@@ -1,0 +1,8 @@
+\e[1;36m================================================================================
+\e[1;32m       AE_ARCH Linux 2026.10 — SecLegion Cybersecurity Edition
+\e[1;36m                 Engineered by Ammar Elkholy (\l)
+================================================================================\e[0m
+  * Type \e[1;32mInstallation_guide\e[0m for installation helper & menu
+  * Type \e[1;36msudo -E calamares\e[0m  to launch graphical installer
+  * Type \e[1;33mnmtui\e[0m              to connect to Wi-Fi
+

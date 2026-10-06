@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+echo -e "\033[1;36mInitializing audio endpoints (PipeWire / ALSA)...\033[0m"
+command -v amixer &>/dev/null && amixer set Master unmute 100% 2>/dev/null || true
+command -v pactl &>/dev/null && pactl set-sink-mute @DEFAULT_SINK@ 0 2>/dev/null || true
+command -v pactl &>/dev/null && pactl set-sink-volume @DEFAULT_SINK@ 70% 2>/dev/null || true
+echo -e "\033[1;32mAudio unmuted and normalized.\033[0m"

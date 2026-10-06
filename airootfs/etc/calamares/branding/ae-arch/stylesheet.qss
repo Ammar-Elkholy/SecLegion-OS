@@ -1,0 +1,212 @@
+/* ==========================================================================
+   AE_ARCH Calamares Cyber Stylesheet — SecLegion Edition
+   Engineered by Ammar Elkholy
+   Palette: Dark Matrix (#070d14), Electric Cyan (#00f0ff), Neon Green (#00ff88)
+   ========================================================================== */
+
+QWidget {
+    background-color: #070d14;
+    color: #c9d1d9;
+    font-family: "JetBrains Mono", "Inter", sans-serif;
+    font-size: 13px;
+    selection-background-color: #0d2a45;
+    selection-color: #00ff88;
+}
+
+/* Main Window */
+QDialog, QMainWindow {
+    background-color: #070d14;
+}
+
+/* Sidebar / Navigation Step Area */
+QTreeView#sidebar, QListView#sidebar, #sidebarAppList {
+    background-color: #050a10;
+    color: #93c5fd;
+    border: none;
+    border-right: 1px solid #0e2439;
+    padding-top: 15px;
+}
+
+QTreeView#sidebar::item:selected, QListView#sidebar::item:selected {
+    background-color: #0d2030;
+    color: #00ff88;
+    font-weight: bold;
+    border-left: 3px solid #00ff88;
+}
+
+/* Headings and Titles */
+QLabel#titleText, QLabel#headerText, QLabel#viewTitle {
+    color: #00f0ff;
+    font-size: 18px;
+    font-weight: bold;
+    padding-bottom: 8px;
+}
+
+QLabel#subTitleText, QLabel#subHeaderText {
+    color: #00ff88;
+    font-size: 13px;
+    padding-bottom: 6px;
+}
+
+QLabel {
+    color: #c9d1d9;
+}
+
+/* Buttons */
+QPushButton {
+    background-color: #0a1926;
+    color: #00f0ff;
+    border: 1px solid #144265;
+    border-radius: 6px;
+    padding: 8px 18px;
+    font-weight: bold;
+    min-width: 85px;
+    min-height: 20px;
+}
+
+QPushButton:hover {
+    background-color: #0f2c44;
+    border: 1px solid #00f0ff;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+}
+
+QPushButton:pressed {
+    background-color: #00ff88;
+    color: #070d14;
+    border: 1px solid #00ff88;
+}
+
+QPushButton:disabled {
+    background-color: #09111a;
+    color: #3b5066;
+    border: 1px solid #142230;
+}
+
+/* Primary Action Buttons (Next / Install) */
+QPushButton#nextButton {
+    background-color: #0d2d3e;
+    color: #00ff88;
+    border: 1px solid #00ff88;
+}
+
+QPushButton#nextButton:hover {
+    background-color: #00ff88;
+    color: #070d14;
+    font-weight: bold;
+}
+
+/* Input Fields */
+QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox {
+    background-color: #0a131c;
+    color: #e6edf3;
+    border: 1px solid #163654;
+    border-radius: 5px;
+    padding: 6px 10px;
+}
+
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSpinBox:focus {
+    border: 1px solid #00f0ff;
+    background-color: #0c1824;
+}
+
+/* Combo Boxes & Dropdowns */
+QComboBox {
+    background-color: #0a131c;
+    color: #e6edf3;
+    border: 1px solid #163654;
+    border-radius: 5px;
+    padding: 6px 12px;
+}
+
+QComboBox:hover, QComboBox:focus {
+    border: 1px solid #00f0ff;
+}
+
+QComboBox::drop-down {
+    border: none;
+    padding-right: 8px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #08111a;
+    color: #c9d1d9;
+    border: 1px solid #00f0ff;
+    selection-background-color: #0d283d;
+    selection-color: #00ff88;
+}
+
+/* Progress Bar */
+QProgressBar {
+    background-color: #0a1420;
+    border: 1px solid #143550;
+    border-radius: 6px;
+    text-align: center;
+    color: #ffffff;
+    font-weight: bold;
+    height: 22px;
+}
+
+QProgressBar::chunk {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #00b4d8, stop:0.5 #00f0ff, stop:1 #00ff88);
+    border-radius: 5px;
+}
+
+/* Checkboxes and Radio Buttons */
+QCheckBox, QRadioButton {
+    color: #c9d1d9;
+    spacing: 8px;
+}
+
+QCheckBox::indicator, QRadioButton::indicator {
+    width: 16px;
+    height: 16px;
+    background-color: #0a131c;
+    border: 1px solid #1c456b;
+    border-radius: 3px;
+}
+
+QRadioButton::indicator {
+    border-radius: 8px;
+}
+
+QCheckBox::indicator:hover, QRadioButton::indicator:hover {
+    border: 1px solid #00f0ff;
+}
+
+QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+    background-color: #00ff88;
+    border: 1px solid #00ff88;
+}
+
+/* Scrollbars */
+QScrollBar:vertical {
+    background: #050a10;
+    width: 10px;
+    border-radius: 5px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #15344f;
+    min-height: 20px;
+    border-radius: 5px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #00f0ff;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+/* Tooltips */
+QToolTip {
+    background-color: #050a10;
+    color: #00ff88;
+    border: 1px solid #00f0ff;
+    padding: 4px 8px;
+    border-radius: 4px;
+}

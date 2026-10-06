@@ -1,0 +1,10 @@
+\e[1;36m================================================================================
+\e[1;32m   AE_ARCH Linux (SecLegion Edition) — Live Setup & Rescue Environment
+\e[1;36m                 Engineered by Ammar Elkholy
+================================================================================\e[0m
+  Quick commands:
+    * \e[1;32mInstallation_guide\e[0m  : Launch interactive setup helper
+    * \e[1;36msudo -E calamares\e[0m   : Launch GUI installer
+    * \e[1;33mnmtui\e[0m               : Connect to Wi-Fi network
+    * \e[1;35mchoose-mirror\e[0m       : Rank fastest Arch Linux mirrors
+

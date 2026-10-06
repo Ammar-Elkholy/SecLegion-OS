@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Installation_guide — AE_ARCH Live Environment Setup Assistant
+# SecLegion Edition | Ammar Elkholy
+# ==============================================================================
+
+CYAN="\033[1;36m"
+GREEN="\033[1;32m"
+BLUE="\033[1;34m"
+YELLOW="\033[1;33m"
+WHITE="\033[1;37m"
+DIM="\033[2;37m"
+RESET="\033[0m"
+
+clear
+echo -e "${CYAN}====================================================================${RESET}"
+echo -e "${CYAN} █${GREEN}  ██████ ███████  ██████     ${CYAN}AE_ARCH LINUX  █${RESET}"
+echo -e "${CYAN} █${GREEN}  ██     ██      ██          ${CYAN}SecLegion Ed.  █${RESET}"
+echo -e "${CYAN} █${GREEN}  ███████ █████  ██          ${DIM}by Ammar Elkholy${CYAN} █${RESET}"
+echo -e "${CYAN} █${GREEN}       ██ ██     ██                         █${RESET}"
+echo -e "${CYAN} █${GREEN}  ███████ ███████  ██████                   █${RESET}"
+echo -e "${CYAN}====================================================================${RESET}"
+echo -e " ${WHITE}Welcome to the AE_ARCH Installation & Setup Center.${RESET}"
+echo -e " ${DIM}Universal installer for AMD, Intel, and NVIDIA systems.${RESET}"
+echo -e "${CYAN}--------------------------------------------------------------------${RESET}"
+
+# Network status check
+if ping -c 1 -W 2 1.1.1.1 &>/dev/null; then
+    echo -e " Network Status: ${GREEN}● ONLINE (Connected)${RESET}"
+else
+    echo -e " Network Status: ${YELLOW}○ OFFLINE (Run 'nmtui' to connect Wi-Fi)${RESET}"
+fi
+
+echo -e "${CYAN}--------------------------------------------------------------------${RESET}"
+echo -e " ${WHITE}1)${RESET} Launch Calamares Graphical Installer ${GREEN}[Recommended]${RESET}"
+echo -e " ${WHITE}2)${RESET} Connect to Wi-Fi (${YELLOW}nmtui${RESET})"
+echo -e " ${WHITE}3)${RESET} Rank Fast Pacman Mirrors (${YELLOW}choose-mirror${RESET})"
+echo -e " ${WHITE}4)${RESET} Test Audio System (${YELLOW}livecd-sound${RESET})"
+echo -e " ${WHITE}5)${RESET} View Hardware & GPU Driver Info"
+echo -e " ${WHITE}6)${RESET} Read Offline Installation Guide (${CYAN}less INSTALL_GUIDE.md${RESET})"
+echo -e " ${WHITE}0)${RESET} Exit to Shell"
+echo -e "${CYAN}--------------------------------------------------------------------${RESET}"
+read -rp " Select an option [1-6, 0]: " choice
+
+case "$choice" in
+    1)
+        echo -e "${GREEN}Starting Calamares GUI Installer...${RESET}"
+        if [[ -n "$WAYLAND_DISPLAY" || -n "$DISPLAY" ]]; then
+            sudo -E calamares
+        else
+            echo -e "${YELLOW}Notice: No graphical display active. Start Hyprland or GNOME first, or use terminal.${RESET}"
+        fi
+        ;;
+    2)
+        nmtui
+        ;;
+    3)
+        choose-mirror
+        ;;
+    4)
+        livecd-sound
+        ;;
+    5)
+        echo -e "${CYAN}=== Graphics & Hardware Detection ===${RESET}"
+        lspci -k | grep -A 2 -E "(VGA|3D)" || true
+        echo -e "\nPress Enter to return..."; read -r
+        exec "$0"
+        ;;
+    6)
+        if [[ -f /usr/share/doc/ae-arch/INSTALL_GUIDE.md ]]; then
+            less /usr/share/doc/ae-arch/INSTALL_GUIDE.md
+        elif [[ -f /root/INSTALL_GUIDE.md ]]; then
+            less /root/INSTALL_GUIDE.md
+        else
+            echo -e "${YELLOW}Reading setup documentation...${RESET}"
+        fi
+        ;;
+    0)
+        echo -e "${BLUE}Exiting to shell. Happy hacking!${RESET}"
+        exit 0
+        ;;
+    *)
+        exec "$0"
+        ;;
+esac

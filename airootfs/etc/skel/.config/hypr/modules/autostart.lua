@@ -30,4 +30,7 @@ hl.on("hyprland.start", function ()
 
     -- Restore last wallpaper
     hl.exec_cmd("~/.config/hypr/scripts/restore-wallpaper.sh")
+
+    -- First-login onboarding wizard (SecLegion Edition)
+    hl.exec_cmd("bash -c 'if [ ! -f ~/.config/.ae-welcome-done ]; then sleep 2 && kitty --title \"SecLegion Setup Wizard\" ~/.config/hypr/scripts/ae-welcome.sh; fi'")
 end)

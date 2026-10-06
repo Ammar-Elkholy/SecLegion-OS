@@ -1,6 +1,10 @@
 # First-Time Setup Guide
 
-Welcome to AE_ARCH Linux. This file walks you through everything you need to personalize after the first login — username, hostname, timezone, appearance, and anything else that should reflect you, not the defaults.
+Welcome to AE_ARCH Linux (SecLegion Edition) by Ammar Elkholy.
+
+This guide walks you through everything to personalize **after your first login** — username, hostname, timezone, appearance, git identity, SSH keys, AUR packages, and hardware tweaks.
+
+> **Need to install the OS first?** See the full [Installation & Setup Guide](INSTALL_GUIDE.md) for media flashing, BIOS configuration, and the Calamares installer walkthrough.
 
 If you installed via Calamares (the graphical installer), your username and password are already set. Start from whichever section is still relevant.
 

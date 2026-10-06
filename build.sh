@@ -58,6 +58,9 @@ chmod 755 "$SCRIPT_DIR/airootfs"
 find "$SCRIPT_DIR/airootfs/etc/skel" -type d -exec chmod 755 {} + 2>/dev/null || true
 find "$SCRIPT_DIR/airootfs/etc/skel" -type f -exec chmod 644 {} + 2>/dev/null || true
 find "$SCRIPT_DIR/airootfs/etc/skel" -name "*.sh" -exec chmod 755 {} + 2>/dev/null || true
+chmod 750 "$SCRIPT_DIR/airootfs/root" 2>/dev/null || true
+chmod 755 "$SCRIPT_DIR/airootfs/usr/local/bin"/* 2>/dev/null || true
+chmod 400 "$SCRIPT_DIR/airootfs/etc/shadow" "$SCRIPT_DIR/airootfs/etc/gshadow" 2>/dev/null || true
 
 # 4. Run mkarchiso
 log_info "Executing mkarchiso build..."
@@ -73,7 +76,7 @@ if [[ -n "$ISO_FILE" ]]; then
     echo -e " File Size:      $(du -h "$ISO_FILE" | cut -f1)"
     echo -e " Generating SHA256 checksum..."
     sha256sum "$ISO_FILE" | tee "$ISO_FILE.sha256"
-    echo -e "\n ${YELLOW}Burn to a 32GB USB Drive:${RESET}"
+    echo -e "\n ${YELLOW}Burn to a USB Drive (8GB minimum required, bigger is fine):${RESET}"
     echo -e "   sudo dd if=${ISO_FILE} of=/dev/sdX bs=4M status=progress oflag=sync"
     echo -e "   (Replace /dev/sdX with your USB drive letter)"
 fi

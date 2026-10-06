@@ -115,3 +115,10 @@ if [[ -o interactive ]] && [[ -z "${FASTFETCH_SHOWN:-}" ]]; then
     fi
 fi
 
+
+# --- First Login SecLegion Setup Wizard ---
+if [[ -o interactive ]] && [[ ! -f "$HOME/.config/.ae-welcome-done" ]] && [[ -t 0 ]]; then
+    if [[ -x "$HOME/.config/hypr/scripts/ae-welcome.sh" ]]; then
+        "$HOME/.config/hypr/scripts/ae-welcome.sh"
+    fi
+fi
