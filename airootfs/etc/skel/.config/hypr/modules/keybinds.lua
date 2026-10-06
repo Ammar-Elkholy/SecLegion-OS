@@ -132,10 +132,12 @@ end
 
 -- ── Scratchpad / Special Workspace ──────────────────────────────────────────
 -- Super+S        → toggle scratchpad (show/hide)
--- Super+Shift+A  → move current window into scratchpad
--- NOTE: Super+Shift+S is now screenshot; scratchpad move uses Super+Shift+A
+-- Super+Shift+A  → move focused window INTO scratchpad
+-- Super+Z        → pull focused window OUT of scratchpad back to current workspace
+-- NOTE: Super+Shift+S is screenshot; scratchpad uses Super+S / Super+Shift+A / Super+Z
 hl.bind(mainMod .. " + S",         hl.dsp.workspace.toggle_special("magic"))
 hl.bind(mainMod .. " + SHIFT + A", hl.dsp.window.move({ workspace = "special:magic" }))
+hl.bind(mainMod .. " + Z",         hl.dsp.window.move({ workspace = "current" }))
 
 -- ── Mouse Controls ──────────────────────────────────────────────────────────
 hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
