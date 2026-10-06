@@ -3,30 +3,32 @@ componentName:  ae-arch
 welcomeStyleCalamares:   false
 welcomeExpandingLogo:    true
 windowExpanding:         normal
-windowSize:              980px,650px
+windowSize:              1020px,680px
 
 strings:
     productName:         "AE_ARCH Linux"
     shortProductName:    "AE_ARCH"
-    version:             "2026.10"
+    version:             "2026.10 (SecLegion Edition)"
     shortVersion:        "2026.10"
-    versionedName:       "AE_ARCH Linux 2026.10"
+    versionedName:       "AE_ARCH Linux 2026.10 (SecLegion Edition)"
     shortVersionedName:  "AE_ARCH 2026.10"
     bootloaderEntryName: "AE_ARCH Linux"
     productUrl:          "https://github.com/aelkholy/AE_ARCH"
     supportUrl:          "https://github.com/aelkholy/AE_ARCH/issues"
+    knownIssuesUrl:      "https://github.com/aelkholy/AE_ARCH/blob/main/EDGE_CASES.md"
+    releaseNotesUrl:     "https://github.com/aelkholy/AE_ARCH/releases"
 
 images:
-    productLogo:         "/usr/share/pixmaps/archlinux-logo.png"
-    productIcon:         "/usr/share/pixmaps/archlinux-logo.png"
-    productWelcome:      "/usr/share/backgrounds/arch-custom/default.png"
+    productLogo:         "/usr/share/backgrounds/seclegion.png"
+    productIcon:         "/usr/share/backgrounds/seclegion.png"
+    productWelcome:      "/usr/share/backgrounds/seclegion.png"
 
 slideshow:               "show.qml"
 
 style:
-   SidebarBackground:    "#0c0f16"
-   SidebarText:          "#f0f3f6"
-   SidebarTextCurrent:   "#00f0ff"
-   SidebarBackgroundCurrent: "#182333"
+   SidebarBackground:    "#070d14"
+   SidebarText:          "#93c5fd"
+   SidebarTextCurrent:   "#00ff88"
+   SidebarBackgroundCurrent: "#0d2030"
 
 slideshowAPI: 2

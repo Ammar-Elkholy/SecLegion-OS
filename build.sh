@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # AE_ARCH — Universal Bootable ISO Builder
+# Engineered by: Ammar Elkholy (SecLegion Edition)
 # Target: Any Laptop (AMD Radeon, Intel, or NVIDIA GeForce/RTX Hybrid)
 # Desktops: GNOME + Hyprland Dual Experience with Calamares Installer
+# Edge Cases Handled: Disk-backed workdir (No RAM /tmp exhaustion), Multi-GPU KMS
 # ==============================================================================
 
 set -euo pipefail
@@ -26,11 +28,13 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="/tmp/ae-arch-work"
+# Using /var/tmp (disk-backed) to prevent /tmp RAM tmpfs exhaustion during squashfs compression
+WORK_DIR="/var/tmp/ae-arch-work"
 OUT_DIR="$SCRIPT_DIR/output"
 
 echo -e "${CYAN}====================================================================${RESET}"
 echo -e "${CYAN}    AE_ARCH Linux — Building Universal Bootable ISO                ${RESET}"
+echo -e "${CYAN}    Engineered by: Ammar Elkholy (SecLegion Edition)               ${RESET}"
 echo -e "${CYAN}====================================================================${RESET}"
 
 # 1. Install archiso if missing
@@ -39,21 +43,21 @@ if ! command -v mkarchiso &>/dev/null; then
     pacman -S --needed --noconfirm archiso
 fi
 
-# 2. Prepare Output Directory
+# 2. Prepare Output & Work Directories
 mkdir -p "$OUT_DIR"
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR"
 
 log_info "Profile directory: $SCRIPT_DIR"
-log_info "Work directory:    $WORK_DIR"
+log_info "Work directory:    $WORK_DIR (disk-backed on /var/tmp)"
 log_info "Output directory:  $OUT_DIR"
 
 # 3. Clean permissions for airootfs
 log_info "Ensuring correct permissions in airootfs..."
 chmod 755 "$SCRIPT_DIR/airootfs"
-find "$SCRIPT_DIR/airootfs/etc/skel" -type d -exec chmod 755 {} +
-find "$SCRIPT_DIR/airootfs/etc/skel" -type f -exec chmod 644 {} +
-find "$SCRIPT_DIR/airootfs/etc/skel" -name "*.sh" -exec chmod 755 {} +
+find "$SCRIPT_DIR/airootfs/etc/skel" -type d -exec chmod 755 {} + 2>/dev/null || true
+find "$SCRIPT_DIR/airootfs/etc/skel" -type f -exec chmod 644 {} + 2>/dev/null || true
+find "$SCRIPT_DIR/airootfs/etc/skel" -name "*.sh" -exec chmod 755 {} + 2>/dev/null || true
 
 # 4. Run mkarchiso
 log_info "Executing mkarchiso build..."
