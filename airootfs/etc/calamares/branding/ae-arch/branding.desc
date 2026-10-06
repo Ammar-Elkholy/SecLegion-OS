@@ -1,0 +1,32 @@
+---
+componentName:  ae-arch
+welcomeStyleCalamares:   false
+welcomeExpandingLogo:    true
+windowExpanding:         normal
+windowSize:              980px,650px
+
+strings:
+    productName:         "AE_ARCH Linux"
+    shortProductName:    "AE_ARCH"
+    version:             "2026.10"
+    shortVersion:        "2026.10"
+    versionedName:       "AE_ARCH Linux 2026.10"
+    shortVersionedName:  "AE_ARCH 2026.10"
+    bootloaderEntryName: "AE_ARCH Linux"
+    productUrl:          "https://github.com/aelkholy/AE_ARCH"
+    supportUrl:          "https://github.com/aelkholy/AE_ARCH/issues"
+
+images:
+    productLogo:         "/usr/share/pixmaps/archlinux-logo.png"
+    productIcon:         "/usr/share/pixmaps/archlinux-logo.png"
+    productWelcome:      "/usr/share/backgrounds/arch-custom/default.png"
+
+slideshow:               "show.qml"
+
+style:
+   SidebarBackground:    "#0c0f16"
+   SidebarText:          "#f0f3f6"
+   SidebarTextCurrent:   "#00f0ff"
+   SidebarBackgroundCurrent: "#182333"
+
+slideshowAPI: 2

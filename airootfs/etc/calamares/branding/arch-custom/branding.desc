@@ -1,0 +1,32 @@
+---
+componentName:  arch-custom
+welcomeStyleCalamares:   false
+welcomeExpandingLogo:    true
+windowExpanding:         normal
+windowSize:              980px,650px
+
+strings:
+    productName:         "Arch Custom OS"
+    shortProductName:    "ArchOS"
+    version:             "2026.10"
+    shortVersion:        "2026.10"
+    versionedName:       "Arch Custom OS 2026.10"
+    shortVersionedName:  "ArchOS 2026.10"
+    bootloaderEntryName: "Arch Linux"
+    productUrl:          "https://github.com/aelkholy/arch-custom-os"
+    supportUrl:          "https://github.com/aelkholy/arch-custom-os/issues"
+
+images:
+    productLogo:         "/usr/share/pixmaps/archlinux-logo.png"
+    productIcon:         "/usr/share/pixmaps/archlinux-logo.png"
+    productWelcome:      "/usr/share/backgrounds/arch-custom/default.png"
+
+slideshow:               "show.qml"
+
+style:
+   SidebarBackground:    "#0c0f16"
+   SidebarText:          "#f0f3f6"
+   SidebarTextCurrent:   "#00f0ff"
+   SidebarBackgroundCurrent: "#182333"
+
+slideshowAPI: 2

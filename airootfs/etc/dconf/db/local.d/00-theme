@@ -1,0 +1,25 @@
+[org/gnome/desktop/interface]
+color-scheme='prefer-dark'
+gtk-theme='Catppuccin-Mocha'
+icon-theme='Tela-circle-dracula'
+cursor-theme='Bibata-Modern-Ice'
+cursor-size=24
+accent-color='teal'
+font-name='Cantarell 10'
+document-font-name='Cantarell 10'
+monospace-font-name='JetBrainsMono Nerd Font 10'
+show-battery-percentage=true
+
+[org/gnome/desktop/background]
+picture-uri='file:///usr/share/backgrounds/arch-custom/default.png'
+picture-uri-dark='file:///usr/share/backgrounds/arch-custom/default.png'
+picture-options='zoom'
+color-shading-type='solid'
+primary-color='#000000'
+secondary-color='#000000'
+
+[org/gnome/desktop/wm/preferences]
+button-layout='appmenu:minimize,maximize,close'
+
+[org/gnome/shell]
+favorite-apps=['org.gnome.Nautilus.desktop', 'kitty.desktop', 'brave-browser.desktop', 'discord.desktop', 'org.gnome.Settings.desktop']

@@ -1,0 +1,112 @@
+# ==============================================================================
+# Starship Prompt Configuration — OffSec Operator HUD (Always Show User)
+# ==============================================================================
+
+# Format definition
+format = """
+[╭─](bold #388bfd)\
+${custom.vpn}\
+${custom.target}\
+$username\
+$hostname\
+$directory\
+$git_branch\
+$git_status\
+$docker_context\
+$python\
+$rust\
+$golang\
+$cmd_duration\
+$status\
+$line_break\
+[╰─](bold #388bfd)$character"""
+
+# Timeout for command execution
+command_timeout = 500
+
+# Custom VPN IP Module
+[custom.vpn]
+command = "~/.local/bin/get_vpn_ip.sh"
+when = "~/.local/bin/get_vpn_ip.sh"
+format = "[  $output ](bold fg:#7ef1ff bg:#004d61)"
+shell = ["bash", "--noprofile", "--norc"]
+
+# Custom Target Lock Module
+[custom.target]
+command = "~/.local/bin/get_target_ip.sh"
+when = "[ -f /tmp/target_ip ] && [ -s /tmp/target_ip ]"
+format = "[ 🎯 $output ](bold fg:#ffa1ad bg:#5c1822)"
+shell = ["bash", "--noprofile", "--norc"]
+
+# Username — ALWAYS SHOWN IN ALL TERMINALS
+[username]
+show_always = true
+style_user = "bold fg:#00f0ff bg:#182333"
+style_root = "bold fg:#ff5f56 bg:#381d1e"
+format = "[  $user ]($style)"
+
+# Hostname
+[hostname]
+ssh_only = false
+style = "bold fg:#79c0ff bg:#182333"
+format = "[@$hostname ]($style)"
+
+# Directory Module
+[directory]
+truncation_length = 4
+truncate_to_repo = true
+format = "[  $path ](bold fg:#93c5fd bg:#1f2937)"
+home_symbol = "~"
+
+# Git Modules
+[git_branch]
+symbol = " "
+format = "[ $symbol$branch ](bold fg:#86efac bg:#232c1c)"
+
+[git_status]
+format = "[$all_status$ahead_behind ](bold fg:#e3b341 bg:#232c1c)"
+conflicted = "🏳 "
+ahead = "⇡${count} "
+behind = "⇣${count} "
+diverged = "⇕ "
+untracked = "? "
+modified = "! "
+staged = "+ "
+renamed = "» "
+deleted = "✘ "
+
+# Programming Languages & Toolchains
+[python]
+symbol = "🐍 "
+format = "[ $symbol$version ](bold fg:#e3b341 bg:#2a251a)"
+
+[docker_context]
+symbol = "🐳 "
+format = "[ $symbol$context ](bold fg:#79c0ff bg:#15293d)"
+
+[rust]
+symbol = "🦀 "
+format = "[ $symbol$version ](bold fg:#ff7b72 bg:#381d1e)"
+
+[golang]
+symbol = "🐹 "
+format = "[ $symbol$version ](bold fg:#7ef1ff bg:#15293d)"
+
+# Execution Duration
+[cmd_duration]
+min_time = 2_000
+format = "[ ⏱ $duration ](bold fg:#e9d5ff bg:#2a2236)"
+
+# Command Status
+[status]
+disabled = false
+format = "[$symbol ](bold fg:#ff5f56 bg:#2a1b1e)"
+symbol = " ✘"
+success_symbol = ""
+
+# Prompt Characters
+[character]
+success_symbol = "[❯](bold #00f0ff) "
+error_symbol = "[❯](bold #ff5f56) "
+vicmd_symbol = "[❮](bold #3fb950) "
+

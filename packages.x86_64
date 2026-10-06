@@ -1,0 +1,148 @@
+# ==============================================================================
+# Arch Linux Custom OS — Package Manifest (packages.x86_64)
+# Multi-GPU: Full AMD Radeon + Intel + NVIDIA Hybrid Support
+# Desktops: GNOME + Hyprland (with HyDE / Kartik dotfiles)
+# Audio: PipeWire + Bluetooth HiFi Codecs
+# Installer: Calamares GUI Installer & Archinstall
+# ==============================================================================
+
+# --- Base System & Hardware Firmware ---
+base
+base-devel
+linux
+linux-headers
+linux-firmware
+linux-firmware-amdgpu
+linux-firmware-intel
+linux-firmware-nvidia
+sof-firmware
+alsa-firmware
+sudo
+efibootmgr
+grub
+dosfstools
+e2fsprogs
+btrfs-progs
+lvm2
+ntfs-3g
+
+# --- Multi-GPU Hardware Stack (AMD, Intel & NVIDIA) ---
+mesa
+lib32-mesa
+vulkan-icd-loader
+lib32-vulkan-icd-loader
+
+# AMD Drivers & Acceleration
+vulkan-radeon
+lib32-vulkan-radeon
+xf86-video-amdgpu
+libva-mesa-driver
+
+# Intel Drivers & Acceleration
+vulkan-intel
+lib32-vulkan-intel
+intel-media-driver
+
+# NVIDIA Proprietary & Hybrid Prime
+nvidia-open-dkms
+nvidia-utils
+lib32-nvidia-utils
+nvidia-prime
+nvidia-settings
+egl-wayland
+
+# Virtualization / VM Guest Drivers (QEMU / VMware / VirtualBox)
+qemu-guest-agent
+spice-vdagent
+
+# --- Display Manager & Polkit ---
+gdm
+xorg-xwayland
+polkit-gnome
+
+# --- GNOME Desktop Environment ---
+gnome-shell
+gnome-control-center
+gnome-tweaks
+gnome-software
+gnome-disk-utility
+nautilus
+extension-manager
+gnome-shell-extension-appindicator
+
+# --- Hyprland Wayland Suite ---
+hyprland
+hyprpaper
+hypridle
+hyprlock
+waybar
+rofi-wayland
+swaync
+kitty
+yazi
+wl-clipboard
+cliphist
+brightnessctl
+playerctl
+grim
+slurp
+
+# --- Audio & Sound (PipeWire) ---
+pipewire
+pipewire-audio
+pipewire-pulse
+pipewire-alsa
+pipewire-jack
+wireplumber
+gst-plugin-pipewire
+libfreeaptx
+libldac
+pavucontrol
+
+# --- Networking & Bluetooth ---
+networkmanager
+iwd
+wireless_tools
+wpa_supplicant
+ethtool
+bluez
+bluez-utils
+
+# --- Shell & Terminal Productivity ---
+zsh
+zsh-autosuggestions
+zsh-syntax-highlighting
+starship
+eza
+bat
+fzf
+zoxide
+fastfetch
+btop
+neovim
+nano
+git
+wget
+curl
+openssh
+rsync
+unzip
+p7zip
+jq
+
+# --- Modern Typography & Nerd Fonts ---
+ttf-jetbrains-mono-nerd
+noto-fonts
+noto-fonts-emoji
+noto-fonts-cjk
+ttf-liberation
+ttf-dejavu
+
+# --- Cybersecurity Core Suite ---
+nmap
+wireshark-qt
+tcpdump
+sqlmap
+
+# --- Installation Frameworks ---
+archinstall

@@ -1,0 +1,19 @@
+# Build Artifacts & Output Images
+/output/
+/work/
+*.iso
+*.iso.sha256
+*.log
+
+# Caches
+.cache/
+__pycache__/
+*.swp
+*.bak
+
+# Security & Private Credentials
+*.key
+*.pem
+id_rsa*
+id_ed25519*
+*.env
