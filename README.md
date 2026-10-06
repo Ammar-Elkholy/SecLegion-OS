@@ -256,6 +256,12 @@ sudo dd if=output/AE_ARCH-*.iso of=/dev/rdiskN bs=4m
 
 ---
 
+## After Installing
+
+Once you're booted into the installed system, follow the [First-Time Setup Guide](SETUP.md) to personalize everything — username, hostname, timezone, wallpaper, keybinds, monitors, SSH keys, and more. It's all in one place with copy-paste commands.
+
+---
+
 ## License
 
 Released under the [MIT License](LICENSE).
