@@ -88,6 +88,8 @@ dunst
 copyq
 grim
 slurp
+ffmpeg
+mpv
 
 # --- Audio & Sound (PipeWire) ---
 pipewire

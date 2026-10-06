@@ -110,19 +110,27 @@ Inside Hyprland, the layout is toggled live with `Super + Space`. To change the 
 
 ---
 
-## 6 — Wallpaper
+## 6 — Wallpaper & Live Wallpapers
 
 **Hyprland:**
-- Press `Super + Shift + W` to open Yazi and pick any image as your wallpaper
-- Press `Super + Ctrl + W` to set a live/animated wallpaper
+- **Static Wallpapers (`Super + Shift + W`)**: Opens Yazi (or Rofi fallback) to select any wallpaper from `~/Pictures/Wallpapers/` with smooth wipe transitions.
+- **Live / Video Wallpapers (`Super + Ctrl + W`)**: Opens the live wallpaper selector from `~/Videos/LiveWallpapers/`.
+  - Supports animated **GIF** and **WebP** loops natively using `awww`.
+  - Supports video files (**MP4**, **WebM**, **MKV**).
+  - For hardware-accelerated 60 FPS video wallpaper playback, install `mpvpaper`:
+    ```bash
+    yay -S mpvpaper
+    ```
+  - If `mpvpaper` is not installed, AE_ARCH automatically optimizes the video loop using `ffmpeg` and plays it via the `awww` engine.
 
-Your wallpaper choice is saved and restored on next login automatically.
+Your active wallpaper choice (static or live) is saved to `~/.cache/current_wallpaper` and restored on login automatically via `restore-wallpaper.sh`.
 
 **GNOME:**
 - Right-click the desktop → Change Background
 - Or open Settings → Appearance
 
-Wallpapers are stored in `/usr/share/backgrounds/` and `~/Pictures/Wallpapers/`.
+Static wallpapers are stored in `/usr/share/backgrounds/` and `~/Pictures/Wallpapers/`.
+Live wallpapers are stored in `~/Videos/LiveWallpapers/`.
 
 ---
 

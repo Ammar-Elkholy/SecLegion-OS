@@ -60,6 +60,7 @@ find "$SCRIPT_DIR/airootfs/etc/skel" -type f -exec chmod 644 {} + 2>/dev/null ||
 find "$SCRIPT_DIR/airootfs/etc/skel" -name "*.sh" -exec chmod 755 {} + 2>/dev/null || true
 chmod 750 "$SCRIPT_DIR/airootfs/root" 2>/dev/null || true
 chmod 755 "$SCRIPT_DIR/airootfs/usr/local/bin"/* 2>/dev/null || true
+chmod -R 755 "$SCRIPT_DIR/airootfs/usr/share/applications" 2>/dev/null || true
 chmod 400 "$SCRIPT_DIR/airootfs/etc/shadow" "$SCRIPT_DIR/airootfs/etc/gshadow" 2>/dev/null || true
 
 # 4. Run mkarchiso
