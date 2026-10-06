@@ -15,7 +15,7 @@ strings:
     bootloaderEntryName: "AE_ARCH Linux"
     productUrl:          "https://github.com/aelkholy/AE_ARCH"
     supportUrl:          "https://github.com/aelkholy/AE_ARCH/issues"
-    knownIssuesUrl:      "https://github.com/aelkholy/AE_ARCH/blob/main/EDGE_CASES.md"
+    knownIssuesUrl:      "https://github.com/aelkholy/AE_ARCH/blob/main/INSTALL_GUIDE.md#9-troubleshooting--edge-cases"
     releaseNotesUrl:     "https://github.com/aelkholy/AE_ARCH/releases"
 
 images:

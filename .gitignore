@@ -17,3 +17,6 @@ __pycache__/
 id_rsa*
 id_ed25519*
 *.env
+
+# Internal Testing & Edge Cases Notes
+EDGE_CASES.md
