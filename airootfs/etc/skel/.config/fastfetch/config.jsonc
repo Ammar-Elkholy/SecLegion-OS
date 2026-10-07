@@ -7,15 +7,16 @@
     "separator": ""
   },
   "logo": {
-    "type": "auto",
-    "source": "~/.config/fastfetch/assets/ascii.txt",
-      "padding": {
-      "top": 0,
-      "left": 1
+    "type": "kitty-direct",
+    "source": "/usr/share/pixmaps/seclegion-logo-transparent.png",
+    "width": 26,
+    "height": 13,
+    "padding": {
+      "top": 1,
+      "left": 2
     }
   },
   "modules": [
-    "break",
     "break",
     {
       "type": "command",
@@ -23,9 +24,9 @@
       "text": "echo $USER@$(hostnamectl hostname)"
     },
     {
-      "type": "os",
+      "type": "custom",
       "key": "󰣇 OS",
-      "format": "{name} {version-id}"
+      "format": "SecLegion OS 2026.10 (Arch Linux Base)"
     },
     {
       "type": "command",
@@ -64,9 +65,8 @@
     },
     {
       "type": "custom",
-      "format": "\u001b[90m \u001b[91m \u001b[92m \u001b[93m \u001b[94m \u001b[95m \u001b[96m \u001b[97m "
+      "format": "\u001b[32m \u001b[36m \u001b[92m \u001b[96m \u001b[97m \u001b[90m "
     },
     "break"
   ]
 }
-

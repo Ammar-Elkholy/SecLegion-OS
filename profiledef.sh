@@ -8,7 +8,8 @@ iso_application="SecLegion OS Live & Installer"
 iso_version="$(date +%Y.%m.%d)"
 install_dir="arch"
 build_modes=('iso')
-bootmodes=('bios.syslinux.mbr' 'bios.syslinux.eltorito' 'uefi-ia32.systemd-boot.esp' 'uefi-x64.systemd-boot.esp' 'uefi-ia32.systemd-boot.eltorito' 'uefi-x64.systemd-boot.eltorito')
+bootmodes=('bios.syslinux'
+           'uefi.systemd-boot')
 arch="x86_64"
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"

@@ -52,6 +52,12 @@ log_info "Profile directory: $SCRIPT_DIR"
 log_info "Work directory:    $WORK_DIR (disk-backed on /var/tmp)"
 log_info "Output directory:  $OUT_DIR"
 
+# Host OS-Release synchronization hook
+if [[ -f "$SCRIPT_DIR/airootfs/etc/os-release" ]]; then
+    log_info "Synchronizing host OS identity with SecLegion OS..."
+    cp -f "$SCRIPT_DIR/airootfs/etc/os-release" /etc/os-release 2>/dev/null || true
+fi
+
 # 3. Privacy Sanitization Protocol
 log_info "Executing privacy sanitization protocol..."
 bash "$SCRIPT_DIR/sanitize_system.sh" "$SCRIPT_DIR/airootfs"

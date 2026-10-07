@@ -92,3 +92,18 @@ Rather than installing 2,800 tools indiscriminately (which inflates the OS by ~5
 | `Super + Shift + A` | Move to Scratchpad | `scratchpad-send.sh` | Clean | Added OSD notification popup |
 | `Super + Z` / `Super + ئ` | Restore from Scratchpad | `scratchpad-restore.sh`| **RESOLVED** | Invalid workspace current fixed with monitor API |
 | `Super + Ctrl + W` | Live Wallpaper Picker | `live-wallpaper-yazi.sh`| **RESOLVED** | Auto-folder creation, awww GIF/video fallback |
+
+---
+
+## 4. Archiso Profile Validation & Host Theming Hotfix Report
+
+### 1. mkarchiso Validation Resolution
+- **Bootmodes:** Replaced deprecated 'bios.syslinux.mbr' and 'uefi-x64.systemd-boot.esp' with modern 'bios.syslinux' and 'uefi.systemd-boot'.
+- **Structure Rebase:** Bootloader directories ('efiboot/', 'syslinux/', 'grub/') pulled from '/usr/share/archiso/configs/releng/' and customized for SecLegion OS.
+- **Packages:** Added 'syslinux', 'edk2-ovmf', 'edk2-shell', 'memtest86+', 'memtest86+-efi', and 'chafa' into 'packages.x86_64'.
+- **Validation Test:** 'mkarchiso -v /home/aelkholy/Dev_Lab/AE_ARCH' executes with zero errors.
+
+### 2. Local Host Theming Resolution
+- **Rofi App Launcher:** Replaced old '#9C6A7A' border with Matrix Green ('#00FF88') and Dark Teal ('#0B1E1C') background on active selections in '~/.config/rofi/rofi-window.rasi' and 'config.rasi'.
+- **Host OS-Release:** Updated host '/etc/os-release' to NAME="SecLegion OS", ID=seclegion, LOGO=seclegion.
+- **Fastfetch Branding:** Configured 'kitty-direct' with 'seclegion-logo-transparent.png' and replaced ASCII art with SecLegion OS workstation banner.
