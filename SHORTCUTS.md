@@ -69,6 +69,7 @@
 |:---|:---|:---|
 | `Super + N` | Open SwayNC Notification Center & Control Panel | Slide-in panel |
 | `Super + Shift + B` | Toggle Waybar Visibility | Show / Hide status bar |
+| `Super + Shift + C` | **Toggle 12-Hour / 24-Hour Clock** | Switches between 12-hr (AM/PM) & 24-hr (or click clock) |
 | `Super + Shift + V` | Open CopyQ Clipboard History | Floating clipboard manager |
 | `Super + Shift + W` | Static Wallpaper Selector (Yazi / Rofi) | Smooth 60 FPS wipe transition |
 | `Super + Ctrl + W` | **Live / Animated Wallpaper Engine** | Plays `.gif`, `.webp` & `.mp4` loops |

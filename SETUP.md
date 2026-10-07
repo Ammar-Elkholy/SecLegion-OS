@@ -1,10 +1,10 @@
 # First-Time Setup Guide
 
-Welcome to AE_ARCH Linux (SecLegion Edition) by Ammar Elkholy.
+Welcome to SecLegion OS by Ammar Elkholy.
 
 This guide walks you through everything to personalize **after your first login** — username, hostname, timezone, appearance, git identity, SSH keys, AUR packages, and hardware tweaks.
 
-> **Need to install the OS first?** See the full [Installation & Setup Guide](HOW_TO_INSTALL.md) for media flashing, BIOS configuration, and the Calamares installer walkthrough.
+> **Need to install the OS first?** See the full [Installation & Setup Guide](INSTALLATION.md) for media flashing, BIOS configuration, and the Calamares installer walkthrough.
 
 If you installed via Calamares (the graphical installer), your username and password are already set. Start from whichever section is still relevant.
 
@@ -288,6 +288,22 @@ AutomaticLogin=yourusername
 ```
 
 ---
+
+---
+
+## 16 — Clock Format (12-Hour AM/PM vs 24-Hour)
+
+By default, Waybar displays a 24-hour clock. You can toggle between 12-hour format (with AM/PM) and 24-hour format at any time:
+- **Using Keyboard Shortcut:** Press `Super + Shift + C`
+- **Using Mouse:** Click directly on the clock in the top status bar
+- **Using Terminal Command:**
+  ```bash
+  ~/.config/hypr/scripts/toggle-clock-format.sh
+  ```
+
+To edit the clock format manually, open `~/.config/waybar/config.jsonc` and modify the `"format"` string:
+* 12-Hour format: `"{:%a %d %I:%M %p}"` (e.g. `Wed 08 02:25 AM`)
+* 24-Hour format: `"{:%a %d %H:%M}"` (e.g. `Wed 08 02:25`)
 
 ## Summary — Minimum You Should Do
 

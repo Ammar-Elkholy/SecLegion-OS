@@ -164,3 +164,6 @@ hl.bind("XF86AudioPrev",         hl.dsp.exec_cmd(osd .. " media-prev"), { locked
 hl.bind(mainMod .. " + F10", hl.dsp.exec_cmd(osd .. " media-play"))
 hl.bind(mainMod .. " + F11", hl.dsp.exec_cmd(osd .. " media-prev"))
 hl.bind(mainMod .. " + F12", hl.dsp.exec_cmd(osd .. " media-next"))
+
+-- Toggle 12-Hour (AM/PM) vs 24-Hour Clock Format
+hl.bind(mainMod .. " + SHIFT + C", hl.dsp.exec_cmd("~/.config/hypr/scripts/toggle-clock-format.sh"))

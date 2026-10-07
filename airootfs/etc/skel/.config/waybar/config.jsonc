@@ -32,6 +32,7 @@
   },
 
   "clock": {
+    "on-click": "~/.config/hypr/scripts/toggle-clock-format.sh",
     "format": "<span foreground='#ffffff'>  </span>{:%a %d %H:%M}",
     "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
   },

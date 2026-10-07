@@ -98,34 +98,26 @@ SecLegion OS automatically detects your hardware architecture at boot and runs y
 ## Repository Structure
 
 ```
-AE_ARCH/
-├── build.sh                  ← builds the ISO in one command
-├── clean_host_system.sh      ← removes bloat from a live Arch host
-├── packages.x86_64           ← the full package list
-├── pacman.conf               ← pacman config (multilib enabled)
-├── profiledef.sh             ← ISO metadata and boot modes
-├── EDGE_CASES.md             ← documented issues and fixes
-└── airootfs/                 ← root filesystem overlay
-    ├── etc/
-    │   ├── skel/             ← default config for every new user
-    │   │   └── .config/
-    │   │       ├── hypr/     ← Hyprland config, keybinds, OSD scripts
-    │   │       ├── dunst/    ← neon OSD notification theme
-    │   │       ├── waybar/   ← status bar
-    │   │       ├── rofi/     ← app launcher
-    │   │       ├── kitty/    ← terminal
-    │   │       ├── yazi/     ← file manager
-    │   │       └── swaync/   ← notification center
-    │   ├── dconf/            ← GNOME global defaults
-    │   └── calamares/        ← GUI installer + SecLegion branding
-    └── usr/share/
-        ├── backgrounds/      ← curated wallpaper collection
-        ├── themes/           ← GTK themes (Catppuccin, Tokyo Night, Graphite...)
-        └── icons/            ← Tela-circle icons + Bibata cursors
+SecLegion-OS/
+├── build.sh                  ← builds the release ISO in one command
+├── install-from-existing.sh  ← USB-less direct partition installer
+├── packages.x86_64           ← curated Arch Linux package list
+├── pacman.conf               ← pacman configuration (multilib enabled)
+├── profiledef.sh             ← archiso profile metadata & permissions
+├── INSTALLATION.md           ← step-by-step installation manual
+├── SETUP.md                  ← post-install customization guide
+├── SHORTCUTS.md              ← Hyprland keyboard shortcuts cheat sheet
+├── LICENSE                   ← exclusive author-protective license
+├── airootfs/                 ← root filesystem overlay & dotfiles
+│   ├── etc/
+│   │   ├── skel/             ← default configs (Hyprland, Waybar, Rofi, Kitty, Fastfetch)
+│   │   ├── dconf/            ← GNOME global defaults
+│   │   └── calamares/        ← GUI installer & SecLegion branding
+│   └── usr/
+│       ├── local/bin/        ← seclegion-bootstrap-tier2 & seclegion-gpu-run
+│       └── share/backgrounds ← curated 4K wallpapers
+└── assets/                   ← ASCII terminal art gallery & brand logos
 ```
-
----
-
 
 ---
 
@@ -161,7 +153,7 @@ Getting SecLegion OS running takes just a few minutes:
 3. Launch the visual **Calamares Installer** from the desktop to install with a few clicks!
 
 > **Need USB-less direct install, dual-boot setup, or advanced options?**  
-> Check out the complete [Step-by-Step Installation Guide (HOW_TO_INSTALL.md)](HOW_TO_INSTALL.md).
+> Check out the complete [Installation Guide (INSTALLATION.md)](INSTALLATION.md).
 
 ---
 
@@ -218,6 +210,7 @@ Getting SecLegion OS running takes just a few minutes:
 | `Super + L` / `Escape` / `Backspace` | Logout & power menu (Wlogout) |
 | `Super + Shift + L` | Lock screen |
 | `Super + Shift + B` | Toggle Waybar |
+| `Super + Shift + C` | Toggle 12-Hour (AM/PM) / 24-Hour Clock |
 | `Super + Shift + V` | Open clipboard manager (CopyQ) |
 | `Super + Shift + W` | Pick wallpaper via Yazi |
 | `Super + Ctrl + W` | Set live wallpaper |
@@ -247,7 +240,7 @@ Getting SecLegion OS running takes just a few minutes:
 
 Comprehensive documentation is provided across dedicated manuals:
 
-1. **[Step-by-Step Installation Guide (HOW_TO_INSTALL.md)](HOW_TO_INSTALL.md)**:
+1. **[Installation Guide (INSTALLATION.md)](INSTALLATION.md)**:
    Covers both **Method A (Standard USB Media via Calamares)** and **Method B (USB-Less Local Partition Deployment via `install-from-existing.sh`)**, BIOS/UEFI firmware settings, multi-GPU kernel KMS flags, Windows dual-boot probing, and post-install Tier-2 lab bootstrapping.
 
 2. **[Keyboard Shortcuts Reference (SHORTCUTS.md)](SHORTCUTS.md)**:

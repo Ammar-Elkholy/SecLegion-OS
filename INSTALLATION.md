@@ -1,4 +1,4 @@
-# SecLegion OS — Step-by-Step Installation Guide
+# SecLegion OS — Official Installation Guide
 
 > **"We develop Mindsets — Securing Minds & Systems"**  
 > Author & Lead Architect: **Ammar Elkholy**  
@@ -10,6 +10,7 @@
 
 * **[Step 0: How to Get the ISO (Google Drive or Build from Source)](#step-0)**
 * **[Do You Need to Format Your Drive First?](#formatting-faq)**
+* **[Dual-Booting with Windows: Machine Preparation](#dual-boot-prep)**
 * **[Step 1: Flash the ISO to Your USB Drive](#step-1)**
   * [Windows (Rufus)](#windows-rufus)
   * [Windows (Ventoy)](#windows-ventoy)
@@ -73,6 +74,32 @@ The finished ISO file will be created in `./output/SecLegion-OS-2026.10.08-x86_6
 ---
 
 <a id="step-1"></a>
+<a id="dual-boot-prep"></a>
+## Dual-Booting with Windows: Machine Preparation
+
+If you are planning to run SecLegion OS alongside your existing Windows installation:
+
+### 1. Inside Windows (Before Shutting Down)
+1. **Free Up Disk Space (Disk Management):**
+   * Press `Windows Key + X` and select **Disk Management** (or run `diskmgmt.msc`).
+   * Right-click your main Windows drive (**`OS (C:)`**) -> click **Shrink Volume...**.
+   * Enter the amount to shrink in MB: `60000` to `100000` MB (60 GB to 100 GB).
+   * Click **Shrink**. A black block labelled **Unallocated** will appear. Leave it unallocated; the installer will automatically use it.
+2. **Disable Windows Fast Startup:**
+   * Open *Control Panel* -> *Hardware and Sound* -> *Power Options*.
+   * Click *"Choose what the power buttons do"* on the left.
+   * Click *"Change settings that are currently unavailable"*.
+   * Under *Shutdown settings*, **uncheck "Turn on fast startup (recommended)"**.
+   * Click **Save changes**.
+
+### 2. In BIOS / UEFI Settings
+* Set **Secure Boot** to **Disabled**.
+* Verify storage controller mode is set to **AHCI** (disable Intel RST/RAID).
+
+> **Next Step:** Machine prepared?  
+> 👉 **[Click here to Jump to Step 1: Flash the ISO to Your USB Drive](#step-1)**
+
+---
 ## Step 1: Flash the ISO to Your USB Drive
 
 Select the platform you are currently using:
