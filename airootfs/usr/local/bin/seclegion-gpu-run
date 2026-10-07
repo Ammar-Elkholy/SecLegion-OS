@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# seclegion-gpu-run — Universal Dedicated GPU Offloader
+# Automatically launches heavy tasks with full power on dedicated NVIDIA or AMD GPU
+# ==============================================================================
+
+if command -v prime-run &>/dev/null && lspci 2>/dev/null | grep -iq "nvidia"; then
+    exec prime-run "$@"
+elif lspci 2>/dev/null | grep -E "(VGA|3D)" | grep -iq "amd\|radeon"; then
+    DRI_PRIME=1 exec "$@"
+else
+    exec "$@"
+fi

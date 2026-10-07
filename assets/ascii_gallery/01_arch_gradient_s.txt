@@ -1,0 +1,22 @@
+[38;2;0;240;255m               .---:++ossso+/-.[0m
+[38;2;0;240;255m            ./osssssssssssssssss+:.[0m
+[38;2;0;240;255m          .+ssssso++/:---:/+ossssss/.[0m
+[38;2;0;240;255m         /sssso/.             ./ossss/[0m
+[38;2;0;240;255m        +ssso-                   -osss+[0m
+[38;2;0;255;136m       :ssso'   ':++oooooooo+/-'   '---.[0m
+[38;2;0;255;136m       +ssso   -osssssssssssssss+'[0m
+[38;2;0;255;136m       +ssso   osssso:----:/osssso[0m
+[38;2;0;255;136m       :ssso'  :ssss/'      '+ssss:[0m
+[38;2;0;255;136m        +ssso-  ./osssso+:.   ----'[0m
+[38;2;0;255;136m         /sssso/.  '-/+osssso+:.[0m
+[38;2;0;255;136m          .+ssssso+:-'   '-/ossss+:[0m
+[38;2;0;255;136m            ./osssssssso+/-'  :ssss+[0m
+[38;2;0;240;255m               .:/+osssssss+'  +ssso[0m
+[38;2;0;240;255m                    '-/osss+'  +ssso[0m
+[38;2;0;240;255m       '---.           'ssss:  :ssso[0m
+[38;2;0;240;255m      :osss+            +sss+  +ssso[0m
+[38;2;0;240;255m      +ssss/           -osss/ :ssso'[0m
+[38;2;0;240;255m      /sssss+:-.....-:+sssso-:osss+[0m
+[38;2;0;240;255m       .+sssssssssssssssss+:ossso:[0m
+[38;2;0;240;255m         ':+osssssssssso+/:ssso-[0m
+[38;2;0;240;255m             '.-://::-.   :oo/.[0m

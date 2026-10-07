@@ -45,7 +45,15 @@ fi
 
 # 2. Prepare Output & Work Directories
 mkdir -p "$OUT_DIR"
-rm -rf "$WORK_DIR"
+if [[ -d "$WORK_DIR" ]]; then
+    log_info "Cleaning work directory: $WORK_DIR"
+    chmod -R u+rwx "$WORK_DIR" 2>/dev/null || true
+    rm -rf "$WORK_DIR" || {
+        sleep 1
+        chmod -R 777 "$WORK_DIR" 2>/dev/null || true
+        rm -rf "$WORK_DIR"
+    }
+fi
 mkdir -p "$WORK_DIR"
 
 log_info "Profile directory: $SCRIPT_DIR"

@@ -1,0 +1,18 @@
+# ==============================================================================
+# SecLegion OS Official GRUB Bootloader Configuration
+# Engineered by: Ammar Elkholy (SecLegion Edition)
+# ==============================================================================
+
+GRUB_DEFAULT=0
+GRUB_TIMEOUT=5
+GRUB_DISTRIBUTOR="SecLegion OS"
+GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet splash"
+GRUB_CMDLINE_LINUX=""
+
+# Theme and Splash Branding
+GRUB_THEME="/usr/share/grub/themes/seclegion/theme.txt"
+GRUB_BACKGROUND="/usr/share/backgrounds/seclegion/seclegion-grub.png"
+GRUB_GFXMODE="auto"
+
+# Dual-Boot Guarantee: Enable OS Prober for automated Windows/Linux detection
+GRUB_DISABLE_OS_PROBER=false

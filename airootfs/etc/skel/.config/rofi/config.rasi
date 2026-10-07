@@ -50,8 +50,16 @@ prompt {
 }
 
 inputbar {
-    children: ["prompt", "entry"];
+    children: ["prompt", "entry", "icon-logo"];
     spacing: @g-spacing;
+}
+
+
+icon-logo {
+    expand: false;
+    filename: "/usr/share/pixmaps/seclegion-logo-transparent.png";
+    size: 28px;
+    vertical-align: 0.5;
 }
 
 entry {

@@ -3,7 +3,7 @@
 
 iso_name="SecLegion-OS"
 iso_label="SECLEGION_$(date +%Y%m)"
-iso_publisher="SecLegion OS <https://github.com/aelkholy/SecLegion-OS>"
+iso_publisher="SecLegion OS <https://github.com/Ammar-Elkholy/SecLegion-OS>"
 iso_application="SecLegion OS Live & Installer"
 iso_version="$(date +%Y.%m.%d)"
 install_dir="arch"
@@ -23,4 +23,6 @@ file_permissions=(
   ["/usr/local/bin/Installation_guide"]="0:0:755"
   ["/usr/local/bin/livecd-sound"]="0:0:755"
   ["/usr/local/bin/seclegion-bootstrap-tier2.sh"]="0:0:755"
+  ["/usr/local/bin/seclegion-gpu-run"]="0:0:755"
+  ["/usr/local/bin/install-from-existing.sh"]="0:0:755"
 )

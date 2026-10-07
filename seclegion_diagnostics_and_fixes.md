@@ -107,3 +107,19 @@ Rather than installing 2,800 tools indiscriminately (which inflates the OS by ~5
 - **Rofi App Launcher:** Replaced old '#9C6A7A' border with Matrix Green ('#00FF88') and Dark Teal ('#0B1E1C') background on active selections in '~/.config/rofi/rofi-window.rasi' and 'config.rasi'.
 - **Host OS-Release:** Updated host '/etc/os-release' to NAME="SecLegion OS", ID=seclegion, LOGO=seclegion.
 - **Fastfetch Branding:** Configured 'kitty-direct' with 'seclegion-logo-transparent.png' and replaced ASCII art with SecLegion OS workstation banner.
+
+---
+
+## 5. Master Architecture v2.0 Quality Engineering & Final Audit Closure (2026-10-08)
+
+| Component | Diagnostic Issue | Resolution Applied | Verification Status |
+| :--- | :--- | :--- | :---: |
+| **Virtualization** | Missing non-root libvirt access & polkit rule | Created `/etc/polkit-1/rules.d/50-libvirt.rules`, `/etc/libvirt/libvirtd.conf`, enabled `libvirtd.service` in Calamares & Tier-2 scripts | **VALIDATED** |
+| **Multi-GPU KMS** | Hardcoded `/dev/dri/card1:/dev/dri/card0` causing single-GPU failures | Deployed `/etc/profile.d/seclegion-gpu.sh` with dynamic display detection, updated `hyprland.lua`, and created `/usr/local/bin/seclegion-gpu-run` | **VALIDATED** |
+| **Dual-Booting** | `os-prober` omitted & Windows RTC time drift | Added `os-prober` to `packages.x86_64`, enabled `GRUB_DISABLE_OS_PROBER=false` in `/etc/default/grub`, added `timedatectl set-local-rtc 1` | **VALIDATED** |
+| **CLI Utilities** | `bat`, `fd`, `zoxide`, `btop`, `lazygit`, `tmux` missing from base | Embedded automated installation in `seclegion-bootstrap-tier2.sh` | **VALIDATED** |
+| **BlackArch Lab** | Unstructured tool installation bloating disk by 50GB | Injected 8 curated Kali-tier meta-package categories in interactive Tier-2 provisioner | **VALIDATED** |
+| **File Manager** | Yazi 26+ `theme.toml` crash on `name = "*.sh"` | Updated all file rules to `url = "*.sh"` in `theme.toml` across host and airootfs | **VALIDATED** |
+| **Terminal Fetch** | Overlapping/wrapping fastfetch banner on standard terminals | Scaled designs to <= 41 cols, compacted fastfetch modules to 71 cols, added adaptive top layout | **VALIDATED** |
+| **Wallpapers** | SecLegion wallpapers absent from `~/Pictures/Wallpapers` in Yazi | Synchronized all 5 official branded wallpapers alongside 50+ personal wallpapers in `Pictures/Wallpapers` | **VALIDATED** |
+| **Repository** | Potential accidental commits of 3.7GB ISO | Formulated strict production `.gitignore` with asset whitelisting | **VALIDATED** |

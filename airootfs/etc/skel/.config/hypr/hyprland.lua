@@ -1,4 +1,8 @@
-hl.env("AQ_DRM_DEVICES", "/dev/dri/card1:/dev/dri/card0")
+-- Multi-GPU Dynamic DRM: Auto-detects single or dual GPUs without hardcoded failures
+local env_drm = os.getenv("AQ_DRM_DEVICES")
+if env_drm and env_drm ~= "" then
+    hl.env("AQ_DRM_DEVICES", env_drm)
+end
 hl.env("XDG_CURRENT_DESKTOP", "Hyprland")
 hl.env("XDG_SESSION_TYPE", "wayland")
 hl.env("XDG_SESSION_DESKTOP", "Hyprland")

@@ -1,22 +1,60 @@
-# Build Artifacts & Output Images
-/output/
-/work/
+# ==============================================================================
+# SecLegion OS — Official Repository .gitignore
+# Engineered by: Ammar Elkholy (SecLegion Edition)
+# ==============================================================================
+
+# 1. Heavy Compiled ISO Images & Checksums (DO NOT TRACK)
+output/
+output/*
 *.iso
 *.iso.sha256
-*.log
+*.iso.sig
 
-# Caches
-.cache/
-__pycache__/
+# 2. mkarchiso Build & SquashFS Workspaces
+work/
+/var/tmp/ae-arch-work/
+*.sfs
+
+# 3. Log Files & Runtime Traces
+*.log
+*.log.*
+
+# 4. OS & Editor Artifacts
+.DS_Store
+Thumbs.db
 *.swp
+*.swo
+*~
 *.bak
 
-# Security & Private Credentials
+# 5. Language & Tooling Caches
+__pycache__/
+*.pyc
+.cache/
+.pytest_cache/
+
+# 6. Cryptographic Keys & Private Credentials (Sanitization)
 *.key
 *.pem
+*.p12
+*.kdbx
 id_rsa*
 id_ed25519*
-*.env
+id_ecdsa*
+known_hosts*
+authorized_keys*
+.git-credentials
+.netrc
+.env
+.env.*
 
-# Internal Testing & Edge Cases Notes
-EDGE_CASES.md
+# 7. Explicit Whitelist: Guarantee Tracking of Assets, Configs & Docs
+!assets/
+!assets/**
+!airootfs/
+!airootfs/**
+!*.sh
+!*.md
+!packages.x86_64
+!pacman.conf
+!profiledef.sh

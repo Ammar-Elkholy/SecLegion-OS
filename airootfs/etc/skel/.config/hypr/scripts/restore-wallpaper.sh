@@ -6,7 +6,16 @@
 wallpaper=$(cat "$HOME/.cache/current_wallpaper" 2>/dev/null)
 type=$(cat "$HOME/.cache/current_wallpaper_type" 2>/dev/null)
 
-[[ -z "$wallpaper" || ! -f "$wallpaper" ]] && exit 0
+
+if [[ -z "$wallpaper" || ! -f "$wallpaper" ]]; then
+    if [[ -f "/usr/share/backgrounds/seclegion/seclegion-wallpaper.png" ]]; then
+        wallpaper="/usr/share/backgrounds/seclegion/seclegion-wallpaper.png"
+        type="image"
+    else
+        exit 0
+    fi
+fi
+
 
 if [[ "$type" == "video" ]]; then
     if command -v mpvpaper &>/dev/null; then

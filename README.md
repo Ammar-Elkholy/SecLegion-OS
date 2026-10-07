@@ -1,8 +1,10 @@
 # SecLegion OS
 
-**An advanced, production-grade Offensive Security Linux distribution built upon Arch Linux by Ammar Elkholy.**
+> **"We develop Mindsets — Securing Minds & Systems."**
 
-*Official SecLegion Edition · Cyberpunk Matrix Architecture · Hyprland + GNOME · Universal Multi-GPU*
+**SecLegion OS** is an advanced, production-grade Offensive Security & Penetration Testing workstation built upon Arch Linux by **Ammar Elkholy**.
+
+Engineered with dual **Hyprland (Wayland)** and **GNOME** environments, native **BlackArch** security suites, complete **KVM/QEMU** hypervisor virtualization, and intelligent auto-detection built to unleash **full-power NVIDIA and AMD GPU hardware acceleration** out of the box with zero manual configuration.
 
 ---
 
@@ -56,14 +58,30 @@ Both desktops come pre-configured out of the box, so you can pick whatever fits 
 - **Zsh + Starship** — shows your active tun0 VPN IP, HackTheBox/TryHackMe target, and WireGuard status right in the prompt
 - **Modern CLI tools:** `eza` (better ls), `bat` (syntax-highlighted cat), `fzf`, `zoxide`, `fastfetch`
 
-### Hardware Portability — Any Laptop Works
+### ⚡ Full-Power GPU Acceleration (NVIDIA & AMD Out-of-the-Box)
 
-No tuning needed regardless of your GPU:
+SecLegion OS automatically detects your hardware architecture at boot and runs your GPU at **100% full power** without manual xorg/modprobe tinkering:
 
-- **AMD Radeon** — Mesa + RADV Vulkan, fully open source
-- **Intel** — Iris Xe / HD Graphics with VA-API hardware decoding
-- **NVIDIA** — Open-DKMS with nvidia-prime for hybrid laptop switching
-- **Audio** — Complete PipeWire stack with LDAC and aptX Bluetooth codecs
+- **NVIDIA GeForce / RTX (Full Power & Wayland Native):**
+  - Native driver integration with `nvidia-open-dkms`, `nvidia-utils`, and 32-bit `lib32-nvidia-utils`.
+  - Kernel modesetting enabled (`nvidia-drm.modeset=1 fbdev=1 NVreg_PreserveVideoMemoryAllocations=1`).
+  - Seamless Wayland hardware acceleration across Hyprland with automatic `GBM_BACKEND=nvidia-drm` and `LIBVA_DRIVER_NAME=nvidia`.
+  - On-demand high-performance discrete GPU offloading via `seclegion-gpu-run` and `prime-run`.
+  - Full CUDA / OpenCL acceleration for Hashcat, John the Ripper, and cryptographic cracking suites.
+
+- **AMD Radeon (Full Power Vulkan & ACO):**
+  - High-performance Mesa stack with RADV Vulkan and AMD ACO shader compiler.
+  - Automatic `DRI_PRIME=1` discrete GPU offload switching for dual-GPU laptops.
+  - Zero-tear Wayland rendering and ultra-low latency display pipelines.
+
+- **Intel Iris Xe / Arc:**
+  - High-efficiency VA-API hardware decoding and modern Vulkan support.
+
+- **Dynamic DRM Display Resolver (`seclegion-gpu.sh`):**
+  - Automatically identifies primary and secondary DRM cards (`/dev/dri/card*`) at login and dynamically exports `AQ_DRM_DEVICES` in Hyprland, eliminating black screens and multi-monitor stutter.
+
+- **Audio & Media:**
+  - Complete PipeWire stack with WirePlumber, LDAC, and aptX Bluetooth codecs.
 
 ### File Management
 
@@ -108,6 +126,22 @@ AE_ARCH/
 
 ---
 
+
+---
+
+## 🚀 Distribution Pathways
+
+SecLegion OS supports two distribution models:
+
+1. **Direct Download (GitHub Releases / Mirrors):**
+   - Download the pre-built ISO and checksum directly from [GitHub Releases](https://github.com/aelkholy/SecLegion-OS/releases).
+   - Verify checksum: `sha256sum -c SecLegion-OS-*.iso.sha256`.
+
+2. **Building from Source (Fully Reproducible):**
+   - Clone the repository: `git clone https://github.com/aelkholy/SecLegion-OS.git && cd SecLegion-OS`
+   - Install archiso: `sudo pacman -S --needed archiso`
+   - Build ISO: `sudo bash build.sh`
+
 ## Building the ISO
 
 You need `archiso` installed on a running Arch Linux host:
@@ -128,6 +162,28 @@ The finished ISO lands in `./output/` alongside a `sha256sum.txt` for verificati
 
 ---
 
+---
+
+## ⚡ USB-Less Direct Partition Installation (`install-from-existing.sh`)
+
+If you don't have an 8GB USB drive on hand, SecLegion OS can be installed directly from an existing Linux distribution to a target partition using our automated installer:
+
+```bash
+# 1. Inspect existing drives and target partition
+lsblk -f
+
+# 2. Run the offline installer as root
+sudo bash install-from-existing.sh
+```
+
+**What it does automatically:**
+- Mounts and formats target root partition (`ext4`/`btrfs`) and EFI system partition (`vfat`)
+- Extracts the compressed live system image (`airootfs.sfs`) directly to disk
+- Generates accurate partition mappings in `/etc/fstab` (`genfstab -U`)
+- Preserves all desktop configurations, themes, fastfetch banners, and wallpapers
+- Installs GRUB bootloader with automated Windows Dual-Boot detection (`os-prober`)
+- Synchronizes the hardware clock with Windows (`timedatectl set-local-rtc 1`)
+
 ## Flashing to USB
 
 Pick the method that matches your platform:
@@ -141,7 +197,7 @@ Pick the method that matches your platform:
 lsblk
 
 # Write the ISO (replace sdX with your drive, e.g. sdb — NOT the partition)
-sudo dd if=output/AE_ARCH-*.iso of=/dev/sdX bs=4M status=progress oflag=sync && sync
+sudo dd if=output/SecLegion-OS-*.iso of=/dev/sdX bs=4M status=progress oflag=sync && sync
 ```
 
 > Double-check the drive letter before running. `dd` will silently overwrite whatever is there.
@@ -155,7 +211,7 @@ sudo dd if=output/AE_ARCH-*.iso of=/dev/sdX bs=4M status=progress oflag=sync && 
 sudo bash ventoy -i /dev/sdX
 
 # Then just drop the ISO onto the drive
-cp output/AE_ARCH-*.iso /run/media/$USER/Ventoy/
+cp output/SecLegion-OS-*.iso /run/media/$USER/Ventoy/
 ```
 
 ---
@@ -170,7 +226,7 @@ diskutil list
 diskutil unmountDisk /dev/diskN
 
 # Flash — use rdiskN (raw device), it's ~10× faster than diskN
-sudo dd if=output/AE_ARCH-*.iso of=/dev/rdiskN bs=4m
+sudo dd if=output/SecLegion-OS-*.iso of=/dev/rdiskN bs=4m
 ```
 
 ---

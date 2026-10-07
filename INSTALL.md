@@ -118,4 +118,38 @@ This automates:
 
 ---
 
+
+---
+
+## 8. Distribution Pathways & Reproducibility
+
+SecLegion OS provides two independent distribution pathways:
+
+### Pathway A: Building from Source (100% Reproducible)
+Anyone running an Arch Linux system can reproduce and compile this ISO bit-for-bit:
+```bash
+# 1. Clone the official repository
+git clone https://github.com/aelkholy/SecLegion-OS.git
+cd SecLegion-OS
+
+# 2. Install archiso builder toolchain
+sudo pacman -S --needed archiso
+
+# 3. Compile the Release ISO (handles permissions, workdir, and compression)
+sudo bash build.sh
+```
+The finished binary image is generated in `./output/SecLegion-OS-*.iso` along with its cryptographic `.sha256` verification hash.
+
+### Pathway B: Direct Release Download
+For users who do not run Arch Linux or wish to skip the compilation process:
+1. Download the pre-compiled Release ISO and SHA256 checksum from:
+   - **GitHub Releases:** `https://github.com/aelkholy/SecLegion-OS/releases`
+   - **External Mirror / Cloud Storage:** (Direct download link on official release page)
+2. Verify image integrity before flashing:
+   ```bash
+   sha256sum -c SecLegion-OS-*.iso.sha256
+   ```
+
+---
+
 *Engineered with precision for offensive security professionals by Ammar Elkholy.*

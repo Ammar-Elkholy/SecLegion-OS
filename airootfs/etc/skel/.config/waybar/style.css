@@ -128,3 +128,19 @@ button:hover {
     border-radius: 8px;
     color: rgba(255, 255, 255, 0.9);
 }
+
+#custom-launcher {
+    background-image: url("/usr/share/pixmaps/seclegion-logo-transparent.png");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 20px 20px;
+    min-width: 28px;
+    padding: 0 4px;
+    margin: 4px 6px 4px 2px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+#custom-launcher:hover {
+    background-color: rgba(0, 255, 136, 0.25);
+}

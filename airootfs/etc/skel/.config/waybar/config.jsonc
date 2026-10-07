@@ -6,9 +6,16 @@
   "passthrough": false,
   "spacing": 4,
 
-  "modules-left": ["hyprland/workspaces"],
+  "modules-left": ["custom/launcher", "hyprland/workspaces"],
   "modules-center": ["custom/media"],
   "modules-right": ["hyprland/language", "network", "pulseaudio", "backlight", "battery", "clock"],
+
+  
+  "custom/launcher": {
+    "format": " ",
+    "tooltip-format": "SecLegion OS Launcher",
+    "on-click": "rofi -show drun"
+  },
 
   "hyprland/workspaces": {
     "disable-scroll": false,
