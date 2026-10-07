@@ -1,8 +1,0 @@
-[Plymouth Theme]
-Name=SecLegion OS Splash
-Description=Official SecLegion Cyberpunk Boot Animation
-ModuleName=script
-
-[script]
-ImageDir=/usr/share/plymouth/themes/seclegion
-ScriptFile=/usr/share/plymouth/themes/seclegion/seclegion.script

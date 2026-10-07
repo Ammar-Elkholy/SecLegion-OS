@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# AE_ARCH — Universal Bootable ISO Builder
+# SecLegion OS — Universal Offensive Security ISO Builder
 # Engineered by: Ammar Elkholy (SecLegion Edition)
 # Target: Any Laptop (AMD Radeon, Intel, or NVIDIA GeForce/RTX Hybrid)
 # Desktops: GNOME + Hyprland Dual Experience with Calamares Installer
@@ -33,7 +33,7 @@ WORK_DIR="/var/tmp/ae-arch-work"
 OUT_DIR="$SCRIPT_DIR/output"
 
 echo -e "${CYAN}====================================================================${RESET}"
-echo -e "${CYAN}    AE_ARCH Linux — Building Universal Bootable ISO                ${RESET}"
+echo -e "${CYAN}    SecLegion OS — Building Universal Offensive Security ISO                ${RESET}"
 echo -e "${CYAN}    Engineered by: Ammar Elkholy (SecLegion Edition)               ${RESET}"
 echo -e "${CYAN}====================================================================${RESET}"
 
@@ -52,7 +52,11 @@ log_info "Profile directory: $SCRIPT_DIR"
 log_info "Work directory:    $WORK_DIR (disk-backed on /var/tmp)"
 log_info "Output directory:  $OUT_DIR"
 
-# 3. Clean permissions for airootfs
+# 3. Privacy Sanitization Protocol
+log_info "Executing privacy sanitization protocol..."
+bash "$SCRIPT_DIR/sanitize_system.sh" "$SCRIPT_DIR/airootfs"
+
+# 4. Clean permissions for airootfs
 log_info "Ensuring correct permissions in airootfs..."
 chmod 755 "$SCRIPT_DIR/airootfs"
 find "$SCRIPT_DIR/airootfs/etc/skel" -type d -exec chmod 755 {} + 2>/dev/null || true

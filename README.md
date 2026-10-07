@@ -1,12 +1,41 @@
-# AE_ARCH Linux
+# SecLegion OS
 
-**A personal Arch Linux build by Ammar Elkholy — crafted for cybersecurity, penetration testing, and power users who refuse to settle for a generic OS.**
+**An advanced, production-grade Offensive Security Linux distribution built upon Arch Linux by Ammar Elkholy.**
 
-SecLegion Edition · Neon Cyberpunk · Hyprland + GNOME · Works on any hardware
+*Official SecLegion Edition · Cyberpunk Matrix Architecture · Hyprland + GNOME · Universal Multi-GPU*
+
+---
+
+## 🎨 Official Brand Identity & Color Palette
+
+SecLegion OS adheres strictly to an aggressive cyber-security aesthetic:
+- **Glitch White (`#FFFFFF`):** High-contrast typography and icon highlights
+- **Matrix Green (`#00FF88`):** Active window borders, success indicators, primary operational accent
+- **Cyberpunk Cyan (`#00F0FF`):** Focus rings, interactive elements, section headers
+- **Dark Teal Carbon (`#0B1E1C`):** Panels, inactive borders, card backgrounds
+- **Matrix Obsidian (`#050F0E`):** Base workspace canvas, terminal backdrop
 
 ---
 
 ## What makes it different
+
+### 🛡️ Two-Tier Software Provisioning Model
+
+To ensure blistering speed without bloat, SecLegion OS employs a two-tier provisioning strategy:
+
+- **Tier 1 (Base ISO & Core System):**
+  - Ultra-fast live environment and minimal installer footprint.
+  - Complete Hyprland Wayland suite + GNOME fallback.
+  - Essential CLI offensive security tools: `nmap`, `tcpdump`, `sqlmap`, `aircrack-ng`, `hydra`, `john`, `radare2`, `socat`, `netcat`.
+  - High-performance terminal tools: `kitty`, `bat`, `eza`, `zoxide`, `btop`, `yazi`, `fzf`, `starship`.
+  - **Raw Arch Boot (No Plymouth):** Maximum startup speed with diagnostic kernel messages in high-visibility Matrix Green.
+
+- **Tier 2 (Post-Install Infrastructure Bootstrap):**
+  - Execute `seclegion-bootstrap-tier2.sh` after installation to pull heavy lab infrastructure on demand:
+    - **KVM/QEMU/Libvirt Lab Hypervisor:** Full hardware virtualization with `virt-manager`, `ovmf`, and automated NAT network bridge (`virbr0`).
+    - **Heavy GUI InfoSec Suites:** Burp Suite, Wireshark (packet capture permissions pre-granted), Metasploit framework with PostgreSQL, and wordlists (`rockyou.txt`).
+    - **Privacy Browser:** Brave Browser (`brave-bin`).
+    - **Full BlackArch Repository:** 2,800+ penetration testing tools synchronized via official `strap.sh`.
 
 ### Dual Desktop — GNOME & Hyprland
 
@@ -256,15 +285,18 @@ sudo dd if=output/AE_ARCH-*.iso of=/dev/rdiskN bs=4m
 
 ---
 
-## Installation & Setup Guides
+## 📚 Core Documentation & Guides
 
-Everything is documented in two dedicated guides:
+Comprehensive documentation is provided across dedicated manuals:
 
-1. **[Complete Installation Guide (INSTALL_GUIDE.md)](INSTALL_GUIDE.md)**:
-   Covers USB preparation across Windows, macOS, and Linux (8GB is all you need!), BIOS/UEFI settings, booting into the SecLegion live environment, and a complete walkthrough of Calamares (including manual dual-boot partitioning alongside Windows).
+1. **[Universal Installation Guide (INSTALL.md)](INSTALL.md)**:
+   Covers both **Method A (Standard USB Media via Calamares)** and **Method B (USB-Less Local Partition Deployment via `install-from-existing.sh`)**, BIOS/UEFI firmware settings, multi-GPU kernel KMS flags, Windows dual-boot probing, and post-install Tier-2 lab bootstrapping.
 
-2. **[First-Time Personalization Guide (SETUP.md)](SETUP.md)**:
-   Covers post-installation customization once you boot into your installed system — user identity, hostname, timezone, keyboard layouts, Starship terminal prompt, Git config, SSH keys, AUR helper (`yay`), monitors, and autologin.
+2. **[Keyboard Shortcuts Reference (SHORTCUTS.md)](SHORTCUTS.md)**:
+   Complete keybindings cheat sheet for Hyprland, window management, scratchpad workflow (`Super+S`, `Super+Shift+A`, `Super+Z`), power controls (`Super+L`), media OSD popups, and Arabic layout aliases.
+
+3. **[First-Time Personalization Guide (SETUP.md)](SETUP.md)**:
+   Post-installation customization manual covering hostname, timezone, Git identity, SSH keys, AUR package management (`yay`), and hardware tuning.
 
 ---
 

@@ -147,11 +147,35 @@ noto-fonts-cjk
 ttf-liberation
 ttf-dejavu
 
-# --- Cybersecurity Core Suite ---
+# --- Modern High-Performance CLI Tools ---
+bat
+fd
+zoxide
+btop
+tmux
+lazygit
+ripgrep
+fzf
+
+# --- Cybersecurity Tier-1 Suite (Lightweight CLI) ---
 nmap
-wireshark-qt
 tcpdump
 sqlmap
+aircrack-ng
+hydra
+john
+openbsd-netcat
+socat
+radare2
+whois
+dnsutils
+traceroute
+nethogs
+iftop
+strace
+lsof
+hexedit
+blackarch-mirrorlist
 
 # --- Installation Frameworks ---
 archinstall
