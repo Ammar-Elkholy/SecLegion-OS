@@ -356,6 +356,9 @@ Comprehensive documentation is provided across dedicated manuals:
 
 ---
 
-## License
+## 📄 License & Attribution
 
-Released under the [MIT License](LICENSE).
+Copyright © 2026 **Ammar Elkholy**. All rights reserved.
+
+SecLegion OS is published under the [SecLegion OS Source and Distribution License](LICENSE).
+Personal, educational, and authorized offensive security research use is permitted. Redistribution, commercialization, re-branding, or derivative distribution is strictly prohibited without prior express written approval from **Ammar Elkholy**.

@@ -1,0 +1,52 @@
+SecLegion OS Source and Distribution License
+Copyright (c) 2026 Ammar Elkholy. All rights reserved.
+
+Project: SecLegion OS
+Author & Lead Architect: Ammar Elkholy
+Official Slogan: "We develop Mindsets — Securing Minds & Systems"
+Repository: https://github.com/Ammar-Elkholy/SecLegion-OS
+
+================================================================================
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+================================================================================
+
+1. OWNERSHIP & INTELLECTUAL PROPERTY:
+   All custom scripts, build automation pipelines, system configurations,
+   ASCII terminal artworks, graphical themes, brand assets, and architectural
+   integrations in this repository are the exclusive intellectual property
+   of Ammar Elkholy ("Author").
+
+2. PERMITTED PERSONAL & EDUCATIONAL USE:
+   Permission is hereby granted, free of charge, to any individual obtaining
+   a copy of this software and associated documentation files, to download,
+   compile, and operate SecLegion OS solely for personal, educational, security
+   training, and authorized penetration testing / security assessment purposes.
+
+3. STRICT PROHIBITION ON UNAUTHORIZED REDISTRIBUTION & DERIVATIVES:
+   - NO FORKING / RE-BRANDING WITHOUT APPROVAL: You may NOT copy, mirror,
+     sublicense, publish, or distribute modified or derivative distributions,
+     ISO images, or packaging under a different name, brand, or authorship
+     without the prior express written consent and approval of Ammar Elkholy.
+   - NO COMMERCIAL EXPLOITATION: You may NOT sell, monetize, bundle, or
+     incorporate any part of this software, its configurations, or SecLegion
+     branding into commercial products, services, or paid distributions without
+     explicit contractual agreement from Ammar Elkholy.
+   - MANDATORY ATTRIBUTION: Any authorized demonstration, academic citation,
+     or security research leveraging this system must prominently display the
+     original authorship attribution to Ammar Elkholy and reference the
+     SecLegion OS project.
+
+4. UPSTREAM THIRD-PARTY LICENSES:
+   Underlying upstream software components (including the Linux kernel, Arch Linux
+   repositories, Hyprland, GNOME, BlackArch tool suites, and third-party utilities)
+   remain governed by their respective upstream open-source licenses (GPL, MIT,
+   BSD, Apache, etc.). This license strictly governs the proprietary SecLegion OS
+   distribution layer, custom scripts, curated themes, and author-created tooling.
+
+5. DISCLAIMER OF LIABILITY:
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN
+   ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION
+   WITH THE USE OR REDISTRIBUTION OF THE SOFTWARE.
