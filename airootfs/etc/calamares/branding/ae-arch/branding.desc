@@ -6,22 +6,22 @@ windowExpanding:         normal
 windowSize:              1020px,680px
 
 strings:
-    productName:         "AE_ARCH Linux"
-    shortProductName:    "AE_ARCH"
-    version:             "2026.10 (SecLegion Edition)"
+    productName:         "SecLegion OS"
+    shortProductName:    "SecLegion"
+    version:             "2026.10"
     shortVersion:        "2026.10"
-    versionedName:       "AE_ARCH Linux 2026.10 (SecLegion Edition)"
-    shortVersionedName:  "AE_ARCH 2026.10"
-    bootloaderEntryName: "AE_ARCH Linux"
-    productUrl:          "https://github.com/aelkholy/AE_ARCH"
-    supportUrl:          "https://github.com/aelkholy/AE_ARCH/issues"
-    knownIssuesUrl:      "https://github.com/aelkholy/AE_ARCH/blob/main/INSTALL_GUIDE.md#9-troubleshooting--edge-cases"
-    releaseNotesUrl:     "https://github.com/aelkholy/AE_ARCH/releases"
+    versionedName:       "SecLegion OS 2026.10 (Offensive Security Edition)"
+    shortVersionedName:  "SecLegion 2026.10"
+    bootloaderEntryName: "SecLegion OS"
+    productUrl:          "https://github.com/aelkholy/SecLegion-OS"
+    supportUrl:          "https://github.com/aelkholy/SecLegion-OS/issues"
+    knownIssuesUrl:      "https://github.com/aelkholy/SecLegion-OS/blob/main/INSTALL.md#5-multi-gpu-kernel-parameters--display-drivers"
+    releaseNotesUrl:     "https://github.com/aelkholy/SecLegion-OS/releases"
 
 images:
-    productLogo:         "/usr/share/backgrounds/seclegion.png"
-    productIcon:         "/usr/share/backgrounds/seclegion.png"
-    productWelcome:      "/usr/share/backgrounds/seclegion.png"
+    productLogo:         "/usr/share/pixmaps/seclegion-logo.png"
+    productIcon:         "/usr/share/pixmaps/seclegion-logo.png"
+    productWelcome:      "/usr/share/backgrounds/seclegion-wallpaper.png"
 
 slideshow:               "show.qml"
 style:

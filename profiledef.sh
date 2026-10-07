@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034
 
-iso_name="AE_ARCH"
-iso_label="AE_ARCH_$(date +%Y%m)"
-iso_publisher="AE_ARCH Linux <https://github.com/aelkholy/AE_ARCH>"
-iso_application="AE_ARCH Live & Installer"
+iso_name="SecLegion-OS"
+iso_label="SECLEGION_$(date +%Y%m)"
+iso_publisher="SecLegion OS <https://github.com/aelkholy/SecLegion-OS>"
+iso_application="SecLegion OS Live & Installer"
 iso_version="$(date +%Y.%m.%d)"
 install_dir="arch"
 build_modes=('iso')
@@ -21,4 +21,5 @@ file_permissions=(
   ["/usr/local/bin/choose-mirror"]="0:0:755"
   ["/usr/local/bin/Installation_guide"]="0:0:755"
   ["/usr/local/bin/livecd-sound"]="0:0:755"
+  ["/usr/local/bin/seclegion-bootstrap-tier2.sh"]="0:0:755"
 )

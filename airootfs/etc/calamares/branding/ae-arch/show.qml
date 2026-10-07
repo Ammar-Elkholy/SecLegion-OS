@@ -30,7 +30,7 @@ Rectangle {
         }
 
         Text {
-            text: "AE_ARCH Linux"
+            text: "SecLegion OS"
             font.pixelSize: 28
             font.bold: true
             color: "#00f0ff"

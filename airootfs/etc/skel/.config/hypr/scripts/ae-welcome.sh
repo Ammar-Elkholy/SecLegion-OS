@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# ae-welcome.sh — AE_ARCH First-Login Setup Wizard
+# ae-welcome.sh — SecLegion OS First-Login Setup Wizard
 # SecLegion Edition | Ammar Elkholy
 # Runs once automatically on first login, guides the user through setup
 # =============================================================================
@@ -23,7 +23,7 @@ banner() {
     clear
     echo
     echo -e "${C_CYAN} ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄${C_RESET}"
-    echo -e "${C_CYAN} █${C_GREEN}  ██████ ███████  ██████     ${C_CYAN}AE_ARCH LINUX  █${C_RESET}"
+    echo -e "${C_CYAN} █${C_GREEN}  ██████ ███████  ██████     ${C_CYAN}SECLEGION OS  █${C_RESET}"
     echo -e "${C_CYAN} █${C_GREEN}  ██     ██      ██          ${C_CYAN}SecLegion Ed.  █${C_RESET}"
     echo -e "${C_CYAN} █${C_GREEN}  ███████ █████  ██          ${C_DIM}by Ammar Elkholy${C_CYAN} █${C_RESET}"
     echo -e "${C_CYAN} █${C_GREEN}       ██ ██     ██                         █${C_RESET}"
@@ -49,7 +49,7 @@ ask()     { echo -en "  ${C_CYAN}?${C_RESET} $* "; }
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 banner
-echo -e "  ${C_WHITE}Welcome to AE_ARCH Linux.${C_RESET}"
+echo -e "  ${C_WHITE}Welcome to SecLegion OS Linux.${C_RESET}"
 echo -e "  ${C_DIM}This wizard runs once to help you personalize your system.${C_RESET}"
 echo -e "  ${C_DIM}Press Enter to skip any step you want to do later.${C_RESET}"
 echo

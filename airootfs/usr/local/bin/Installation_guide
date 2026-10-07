@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Installation_guide — AE_ARCH Live Environment Setup Assistant
+# Installation_guide — SecLegion OS Live Environment Setup Assistant
 # SecLegion Edition | Ammar Elkholy
 # ==============================================================================
 
@@ -14,13 +14,13 @@ RESET="\033[0m"
 
 clear
 echo -e "${CYAN}====================================================================${RESET}"
-echo -e "${CYAN} █${GREEN}  ██████ ███████  ██████     ${CYAN}AE_ARCH LINUX  █${RESET}"
+echo -e "${CYAN} █${GREEN}  ██████ ███████  ██████     ${CYAN}SECLEGION OS  █${RESET}"
 echo -e "${CYAN} █${GREEN}  ██     ██      ██          ${CYAN}SecLegion Ed.  █${RESET}"
 echo -e "${CYAN} █${GREEN}  ███████ █████  ██          ${DIM}by Ammar Elkholy${CYAN} █${RESET}"
 echo -e "${CYAN} █${GREEN}       ██ ██     ██                         █${RESET}"
 echo -e "${CYAN} █${GREEN}  ███████ ███████  ██████                   █${RESET}"
 echo -e "${CYAN}====================================================================${RESET}"
-echo -e " ${WHITE}Welcome to the AE_ARCH Installation & Setup Center.${RESET}"
+echo -e " ${WHITE}Welcome to the SecLegion OS Installation & Setup Center.${RESET}"
 echo -e " ${DIM}Universal installer for AMD, Intel, and NVIDIA systems.${RESET}"
 echo -e "${CYAN}--------------------------------------------------------------------${RESET}"
 

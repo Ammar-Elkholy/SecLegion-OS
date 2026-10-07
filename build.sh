@@ -75,7 +75,7 @@ echo -e "\n${CYAN}==============================================================
 echo -e "${GREEN} ✅ AE_ARCH ISO BUILT SUCCESSFULLY!                                ${RESET}"
 echo -e "${CYAN}====================================================================${RESET}"
 
-ISO_FILE=$(ls -t "$OUT_DIR"/AE_ARCH-*.iso 2>/dev/null | head -n1 || true)
+ISO_FILE=$(ls -t "$OUT_DIR"/SecLegion-OS-*.iso 2>/dev/null | head -n1 || true)
 if [[ -n "$ISO_FILE" ]]; then
     echo -e " ISO File:       ${GREEN}${ISO_FILE}${RESET}"
     echo -e " File Size:      $(du -h "$ISO_FILE" | cut -f1)"
