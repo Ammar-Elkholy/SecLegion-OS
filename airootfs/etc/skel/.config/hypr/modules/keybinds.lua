@@ -80,12 +80,15 @@ hl.bind(mainMod .. " + SHIFT + Arabic_ra", hl.dsp.exec_cmd("copyq toggle"))
 hl.bind(mainMod .. " + N",           hl.dsp.exec_cmd("swaync-client -t -sw"))
 hl.bind(mainMod .. " + Arabic_alef", hl.dsp.exec_cmd("swaync-client -t -sw"))
 
--- ── Power & Lock ────────────────────────────────────────────────────────────
--- Wlogout power menu (Super+Escape, Super+Backspace)
-hl.bind(mainMod .. " + Escape",    hl.dsp.exec_cmd(osd .. " logout-menu"))
-hl.bind(mainMod .. " + BackSpace", hl.dsp.exec_cmd(osd .. " logout-menu"))
--- Lock screen (Super+Shift+L)
-hl.bind(mainMod .. " + SHIFT + L", hl.dsp.exec_cmd(osd .. " lock"))
+-- ── Power & Logout Menu / Lock ──────────────────────────────────────────────
+-- Wlogout power & logout menu (Super+L, Super+Escape, Super+Backspace)
+hl.bind(mainMod .. " + L",                   hl.dsp.exec_cmd(osd .. " logout-menu"))
+hl.bind(mainMod .. " + Arabic_meem",         hl.dsp.exec_cmd(osd .. " logout-menu"))
+hl.bind(mainMod .. " + Escape",              hl.dsp.exec_cmd(osd .. " logout-menu"))
+hl.bind(mainMod .. " + BackSpace",           hl.dsp.exec_cmd(osd .. " logout-menu"))
+-- Lock screen directly (Super+Shift+L)
+hl.bind(mainMod .. " + SHIFT + L",           hl.dsp.exec_cmd(osd .. " lock"))
+hl.bind(mainMod .. " + SHIFT + Arabic_meem",   hl.dsp.exec_cmd(osd .. " lock"))
 
 -- ── Toggle Waybar ───────────────────────────────────────────────────────────
 hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd(osd .. " waybar-toggle"))
@@ -109,9 +112,8 @@ hl.bind(mainMod .. " + right", hl.dsp.focus({ direction = "right" }))
 hl.bind(mainMod .. " + up",    hl.dsp.focus({ direction = "up" }))
 hl.bind(mainMod .. " + down",  hl.dsp.focus({ direction = "down" }))
 hl.bind(mainMod .. " + H",     hl.dsp.focus({ direction = "left" }))
-hl.bind(mainMod .. " + L",     hl.dsp.focus({ direction = "right" }))
 hl.bind(mainMod .. " + K",     hl.dsp.focus({ direction = "up" }))
-hl.bind(mainMod .. " + M",     hl.dsp.focus({ direction = "down" }))  -- was missing
+hl.bind(mainMod .. " + J",     hl.dsp.focus({ direction = "down" }))  -- was missing
 
 -- ── Move Windows (Shift + Arrows & Vim keys) ─────────────────────────────
 hl.bind(mainMod .. " + SHIFT + left",  hl.dsp.window.move({ direction = "left" }))
@@ -119,7 +121,6 @@ hl.bind(mainMod .. " + SHIFT + right", hl.dsp.window.move({ direction = "right" 
 hl.bind(mainMod .. " + SHIFT + up",    hl.dsp.window.move({ direction = "up" }))
 hl.bind(mainMod .. " + SHIFT + down",  hl.dsp.window.move({ direction = "down" }))
 hl.bind(mainMod .. " + SHIFT + H",     hl.dsp.window.move({ direction = "left" }))
-hl.bind(mainMod .. " + SHIFT + L",     hl.dsp.window.move({ direction = "right" }))
 hl.bind(mainMod .. " + SHIFT + K",     hl.dsp.window.move({ direction = "up" }))
 hl.bind(mainMod .. " + SHIFT + J",     hl.dsp.window.move({ direction = "down" }))
 

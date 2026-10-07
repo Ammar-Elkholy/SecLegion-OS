@@ -228,7 +228,7 @@ sudo dd if=output/AE_ARCH-*.iso of=/dev/rdiskN bs=4m
 | :--- | :--- |
 | `Super + Space` | Switch keyboard language |
 | `Super + N` | Open notification center |
-| `Super + Escape` or `Backspace` | Power menu (Wlogout) |
+| `Super + L` / `Escape` / `Backspace` | Logout & power menu (Wlogout) |
 | `Super + Shift + L` | Lock screen |
 | `Super + Shift + B` | Toggle Waybar |
 | `Super + Shift + V` | Open clipboard manager (CopyQ) |

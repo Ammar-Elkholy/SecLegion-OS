@@ -126,7 +126,7 @@ case "$1" in
         ;;
 
     logout-menu)
-        wlogout
+        pkill -x wlogout || wlogout
         ;;
 
     waybar-toggle)
