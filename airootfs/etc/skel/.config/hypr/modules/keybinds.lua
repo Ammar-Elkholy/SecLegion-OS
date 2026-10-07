@@ -3,7 +3,7 @@
 ---------------------
 
 local terminal    = "kitty"
-local fileManager = "nautilus"
+local fileManager = "thunar"
 local menu        = "pkill -x rofi || rofi -show drun"
 local ide         = "antigravity-ide"
 local osd         = "~/.config/hypr/scripts/ae-osd.sh"

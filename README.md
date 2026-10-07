@@ -38,7 +38,7 @@ No tuning needed regardless of your GPU:
 
 ### File Management
 
-- **GUI:** Nautilus — native, dark-themed, no bloat
+- **GUI:** Thunar — lightweight, custom 0.75 opacity, and custom terminal actions (Nautilus also included for GNOME)
 - **CLI:** Yazi — terminal file manager with inline image previews
 
 ### Installer
@@ -186,7 +186,7 @@ sudo dd if=output/AE_ARCH-*.iso of=/dev/rdiskN bs=4m
 | :--- | :--- |
 | `Super + Return` | Open terminal (Kitty) |
 | `Super + T` | Open terminal (alternate) |
-| `Super + E` | Open file manager (Nautilus) |
+| `Super + E` | Open file manager (Thunar) |
 | `Super + Y` | Open Yazi (terminal file manager) |
 | `Super + B` | Open browser (Brave / Firefox) |
 | `Super + D` or `Super + R` | Open app launcher (Rofi) |

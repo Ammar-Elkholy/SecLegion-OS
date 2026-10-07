@@ -67,6 +67,11 @@ gnome-tweaks
 gnome-software
 gnome-disk-utility
 nautilus
+thunar
+thunar-volman
+thunar-archive-plugin
+tumbler
+file-roller
 extension-manager
 gnome-shell-extension-appindicator
 
