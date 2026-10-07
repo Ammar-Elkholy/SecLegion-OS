@@ -5,7 +5,7 @@
 
 ---
 
-## ⚡ Core Applications
+## Core Applications
 
 | Shortcut (US) | Arabic Key | Action | Binary / Script |
 |:---|:---:|:---|:---|
@@ -19,7 +19,7 @@
 
 ---
 
-## 🔒 Power, Lock & Session Controls
+## Power, Lock & Session Controls
 
 | Shortcut | Arabic Key | Action | Notes |
 |:---|:---:|:---|:---|
@@ -29,17 +29,17 @@
 
 ---
 
-## 📥 Scratchpad (Special Workspace)
+## Scratchpad (Special Workspace)
 
 | Shortcut | Arabic Key | Action | OSD Popup |
 |:---|:---:|:---|:---|
 | **`Super + S`** | `Super + س` | Toggle Scratchpad Show / Hide | Slide animation |
-| **`Super + Shift + A`** | `Super + Shift + ش` | Send Focused Window **Into** Scratchpad | 📥 *Sent to Scratchpad* |
-| **`Super + Z`** | `Super + ئ` | Restore Window **Back to Active Workspace** | 📤 *Window Restored* |
+| **`Super + Shift + A`** | `Super + Shift + ش` | Send Focused Window **Into** Scratchpad | *Sent to Scratchpad* |
+| **`Super + Z`** | `Super + ئ` | Restore Window **Back to Active Workspace** | *Window Restored* |
 
 ---
 
-## 🪟 Window Management & Tiling
+## Window Management & Tiling
 
 | Shortcut | Action | Notes |
 |:---|:---|:---|
@@ -52,7 +52,7 @@
 
 ---
 
-## 🎯 Navigation & Window Movement
+## Navigation & Window Movement
 
 | Action | Arrow Keys | Vim-Style Keys |
 |:---|:---|:---|
@@ -63,7 +63,7 @@
 
 ---
 
-## 🎨 System HUD, Audio & Personalization
+## System HUD, Audio & Personalization
 
 | Shortcut | Action | Feedback |
 |:---|:---|:---|
@@ -78,7 +78,7 @@
 
 ---
 
-## 📸 Screenshots & Annotation
+## Screenshots & Annotation
 
 | Shortcut | Action | Target |
 |:---|:---|:---|

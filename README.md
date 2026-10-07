@@ -8,7 +8,7 @@ Engineered with dual **Hyprland (Wayland)** and **GNOME** environments, native *
 
 ---
 
-## 🎨 Official Brand Identity & Color Palette
+## Brand Identity & Color Palette
 
 SecLegion OS adheres strictly to an aggressive cyber-security aesthetic:
 - **Glitch White (`#FFFFFF`):** High-contrast typography and icon highlights
@@ -21,7 +21,7 @@ SecLegion OS adheres strictly to an aggressive cyber-security aesthetic:
 
 ## What makes it different
 
-### 🛡️ Two-Tier Software Provisioning Model
+### Two-Tier Software Provisioning Model
 
 To ensure blistering speed without bloat, SecLegion OS employs a two-tier provisioning strategy:
 
@@ -58,7 +58,7 @@ Both desktops come pre-configured out of the box, so you can pick whatever fits 
 - **Zsh + Starship** — shows your active tun0 VPN IP, HackTheBox/TryHackMe target, and WireGuard status right in the prompt
 - **Modern CLI tools:** `eza` (better ls), `bat` (syntax-highlighted cat), `fzf`, `zoxide`, `fastfetch`
 
-### ⚡ Full-Power GPU Acceleration (NVIDIA & AMD Out-of-the-Box)
+### Full-Power GPU Acceleration (NVIDIA & AMD Out-of-the-Box)
 
 SecLegion OS automatically detects your hardware architecture at boot and runs your GPU at **100% full power** without manual xorg/modprobe tinkering:
 
@@ -129,13 +129,13 @@ AE_ARCH/
 
 ---
 
-## 🚀 Quick Start: Install in 3 Easy Steps
+## Quick Start: Install in 3 Easy Steps
 
 Getting SecLegion OS running takes just a few minutes:
 
 ### 1. Get the ISO
-- **Download Pre-built ISO:** Download from [GitHub Releases](https://github.com/Ammar-Elkholy/SecLegion-OS/releases) or the community mirrors.
-- **OR Build from Source (1 Command):**
+- **🌐 Web Download:** Download the pre-built ISO from [GitHub Releases](https://github.com/Ammar-Elkholy/SecLegion-OS/releases) or the community mirrors.
+- **🤖 Automated Build (1 Command):**
   ```bash
   git clone https://github.com/Ammar-Elkholy/SecLegion-OS.git
   cd SecLegion-OS
@@ -157,7 +157,7 @@ Getting SecLegion OS running takes just a few minutes:
 2. Select **SecLegion OS** from the cyber GRUB menu.
 3. Launch the visual **Calamares Installer** from the desktop to install with a few clicks!
 
-> 📖 **Need USB-less direct install, dual-boot setup, or advanced options?**  
+> **Need USB-less direct install, dual-boot setup, or advanced options?**  
 > Check out the complete [Universal Installation Guide (INSTALL.md)](INSTALL.md).
 
 ---
@@ -240,7 +240,7 @@ Getting SecLegion OS running takes just a few minutes:
 
 ---
 
-## 📚 Core Documentation & Guides
+## Documentation & Guides
 
 Comprehensive documentation is provided across dedicated manuals:
 
@@ -255,7 +255,7 @@ Comprehensive documentation is provided across dedicated manuals:
 
 ---
 
-## 📄 License & Attribution
+## License & Attribution
 
 Copyright © 2026 **Ammar Elkholy**. All rights reserved.
 

@@ -4,7 +4,7 @@ This manifest establishes the decoupled asset pipeline for SecLegion OS. All sys
 
 ---
 
-## 🎨 Official SecLegion Brand Palette
+## Official SecLegion Brand Palette
 - **Glitch White:** `#FFFFFF`
 - **Matrix Green:** `#00FF88` (Primary active accent, highlight, success)
 - **Cyberpunk Cyan:** `#00F0FF` (Secondary accent, focus rings, headers)
@@ -13,7 +13,7 @@ This manifest establishes the decoupled asset pipeline for SecLegion OS. All sys
 
 ---
 
-## 📁 Asset Slots & Target Filenames
+## Asset Slots & Target Filenames
 
 | Target File Path | Target Dimensions | Format | Description / System Consumer | Status |
 |:---|:---:|:---:|:---|:---:|
@@ -25,7 +25,7 @@ This manifest establishes the decoupled asset pipeline for SecLegion OS. All sys
 
 ---
 
-## 🚀 Image Drop Instructions
+## Image Drop Instructions
 Drop your image files directly into the paths above using these exact filenames:
 1. `cp /path/to/your_wallpaper.png assets/wallpapers/seclegion-wallpaper.png`
 2. `cp /path/to/your_grub_splash.png assets/wallpapers/seclegion-grub.png`

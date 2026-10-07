@@ -1,4 +1,4 @@
-# 🚀 SecLegion OS — Quick & Simple Installation Guide
+# SecLegion OS — Installation Guide
 
 > **"We develop Mindsets — Securing Minds & Systems."**  
 > Author & Lead Architect: **Ammar Elkholy**  
@@ -8,12 +8,12 @@ Welcome to **SecLegion OS**! This guide is designed to be crystal clear so you c
 
 ---
 
-## ⚡ Quick Start: Install in 3 Easy Steps
+## Quick Start: 3-Step Installation
 
 ### Step 1: Get the ISO
 You have two easy choices:
-- **Option A (Download Pre-built):** Download `SecLegion-OS-*.iso` from [GitHub Releases](https://github.com/Ammar-Elkholy/SecLegion-OS/releases) or the community mirror.
-- **Option B (Build from Source with 1 Command):** If you are running Arch Linux:
+- **🌐 Web Download:** Download `SecLegion-OS-*.iso` from [GitHub Releases](https://github.com/Ammar-Elkholy/SecLegion-OS/releases) or the community mirror.
+- **🤖 Automated Build (1 Command):** If you are running Arch Linux:
   ```bash
   git clone https://github.com/Ammar-Elkholy/SecLegion-OS.git
   cd SecLegion-OS
@@ -47,7 +47,7 @@ Pick the tool that matches your computer:
 ### Step 3: Boot & Install (One-Click GUI)
 1. Plug the USB into your PC and reboot.
 2. Press your boot key (`F12`, `F11`, `F9`, or `Esc`) to open the Boot Menu and select your USB.
-   > ⚠️ **Important:** Make sure **Secure Boot is Disabled** in your BIOS/UEFI settings!
+   > **Important:** Secure Boot must be disabled in your BIOS/UEFI settings.
 3. Select **SecLegion OS** from the boot menu.
 4. Once the live desktop loads, open the **Calamares GUI Installer**:
    - Double-click **"Install SecLegion OS"** on the desktop, or press `Super + Space` and search for installer.
@@ -56,7 +56,7 @@ Pick the tool that matches your computer:
 
 ---
 
-## 🛠️ Alternative Method: Install Without a USB Drive
+## Alternative Method: Install Without a USB Drive
 
 Don't have a USB drive? If you already have Linux running and want to install SecLegion OS directly onto a secondary drive or partition:
 
@@ -72,7 +72,7 @@ Follow the interactive prompts to pick your target partition (`/dev/nvme0n1pX`),
 
 ---
 
-## 🎯 Post-Installation: Activate Full Security Suite (Tier 2)
+## 🤖 Automated Lab Bootstrap (Tier 2)
 
 Out of the box, SecLegion OS is lightweight and blazing fast (Tier 1). When you're ready to deploy heavy pentesting labs, open a terminal and run:
 
@@ -87,7 +87,7 @@ This automatically sets up:
 
 ---
 
-## 💡 Dual-Booting with Windows? Quick Tips
+## Dual-Booting with Windows: Quick Tips
 
 1. **Fix Clock Drift (Sync Linux & Windows Time):**
    ```bash
