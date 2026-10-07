@@ -30,7 +30,7 @@ You have two easy choices:
 
 ### Choice 1: Download from Google Drive (Ready-to-Use ISO)
 If you just want the pre-built ISO without compiling anything:
-* **Google Drive Download Link:** **[Download SecLegion OS 2026.10 ISO](https://drive.google.com/drive/folders/YOUR_FOLDER_ID_HERE)** *(File: `SecLegion-OS-2026.10.08-x86_64.iso`, Size: 3.7 GB)*
+* **Google Drive Download Link:** **[Download SecLegion OS 2026.10 ISO](https://drive.google.com/file/d/11f2Hd-zPPgYxbT-jacdcGyo21b_tjsVs/view?usp=sharing)** *(File: `SecLegion-OS-2026.10.08-x86_64.iso`, Size: 3.7 GB)*
 * **SHA256 Checksum:** `9d964eebfb1b40fae3322e2b201375aa65c3c4e666b344bfa45fd6f37a4b39d2`
 
 ---

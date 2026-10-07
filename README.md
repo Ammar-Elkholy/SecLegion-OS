@@ -135,7 +135,7 @@ Getting SecLegion OS running takes just a few minutes:
 
 ### 1. Get the ISO (Download or Build)
 * **🌐 Google Drive Download (Fastest — Ready to Use):**  
-  👉 **[Download SecLegion OS 2026.10 ISO (Google Drive)](https://drive.google.com/drive/folders/YOUR_FOLDER_ID_HERE)** *(File: `SecLegion-OS-2026.10.08-x86_64.iso`, Size: 3.7 GB)*  
+  👉 **[Download SecLegion OS 2026.10 ISO (Google Drive)](https://drive.google.com/file/d/11f2Hd-zPPgYxbT-jacdcGyo21b_tjsVs/view?usp=sharing)** *(File: `SecLegion-OS-2026.10.08-x86_64.iso`, Size: 3.7 GB)*  
   *(Also mirrored on [GitHub Releases](https://github.com/Ammar-Elkholy/SecLegion-OS/releases))*
 * **🤖 Build from Source (If you prefer compiling it yourself):**  
   If you are running Arch Linux and don't want to download the ISO, build it in 1 command:
