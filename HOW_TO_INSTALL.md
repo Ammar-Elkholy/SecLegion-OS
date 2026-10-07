@@ -4,19 +4,56 @@
 > Author & Lead Architect: **Ammar Elkholy**  
 > Official Repository: [https://github.com/Ammar-Elkholy/SecLegion-OS](https://github.com/Ammar-Elkholy/SecLegion-OS)
 
-This guide takes you through installing SecLegion OS step by step. Every command is ready to copy and paste, with only small values (like your USB drive letter) to adjust.
+---
+
+## Quick Navigation Index
+
+* **[Step 0: How to Get the ISO (Google Drive or Build from Source)](#step-0)**
+* **[Do You Need to Format Your Drive First?](#formatting-faq)**
+* **[Step 1: Flash the ISO to Your USB Drive](#step-1)**
+  * [Windows (Rufus)](#windows-rufus)
+  * [Windows (Ventoy)](#windows-ventoy)
+  * [Linux (Terminal dd)](#linux-dd)
+  * [Linux (Ventoy)](#linux-ventoy)
+  * [macOS (Terminal dd)](#macos-dd)
+* **[Step 2: How to Boot from Your USB Drive](#step-2)**
+* **[Step 3: Installing on the Live Desktop (Calamares GUI)](#step-3)**
+* **[Alternative Method: Install Without a USB Drive](#step-usb-less)**
+* **[Post-Installation: Helpful Next Steps](#step-post-install)**
 
 ---
 
-## What You Need Before Starting
+<a id="step-0"></a>
+## Step 0: How to Get the SecLegion OS ISO
 
-1. **A USB Flash Drive:** 8 GB minimum (16 GB or 32 GB works great too).
-   > **Backup Warning:** Writing the OS will erase everything on the USB drive. Move any personal files off it first.
-2. **The SecLegion OS ISO file:** Download `SecLegion-OS-*.iso` from the official repository or mirrors.
-3. **Your Computer:** Intel or AMD 64-bit computer (NVIDIA GeForce/RTX and AMD Radeon GPUs are fully supported).
+You have two easy choices:
+
+### Choice 1: Download from Google Drive (Ready-to-Use ISO)
+If you just want the pre-built ISO without compiling anything:
+* **Google Drive Download Link:** **[Download SecLegion OS 2026.10 ISO](https://drive.google.com/drive/folders/YOUR_FOLDER_ID_HERE)** *(File: `SecLegion-OS-2026.10.08-x86_64.iso`, Size: 3.7 GB)*
+* **SHA256 Checksum:** `9d964eebfb1b40fae3322e2b201375aa65c3c4e666b344bfa45fd6f37a4b39d2`
 
 ---
 
+### Choice 2: Build the ISO Yourself in 1 Command (If You Prefer Making It)
+If you don't want to download the 3.7GB file and you are running an Arch Linux system, you can compile the entire ISO locally:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/Ammar-Elkholy/SecLegion-OS.git
+cd SecLegion-OS
+
+# 2. Install the archiso toolchain
+sudo pacman -S --needed archiso
+
+# 3. Build the ISO in one command
+sudo bash build.sh
+```
+The finished ISO file will be created in `./output/SecLegion-OS-2026.10.08-x86_64.iso`.
+
+---
+
+<a id="formatting-faq"></a>
 ## Do You Need to Format Your Drive First?
 
 ### 1. Your USB Drive:
@@ -35,15 +72,16 @@ This guide takes you through installing SecLegion OS step by step. Every command
 
 ---
 
+<a id="step-1"></a>
 ## Step 1: Flash the ISO to Your USB Drive
 
-Choose your current operating system below:
+Select the platform you are currently using:
 
 ---
 
-### If You Are on Windows
+<a id="windows-rufus"></a>
+### Windows — Method A: Rufus (Step-by-Step Button Clicks)
 
-#### Method A: Rufus (Step-by-Step Button Clicks)
 1. Download [Rufus Portable](https://rufus.ie/) (no installation required).
 2. Plug in your USB drive (8 GB+) and open Rufus.
 3. Under **Device**, select your USB flash drive.
@@ -56,22 +94,33 @@ Choose your current operating system below:
 10. Wait 2 to 4 minutes until the progress bar reaches 100% and displays **READY** in green.
 11. Click the **CLOSE** button. Your USB is ready!
 
-#### Method B: Ventoy on Windows (Drag-and-Drop)
+> **Next Step:** Finished flashing on Windows?  
+> 👉 **[Click here to Jump directly to Step 2: How to Boot from Your USB Drive](#step-2)**
+
+---
+
+<a id="windows-ventoy"></a>
+### Windows — Method B: Ventoy (Drag-and-Drop)
+
 1. Download `ventoy-*-windows.zip` from [ventoy.net](https://www.ventoy.net/).
 2. Extract the zip file, open the folder, and run `Ventoy2Disk.exe`.
 3. Select your USB drive and click **Install** (confirm the warnings).
 4. Open Windows File Explorer, open your USB drive, and drag and drop `SecLegion-OS-*.iso` directly into the USB drive. Done!
 
+> **Next Step:** Finished copying the ISO?  
+> 👉 **[Click here to Jump directly to Step 2: How to Boot from Your USB Drive](#step-2)**
+
 ---
 
-### If You Are on Linux
+<a id="linux-dd"></a>
+### Linux — Method A: Terminal `dd`
 
 #### 1. Find Your USB Drive Name
 Plug in your USB drive, open a terminal, and run:
 ```bash
 lsblk
 ```
-Look at the output to find your USB drive size (e.g. `7.5G`, `14.9G`, `29.8G`).
+Look at the output to find your USB drive size (e.g. `7.5G`, `14.9G`, `29.8G`).  
 Note down the drive name (for example `sdb` or `sdc`).
 > **Important Safety Rule:** Never choose `sda` or `nvme0n1` if that is your main hard drive!
 
@@ -85,26 +134,36 @@ sudo umount /dev/sdb* 2>/dev/null || true
 ```bash
 sudo dd if=SecLegion-OS-2026.10.08-x86_64.iso of=/dev/sdb bs=4M status=progress oflag=sync
 ```
-*(Only change `sdb` to your USB drive letter. If you are not in the folder where the ISO was downloaded, put the full path like `if=~/Downloads/SecLegion-OS-*.iso`)*
+*(Only change `sdb` to your USB drive letter. If the ISO is in your Downloads folder, use `if=~/Downloads/SecLegion-OS-*.iso`)*
 
 Wait until `dd` finishes and returns to your terminal prompt. Your USB is ready!
 
-#### Alternative: Ventoy on Linux
-If you prefer Ventoy:
-```bash
-# On Arch Linux:
-sudo pacman -S --needed ventoy
-
-# Format USB with Ventoy (only change sdb to your USB letter):
-sudo ventoy -i /dev/sdb
-
-# Mount the USB and copy the ISO file:
-cp SecLegion-OS-*.iso /run/media/$USER/Ventoy/
-```
+> **Next Step:** Finished flashing on Linux?  
+> 👉 **[Click here to Jump directly to Step 2: How to Boot from Your USB Drive](#step-2)**
 
 ---
 
-### If You Are on macOS
+<a id="linux-ventoy"></a>
+### Linux — Method B: Ventoy
+
+```bash
+# 1. On Arch Linux:
+sudo pacman -S --needed ventoy
+
+# 2. Format USB with Ventoy (only change sdb to your USB letter):
+sudo ventoy -i /dev/sdb
+
+# 3. Mount the USB and copy the ISO file:
+cp SecLegion-OS-*.iso /run/media/$USER/Ventoy/
+```
+
+> **Next Step:** Finished copying the ISO?  
+> 👉 **[Click here to Jump directly to Step 2: How to Boot from Your USB Drive](#step-2)**
+
+---
+
+<a id="macos-dd"></a>
+### macOS — Terminal `dd`
 
 1. Open **Terminal** (press `Command + Space`, type `Terminal`, and press Enter).
 2. List your connected disks:
@@ -124,8 +183,12 @@ cp SecLegion-OS-*.iso /run/media/$USER/Ventoy/
    *(Notice `rdisk2` with an 'r' — this uses the raw disk interface and is 10 times faster than disk2. Only change the number `2` to your disk number)*
 5. Wait for the terminal prompt to return. Your USB is ready!
 
+> **Next Step:** Finished flashing on macOS?  
+> 👉 **[Click here to Jump directly to Step 2: How to Boot from Your USB Drive](#step-2)**
+
 ---
 
+<a id="step-2"></a>
 ## Step 2: How to Boot from Your USB Drive
 
 1. Turn off your computer completely.
@@ -153,8 +216,12 @@ If your computer bypasses the USB or gives a security error:
 3. Go to the **Configuration / Storage** tab -> Ensure SATA Controller is set to **AHCI** (disable Intel RST/RAID).
 4. Press `F10` to save changes and restart.
 
+> **Next Step:** Live desktop loaded?  
+> 👉 **[Click here to Jump directly to Step 3: Installing on the Live Desktop](#step-3)**
+
 ---
 
+<a id="step-3"></a>
 ## Step 3: Installing on the Live Desktop (Calamares GUI)
 
 Once the live desktop appears:
@@ -182,10 +249,12 @@ Once the live desktop appears:
 10. Check **Restart now** -> Click **Done**.
 11. Unplug the USB drive when the screen prompts you to remove installation media and press **Enter**.
 
-Welcome to SecLegion OS!
+> **Next Step:** Booted into your new SecLegion OS?  
+> 👉 **[Click here to Jump directly to Post-Installation: Helpful Next Steps](#step-post-install)**
 
 ---
 
+<a id="step-usb-less"></a>
 ## Alternative Method: Install Without a USB Drive (`install-from-existing.sh`)
 
 If you are already running an existing Linux distribution and have a spare drive or partition, you can deploy SecLegion OS directly to that partition without needing any USB drive:
@@ -207,8 +276,12 @@ If you are already running an existing Linux distribution and have a spare drive
 4. The script formats the target partition, unpacks the live system, sets up `/etc/fstab`, and registers the **SecLegion** boot entry in your UEFI firmware.
 5. Reboot your machine and select **SecLegion** from your boot menu.
 
+> **Next Step:** Finished USB-less install?  
+> 👉 **[Click here to Jump directly to Post-Installation: Helpful Next Steps](#step-post-install)**
+
 ---
 
+<a id="step-post-install"></a>
 ## Post-Installation: Helpful Next Steps
 
 ### 1. Automated Security Lab Bootstrap (Tier 2)
