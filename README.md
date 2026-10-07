@@ -158,7 +158,7 @@ Getting SecLegion OS running takes just a few minutes:
 3. Launch the visual **Calamares Installer** from the desktop to install with a few clicks!
 
 > **Need USB-less direct install, dual-boot setup, or advanced options?**  
-> Check out the complete [Universal Installation Guide (INSTALL.md)](INSTALL.md).
+> Check out the complete [Step-by-Step Installation Guide (HOW_TO_INSTALL.md)](HOW_TO_INSTALL.md).
 
 ---
 
@@ -244,7 +244,7 @@ Getting SecLegion OS running takes just a few minutes:
 
 Comprehensive documentation is provided across dedicated manuals:
 
-1. **[Universal Installation Guide (INSTALL.md)](INSTALL.md)**:
+1. **[Step-by-Step Installation Guide (HOW_TO_INSTALL.md)](HOW_TO_INSTALL.md)**:
    Covers both **Method A (Standard USB Media via Calamares)** and **Method B (USB-Less Local Partition Deployment via `install-from-existing.sh`)**, BIOS/UEFI firmware settings, multi-GPU kernel KMS flags, Windows dual-boot probing, and post-install Tier-2 lab bootstrapping.
 
 2. **[Keyboard Shortcuts Reference (SHORTCUTS.md)](SHORTCUTS.md)**:
