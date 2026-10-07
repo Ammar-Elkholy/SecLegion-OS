@@ -11,9 +11,27 @@ This guide takes you through installing SecLegion OS step by step. Every command
 ## What You Need Before Starting
 
 1. **A USB Flash Drive:** 8 GB minimum (16 GB or 32 GB works great too).
-   > **Warning:** Backup any files on this USB drive before proceeding. Writing the OS will erase the USB drive.
+   > **Backup Warning:** Writing the OS will erase everything on the USB drive. Move any personal files off it first.
 2. **The SecLegion OS ISO file:** Download `SecLegion-OS-*.iso` from the official repository or mirrors.
 3. **Your Computer:** Intel or AMD 64-bit computer (NVIDIA GeForce/RTX and AMD Radeon GPUs are fully supported).
+
+---
+
+## Do You Need to Format Your Drive First?
+
+### 1. Your USB Drive:
+* **Short Answer: No.**
+* When you write the ISO using Rufus, Ventoy, or `dd`, the tool **automatically wipes and reformats the USB drive** sector-by-sector. You do not need to format it beforehand.
+* **If your USB has errors or old stubborn partitions and you want to clean it first:**
+  * **On Windows:** Open *File Explorer* -> Right-click your USB drive -> Select **Format...** -> File System: **FAT32** -> Click **Start**.
+  * **On Linux:** Run `sudo wipefs -a /dev/sdb` and `sudo mkfs.vfat -F 32 -I /dev/sdb` *(change `sdb` to your USB letter)*.
+  * **On macOS:** Run `diskutil eraseDisk FAT32 SECLEGION /dev/disk2` *(change `disk2` to your disk number)*.
+
+### 2. Your Computer's Internal SSD / Hard Drive:
+* **Short Answer: No pre-formatting needed.**
+* The visual installer (**Calamares**) handles drive formatting for you automatically:
+  * If you choose **"Erase disk"**, it automatically formats the entire drive with the correct Linux partitions (`ext4`/`btrfs` and EFI).
+  * If you choose **"Install alongside"** (Dual-boot with Windows), it safely shrinks your Windows partition and formats the newly created space automatically.
 
 ---
 
@@ -131,8 +149,8 @@ cp SecLegion-OS-*.iso /run/media/$USER/Ventoy/
 ### If Your USB Does Not Boot (BIOS Settings Check)
 If your computer bypasses the USB or gives a security error:
 1. Restart your PC and tap your **BIOS Setup Key** (`F2` or `Del`).
-2. Go to the **Security** tab $\rightarrow$ Set **Secure Boot** to **Disabled**.
-3. Go to the **Configuration / Storage** tab $\rightarrow$ Ensure SATA Controller is set to **AHCI** (disable Intel RST/RAID).
+2. Go to the **Security** tab -> Set **Secure Boot** to **Disabled**.
+3. Go to the **Configuration / Storage** tab -> Ensure SATA Controller is set to **AHCI** (disable Intel RST/RAID).
 4. Press `F10` to save changes and restart.
 
 ---
@@ -145,9 +163,9 @@ Once the live desktop appears:
 2. Launch the installer:
    * Double-click **"Install SecLegion OS"** on the desktop, or
    * Press `Super + Space` (Windows key + Space) and select **Install SecLegion OS**.
-3. **Welcome Screen:** Select your language $\rightarrow$ Click **Next**.
-4. **Location Screen:** Click on your country or region on the map $\rightarrow$ Click **Next**.
-5. **Keyboard Screen:** Select your keyboard layout (e.g. English US) $\rightarrow$ Click **Next**.
+3. **Welcome Screen:** Select your language -> Click **Next**.
+4. **Location Screen:** Click on your country or region on the map -> Click **Next**.
+5. **Keyboard Screen:** Select your keyboard layout (e.g. English US) -> Click **Next**.
 6. **Partitions Screen:** Choose how you want to install:
    * **Erase disk:** Completely wipes the drive and installs SecLegion OS as your sole operating system.
    * **Install alongside:** Keeps your existing Windows or Linux installation and automatically splits free space for dual-booting.
@@ -159,9 +177,9 @@ Once the live desktop appears:
    * Enter your password twice.
    * *(Optional)* Check "Log in automatically" if you want to skip the login screen.
    * Click **Next**.
-8. **Summary Screen:** Review your settings $\rightarrow$ Click **Install** $\rightarrow$ Click **Install now** on the confirmation box.
+8. **Summary Screen:** Review your settings -> Click **Install** -> Click **Install now** on the confirmation box.
 9. Wait for the progress bar to complete (takes 3 to 5 minutes).
-10. Check **Restart now** $\rightarrow$ Click **Done**.
+10. Check **Restart now** -> Click **Done**.
 11. Unplug the USB drive when the screen prompts you to remove installation media and press **Enter**.
 
 Welcome to SecLegion OS!
