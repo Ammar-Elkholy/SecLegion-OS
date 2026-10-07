@@ -1,0 +1,59 @@
+# ==============================================================================
+# SecLegion OS Official GRUB Cyber Theme
+# Engineered by Ammar Elkholy
+# Palette: Matrix Green (#00FF88), Cyberpunk Cyan (#00F0FF), Matrix Obsidian (#050F0E)
+# ==============================================================================
+
+title-text: "SecLegion OS — Advanced Offensive Security Workstation"
+title-font: "Unifont Regular 16"
+title-color: "#00F0FF"
+desktop-image: "seclegion-grub.png"
+desktop-color: "#050F0E"
+message-font: "Unifont Regular 14"
+message-color: "#00FF88"
+message-bg-color: "#050F0E"
+terminal-font: "Unifont Regular 14"
+
+# Boot Menu Box
++ boot_menu {
+    left = 22%
+    top = 46%
+    width = 56%
+    height = 42%
+    item_font = "Unifont Regular 14"
+    item_color = "#FFFFFF"
+    selected_item_color = "#00FF88"
+    icon_width = 24
+    icon_height = 24
+    item_height = 36
+    item_padding = 8
+    item_spacing = 6
+    selected_item_pixmap_style = "select_*.png"
+}
+
+# Progress Bar
++ progress_bar {
+    id = "__timeout__"
+    left = 22%
+    top = 90%
+    width = 56%
+    height = 12
+    show_text = true
+    text_color = "#00F0FF"
+    font = "Unifont Regular 12"
+    text = "Booting in %d seconds..."
+    bar_style = "progress_*.png"
+    highlight_style = "highlight_*.png"
+}
+
+# Footer Info
++ label {
+    left = 22%
+    top = 94%
+    width = 56%
+    height = 20
+    text = "SecLegion OS | Engineered by Ammar Elkholy | Universal x86_64"
+    font = "Unifont Regular 12"
+    color = "#00F0FF"
+    align = "center"
+}

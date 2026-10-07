@@ -1,0 +1,11 @@
+NAME="SecLegion OS"
+PRETTY_NAME="SecLegion OS 2026.10 (Arch Linux Base)"
+ID=seclegion
+ID_LIKE=arch
+BUILD_ID=2026.10
+ANSI_COLOR="1;32"
+HOME_URL="https://github.com/aelkholy/SecLegion-OS"
+DOCUMENTATION_URL="https://github.com/aelkholy/SecLegion-OS"
+SUPPORT_URL="https://github.com/aelkholy/SecLegion-OS/issues"
+BUG_REPORT_URL="https://github.com/aelkholy/SecLegion-OS/issues"
+LOGO=seclegion
