@@ -58,3 +58,16 @@ authorized_keys*
 !packages.x86_64
 !pacman.conf
 !profiledef.sh
+
+# Internal Development Scripts & Tracking Logs
+seclegion_build_state.md
+seclegion_diagnostics_and_fixes.md
+EDGE_CASES.md
+INSTALL_GUIDE.md
+seclegion-bootstrap-tier2.sh
+browse_logos.sh
+clean_host_system.sh
+preview_ascii_logos.sh
+sanitize_system.sh
+show_all_30.sh
+build.log

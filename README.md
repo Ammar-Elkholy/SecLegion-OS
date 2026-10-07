@@ -129,137 +129,36 @@ AE_ARCH/
 
 ---
 
-## 🚀 Distribution Pathways
+## 🚀 Quick Start: Install in 3 Easy Steps
 
-SecLegion OS supports two distribution models:
+Getting SecLegion OS running takes just a few minutes:
 
-1. **Direct Download (GitHub Releases / Mirrors):**
-   - Download the pre-built ISO and checksum directly from [GitHub Releases](https://github.com/aelkholy/SecLegion-OS/releases).
-   - Verify checksum: `sha256sum -c SecLegion-OS-*.iso.sha256`.
+### 1. Get the ISO
+- **Download Pre-built ISO:** Download from [GitHub Releases](https://github.com/Ammar-Elkholy/SecLegion-OS/releases) or the community mirrors.
+- **OR Build from Source (1 Command):**
+  ```bash
+  git clone https://github.com/Ammar-Elkholy/SecLegion-OS.git
+  cd SecLegion-OS
+  sudo pacman -S --needed archiso
+  sudo bash build.sh
+  ```
+  *(The 3.7GB release ISO compiles cleanly into `./output/`)*
 
-2. **Building from Source (Fully Reproducible):**
-   - Clone the repository: `git clone https://github.com/aelkholy/SecLegion-OS.git && cd SecLegion-OS`
-   - Install archiso: `sudo pacman -S --needed archiso`
-   - Build ISO: `sudo bash build.sh`
+### 2. Put it on a USB Drive (8GB+)
+- **Easiest Everywhere (Ventoy — Recommended):** Install [Ventoy](https://www.ventoy.net/) on your USB and drag-and-drop the `.iso` file onto it.
+- **Windows (Rufus):** Flash with [Rufus](https://rufus.ie/) (GPT / UEFI / DD Image mode).
+- **Linux (dd):**
+  ```bash
+  sudo dd if=output/SecLegion-OS-*.iso of=/dev/sdX bs=4M status=progress oflag=sync
+  ```
 
-## Building the ISO
+### 3. Boot & Install (One-Click GUI)
+1. Boot from your USB (ensure **Secure Boot is Disabled** in BIOS).
+2. Select **SecLegion OS** from the cyber GRUB menu.
+3. Launch the visual **Calamares Installer** from the desktop to install with a few clicks!
 
-You need `archiso` installed on a running Arch Linux host:
-
-```bash
-sudo pacman -S --needed archiso
-```
-
-Then just run the build script:
-
-```bash
-sudo bash build.sh
-```
-
-The finished ISO lands in `./output/` alongside a `sha256sum.txt` for verification.
-
-> **About size:** The ISO is roughly **3–4 GB**. You only need an **8 GB USB drive** — that is the minimum and it is enough. Anything larger works fine too, and if you go with 16 GB or more you can throw multiple ISOs on a Ventoy drive and boot whichever you need.
-
----
-
----
-
-## ⚡ USB-Less Direct Partition Installation (`install-from-existing.sh`)
-
-If you don't have an 8GB USB drive on hand, SecLegion OS can be installed directly from an existing Linux distribution to a target partition using our automated installer:
-
-```bash
-# 1. Inspect existing drives and target partition
-lsblk -f
-
-# 2. Run the offline installer as root
-sudo bash install-from-existing.sh
-```
-
-**What it does automatically:**
-- Mounts and formats target root partition (`ext4`/`btrfs`) and EFI system partition (`vfat`)
-- Extracts the compressed live system image (`airootfs.sfs`) directly to disk
-- Generates accurate partition mappings in `/etc/fstab` (`genfstab -U`)
-- Preserves all desktop configurations, themes, fastfetch banners, and wallpapers
-- Installs GRUB bootloader with automated Windows Dual-Boot detection (`os-prober`)
-- Synchronizes the hardware clock with Windows (`timedatectl set-local-rtc 1`)
-
-## Flashing to USB
-
-Pick the method that matches your platform:
-
----
-
-### Linux — dd
-
-```bash
-# See your drives
-lsblk
-
-# Write the ISO (replace sdX with your drive, e.g. sdb — NOT the partition)
-sudo dd if=output/SecLegion-OS-*.iso of=/dev/sdX bs=4M status=progress oflag=sync && sync
-```
-
-> Double-check the drive letter before running. `dd` will silently overwrite whatever is there.
-
----
-
-### Linux — Ventoy *(recommended if you use multiple ISOs)*
-
-```bash
-# Install Ventoy onto the USB once
-sudo bash ventoy -i /dev/sdX
-
-# Then just drop the ISO onto the drive
-cp output/SecLegion-OS-*.iso /run/media/$USER/Ventoy/
-```
-
----
-
-### macOS — dd
-
-```bash
-# List disks
-diskutil list
-
-# Unmount before writing (replace diskN, e.g. disk2)
-diskutil unmountDisk /dev/diskN
-
-# Flash — use rdiskN (raw device), it's ~10× faster than diskN
-sudo dd if=output/SecLegion-OS-*.iso of=/dev/rdiskN bs=4m
-```
-
----
-
-### macOS — Balena Etcher *(easier)*
-
-1. Download [Balena Etcher](https://etcher.balena.io/) — free and open source
-2. Flash from file → pick the `.iso`
-3. Select your USB → Flash
-
----
-
-### Windows — Rufus *(recommended)*
-
-1. Download [Rufus](https://rufus.ie/) — portable, no install needed
-2. Select your USB under **Device**
-3. Click **SELECT** and choose the `.iso`
-4. Set **Partition scheme** to GPT and **Target system** to UEFI (non-CSM)
-5. Hit **START** — when asked, choose **DD Image mode**
-6. Wait for "READY"
-
----
-
-### Windows — Balena Etcher *(simpler)*
-
-1. Download [Balena Etcher](https://etcher.balena.io/)
-2. Flash from file → select `.iso` → select USB → Flash
-
----
-
-### All Platforms — Ventoy *(best for power users)*
-
-[Ventoy](https://www.ventoy.net/) runs on Linux, macOS, and Windows. Install it once, then just copy ISO files onto the drive — no re-flashing needed. Boot from USB and pick any ISO from a menu.
+> 📖 **Need USB-less direct install, dual-boot setup, or advanced options?**  
+> Check out the complete [Universal Installation Guide (INSTALL.md)](INSTALL.md).
 
 ---
 
