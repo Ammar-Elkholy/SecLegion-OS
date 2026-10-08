@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Installation_guide — SecLegion OS Live Environment Setup Assistant
+# Installation_guide — SecLegion OS Setup Assistant
 # SecLegion Edition | Ammar Elkholy
 # ==============================================================================
 
@@ -32,48 +32,47 @@ else
 fi
 
 echo -e "${CYAN}--------------------------------------------------------------------${RESET}"
-echo -e " ${WHITE}1)${RESET} Launch Calamares Graphical Installer ${GREEN}[Recommended]${RESET}"
-echo -e " ${WHITE}2)${RESET} Connect to Wi-Fi (${YELLOW}nmtui${RESET})"
-echo -e " ${WHITE}3)${RESET} Rank Fast Pacman Mirrors (${YELLOW}choose-mirror${RESET})"
-echo -e " ${WHITE}4)${RESET} Test Audio System (${YELLOW}livecd-sound${RESET})"
-echo -e " ${WHITE}5)${RESET} View Hardware & GPU Driver Info"
-echo -e " ${WHITE}6)${RESET} Read Offline Installation Guide (${CYAN}less INSTALL_GUIDE.md${RESET})"
+echo -e " ${WHITE}1)${RESET} Launch Calamares Graphical Installer ${GREEN}[Recommended GUI]${RESET}"
+echo -e " ${WHITE}2)${RESET} Launch Guided CLI Installer (${CYAN}archinstall${RESET})"
+echo -e " ${WHITE}3)${RESET} Connect to Wi-Fi (${YELLOW}nmtui${RESET})"
+echo -e " ${WHITE}4)${RESET} Rank Fast Pacman Mirrors (${YELLOW}choose-mirror${RESET})"
+echo -e " ${WHITE}5)${RESET} Test Audio System (${YELLOW}livecd-sound${RESET})"
+echo -e " ${WHITE}6)${RESET} View Hardware & GPU Driver Info"
+echo -e " ${WHITE}7)${RESET} USB-less Disk-to-Disk Installer (${CYAN}install-from-existing.sh${RESET})"
 echo -e " ${WHITE}0)${RESET} Exit to Shell"
 echo -e "${CYAN}--------------------------------------------------------------------${RESET}"
-read -rp " Select an option [1-6, 0]: " choice
+read -rp " Select an option [1-7, 0]: " choice
 
 case "$choice" in
     1)
         echo -e "${GREEN}Starting Calamares GUI Installer...${RESET}"
-        if [[ -n "$WAYLAND_DISPLAY" || -n "$DISPLAY" ]]; then
-            sudo -E calamares
+        if command -v calamares &>/dev/null; then
+            sudo -E calamares &
         else
-            echo -e "${YELLOW}Notice: No graphical display active. Start Hyprland or GNOME first, or use terminal.${RESET}"
+            echo -e "${YELLOW}Calamares not found. Launching guided terminal installer (archinstall)...${RESET}"
+            archinstall
         fi
         ;;
     2)
-        nmtui
+        archinstall
         ;;
     3)
-        choose-mirror
+        nmtui
         ;;
     4)
-        livecd-sound
+        choose-mirror
         ;;
     5)
+        livecd-sound
+        ;;
+    6)
         echo -e "${CYAN}=== Graphics & Hardware Detection ===${RESET}"
         lspci -k | grep -A 2 -E "(VGA|3D)" || true
         echo -e "\nPress Enter to return..."; read -r
         exec "$0"
         ;;
-    6)
-        if [[ -f /usr/share/doc/ae-arch/INSTALL_GUIDE.md ]]; then
-            less /usr/share/doc/ae-arch/INSTALL_GUIDE.md
-        elif [[ -f /root/INSTALL_GUIDE.md ]]; then
-            less /root/INSTALL_GUIDE.md
-        else
-            echo -e "${YELLOW}Reading setup documentation...${RESET}"
-        fi
+    7)
+        install-from-existing.sh
         ;;
     0)
         echo -e "${BLUE}Exiting to shell. Happy hacking!${RESET}"

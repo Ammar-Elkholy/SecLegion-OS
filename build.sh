@@ -24,7 +24,7 @@ log_error() { echo -e "${RED}[ERROR]${RESET} $1"; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ $EUID -eq 0 ]]; then
-    WORK_DIR="/var/tmp/ae-arch-work"
+    WORK_DIR="/var/tmp/seclegion-build-work"
 else
     WORK_DIR="/var/tmp/seclegion-build-work"
 fi
@@ -51,11 +51,7 @@ mkdir -p "$OUT_DIR"
 if [[ -d "$WORK_DIR" ]]; then
     log_info "Cleaning work directory: $WORK_DIR"
     chmod -R u+rwx "$WORK_DIR" 2>/dev/null || true
-    rm -rf "$WORK_DIR" || {
-        sleep 1
-        chmod -R 777 "$WORK_DIR" 2>/dev/null || true
-        rm -rf "$WORK_DIR"
-    }
+    unshare --map-auto --map-root-user rm -rf "$WORK_DIR" 2>/dev/null || rm -rf "$WORK_DIR" || true
 fi
 mkdir -p "$WORK_DIR"
 
@@ -82,6 +78,11 @@ chmod 750 "$SCRIPT_DIR/airootfs/root" 2>/dev/null || true
 chmod 755 "$SCRIPT_DIR/airootfs/usr/local/bin"/* 2>/dev/null || true
 chmod -R 755 "$SCRIPT_DIR/airootfs/usr/share/applications" 2>/dev/null || true
 chmod 400 "$SCRIPT_DIR/airootfs/etc/shadow" "$SCRIPT_DIR/airootfs/etc/gshadow" 2>/dev/null || true
+chmod 440 "$SCRIPT_DIR/airootfs/etc/sudoers.d"/* 2>/dev/null || true
+find "$SCRIPT_DIR/airootfs/home/seclegion" -type d -exec chmod 755 {} + 2>/dev/null || true
+find "$SCRIPT_DIR/airootfs/home/seclegion" -type f -exec chmod 644 {} + 2>/dev/null || true
+find "$SCRIPT_DIR/airootfs/home/seclegion" -name "*.sh" -exec chmod 755 {} + 2>/dev/null || true
+find "$SCRIPT_DIR/airootfs/home/seclegion" -name "*.desktop" -exec chmod 755 {} + 2>/dev/null || true
 
 # 5. Run mkarchiso
 log_info "Executing mkarchiso build..."

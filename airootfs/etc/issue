@@ -1,8 +1,8 @@
-\e[1;36m================================================================================
-\e[1;32m       SecLegion OS 2026.10 — Universal Offensive Security Edition
-\e[1;36m                 Engineered by Ammar Elkholy (\l)
-================================================================================\e[0m
-  * Type \e[1;32mInstallation_guide\e[0m for installation helper & menu
-  * Type \e[1;36msudo -E calamares\e[0m  to launch graphical installer
-  * Type \e[1;33mnmtui\e[0m              to connect to Wi-Fi
+[1;36m================================================================================[0m
+[1;32m       SecLegion OS 2026.10 — Universal Offensive Security Edition[0m
+[1;36m                 Engineered by Ammar Elkholy (\l)[0m
+[1;36m================================================================================[0m
+  * Type [1;32minstall[0m or [1;32mInstallation_guide[0m for setup helper
+  * Launch [1;36mCalamares[0m from the Desktop to install graphically
+  * Type [1;33mnmtui[0m to configure Wi-Fi connections
 

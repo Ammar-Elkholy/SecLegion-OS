@@ -1,0 +1,10 @@
+root:x:0:root
+wheel:x:998:seclegion
+audio:x:995:seclegion
+video:x:986:seclegion
+storage:x:988:seclegion
+optical:x:990:seclegion
+input:x:984:seclegion
+network:x:992:seclegion
+power:x:982:seclegion
+seclegion:x:1000:

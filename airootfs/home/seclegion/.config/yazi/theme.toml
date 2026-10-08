@@ -1,0 +1,37 @@
+[manager]
+cwd = { fg = "#00F0FF", bold = true }
+hovered = { fg = "#050F0E", bg = "#00FF88", bold = true }
+preview_hovered = { underline = true }
+find_keyword = { fg = "#00FF88", italic = true, bold = true }
+find_position = { fg = "#00F0FF" }
+marker_selected = { fg = "#00FF88", bg = "#00FF88" }
+marker_copied = { fg = "#00F0FF", bg = "#00F0FF" }
+marker_cut = { fg = "#FF4444", bg = "#FF4444" }
+tab_active = { fg = "#050F0E", bg = "#00FF88" }
+tab_inactive = { fg = "#FFFFFF", bg = "#0B1E1C" }
+border_symbol = "│"
+border_style = { fg = "#0B1E1C" }
+
+[status]
+separator_open = ""
+separator_close = ""
+separator_style = { fg = "#0B1E1C", bg = "#0B1E1C" }
+mode_normal = { fg = "#050F0E", bg = "#00FF88", bold = true }
+mode_select = { fg = "#050F0E", bg = "#00F0FF", bold = true }
+mode_unset = { fg = "#FFFFFF", bg = "#0B1E1C", bold = true }
+progress_label = { fg = "#FFFFFF", bold = true }
+progress_normal = { fg = "#00FF88", bg = "#0B1E1C" }
+progress_error = { fg = "#FF4444", bg = "#0B1E1C" }
+
+[filetype]
+rules = [
+    { mime = "image/*", fg = "#00F0FF" },
+    { mime = "video/*", fg = "#00FF88" },
+    { mime = "audio/*", fg = "#00F0FF" },
+    { mime = "application/zip", fg = "#FFFFFF" },
+    { mime = "application/x-tar", fg = "#FFFFFF" },
+    { url = "*.sh", fg = "#00FF88", bold = true },
+    { url = "*.py", fg = "#00F0FF" },
+    { url = "*.lua", fg = "#00F0FF" },
+    { url = "*", fg = "#FFFFFF" }
+]

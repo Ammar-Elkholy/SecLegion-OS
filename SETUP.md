@@ -121,7 +121,7 @@ Inside Hyprland, the layout is toggled live with `Super + Space`. To change the 
     ```bash
     yay -S mpvpaper
     ```
-  - If `mpvpaper` is not installed, AE_ARCH automatically optimizes the video loop using `ffmpeg` and plays it via the `awww` engine.
+  - If `mpvpaper` is not installed, SecLegion OS automatically optimizes the video loop using `ffmpeg` and plays it via the `awww` engine.
 
 Your active wallpaper choice (static or live) is saved to `~/.cache/current_wallpaper` and restored on login automatically via `restore-wallpaper.sh`.
 

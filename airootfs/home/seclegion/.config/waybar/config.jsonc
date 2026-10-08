@@ -1,0 +1,97 @@
+{
+  "layer": "top",
+  "position": "top",
+  "height": 36,
+  "exclusive": true,
+  "passthrough": false,
+  "spacing": 4,
+
+  "modules-left": ["custom/launcher", "hyprland/workspaces"],
+  "modules-center": ["custom/media"],
+  "modules-right": ["hyprland/language", "network", "pulseaudio", "backlight", "battery", "clock"],
+
+  
+  "custom/launcher": {
+    "format": " ",
+    "tooltip-format": "SecLegion OS Launcher",
+    "on-click": "rofi -show drun"
+  },
+
+  "hyprland/workspaces": {
+    "disable-scroll": false,
+    "all-outputs": true,
+    "format": "{name}",
+    "on-click": "activate"
+  },
+
+  "hyprland/language": {
+    "format": "  {}",
+    "format-en": "US",
+    "format-ar": "AR",
+    "on-click": "~/.config/hypr/scripts/toggle-layout.sh"
+  },
+
+  "clock": {
+    "on-click": "~/.config/hypr/scripts/toggle-clock-format.sh",
+    "format": "<span foreground='#ffffff'>  </span>{:%a %d %H:%M}",
+    "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
+  },
+
+  "battery": {
+    "states": {
+      "warning": 30,
+      "critical": 15
+    },
+    "format": "<span size='13000' foreground='#ffffff'>{icon} </span>{capacity}%",
+    "format-warning": "<span size='13000' foreground='#ffcc66'>{icon} </span>{capacity}%",
+    "format-critical": "<span size='13000' foreground='#ff6666'>{icon} </span>{capacity}%",
+    "format-charging": "<span size='13000' foreground='#ffffff'> </span>{capacity}%",
+    "format-plugged": "<span size='13000' foreground='#ffffff'> </span>{capacity}%",
+    "format-alt": "<span size='13000' foreground='#ffffff'>{icon} </span>{time}",
+    "format-full": "<span size='13000' foreground='#ffffff'>  </span>{capacity}%",
+    "format-icons": [" ", " ", " ", " ", " "],
+    "tooltip-format": "{time}"
+  },
+
+  "network": {
+    "format-wifi": "<span size='13000' foreground='#ffffff'>  </span>{essid}",
+    "format-ethernet": "<span size='13000' foreground='#ffffff'>󰤭  </span>Wired",
+    "format-linked": "{ifname} (No IP)  ",
+    "format-disconnected": "<span size='13000' foreground='#ffffff'>  </span>Offline",
+    "tooltip-format-wifi": "Signal Strength: {signalStrength}%",
+    "on-click": "kitty -e nmtui"
+  },
+
+  "pulseaudio": {
+    "format": "<span size='13000' foreground='#ffffff'>{icon} </span>{volume}%",
+    "format-muted": "<span size='13000' foreground='#ff6666'> </span>Muted",
+    "format-icons": {
+      "headphone": "",
+      "hands-free": "",
+      "headset": "",
+      "phone": "",
+      "portable": "",
+      "car": "",
+      "default": ["", "", ""]
+    },
+    "scroll-step": 5,
+    "on-click": "pavucontrol",
+    "on-scroll-up": "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+",
+    "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
+    "on-click-middle": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+  },
+
+  "backlight": {
+    "format": "<span size='13000' foreground='#ffffff'>  </span>{percent}%",
+    "tooltip-format": "Brightness: {percent}%"
+  },
+
+  "custom/media": {
+    "format": "{}",
+    "exec": "playerctl metadata --format '♫ {{ artist }} - {{ title }}' 2>/dev/null",
+    "on-click": "playerctl play-pause 2>/dev/null",
+    "on-scroll-up": "playerctl next 2>/dev/null",
+    "on-scroll-down": "playerctl previous 2>/dev/null",
+    "interval": 2
+  }
+}

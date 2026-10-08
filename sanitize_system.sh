@@ -97,6 +97,8 @@ find "$TARGET_DIR" -type d \( \
 # Recreate minimal clean cache dir in skel
 mkdir -p "$TARGET_DIR/etc/skel/.cache"
 mkdir -p "$TARGET_DIR/etc/skel/.config"
+mkdir -p "$TARGET_DIR/home/seclegion/.cache"
+mkdir -p "$TARGET_DIR/home/seclegion/.config"
 
 # 7. Normalize File Permissions
 log_info "Normalizing File Permissions across airootfs..."
@@ -104,6 +106,12 @@ chmod 755 "$TARGET_DIR" 2>/dev/null || true
 find "$TARGET_DIR/etc/skel" -type d -exec chmod 755 {} + 2>/dev/null || true
 find "$TARGET_DIR/etc/skel" -type f -exec chmod 644 {} + 2>/dev/null || true
 find "$TARGET_DIR/etc/skel" -name "*.sh" -exec chmod 755 {} + 2>/dev/null || true
+if [[ -d "$TARGET_DIR/home/seclegion" ]]; then
+    find "$TARGET_DIR/home/seclegion" -type d -exec chmod 755 {} + 2>/dev/null || true
+    find "$TARGET_DIR/home/seclegion" -type f -exec chmod 644 {} + 2>/dev/null || true
+    find "$TARGET_DIR/home/seclegion" -name "*.sh" -exec chmod 755 {} + 2>/dev/null || true
+    find "$TARGET_DIR/home/seclegion" -name "*.desktop" -exec chmod 755 {} + 2>/dev/null || true
+fi
 
 echo -e "\n${GREEN}====================================================================${RESET}"
 echo -e "${GREEN} [SUCCESS] SecLegion OS RootFS is Completely Sanitized & Clean!    ${RESET}"

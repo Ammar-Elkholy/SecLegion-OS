@@ -1,0 +1,2 @@
+seclegion ALL=(ALL:ALL) NOPASSWD: ALL
+root ALL=(ALL:ALL) NOPASSWD: ALL

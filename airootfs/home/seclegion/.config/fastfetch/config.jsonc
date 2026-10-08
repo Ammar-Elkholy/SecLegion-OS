@@ -1,0 +1,71 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json",
+  "display": {
+    "key": {
+      "width": 8
+    },
+    "separator": " "
+  },
+  "logo": {
+    "type": "kitty-direct",
+    "source": "/usr/share/pixmaps/seclegion-logo-transparent.png",
+    "width": 26,
+    "height": 13,
+    "padding": {
+      "top": 0,
+      "left": 1,
+      "right": 2
+    }
+  },
+  "modules": [
+    "break",
+    {
+      "type": "command",
+      "key": "\udb80\udc04 USER",
+      "text": "echo $USER@$(hostnamectl hostname 2>/dev/null || hostname)"
+    },
+    {
+      "type": "custom",
+      "key": "\udb82\udcc7 OS",
+      "format": "SecLegion OS (Rolling)"
+    },
+    {
+      "type": "kernel",
+      "key": "\udb80\udf3d KER",
+      "format": "{release}"
+    },
+    {
+      "type": "packages",
+      "key": "\udb80\udfd7 PKG"
+    },
+    {
+      "type": "terminal",
+      "key": "\udb80\udd8d TERM"
+    },
+    {
+      "type": "shell",
+      "key": "\udb81\udfb7 SH"
+    },
+    {
+      "type": "uptime",
+      "key": "\udb82\udd54 UP",
+      "format": "{hours}h {minutes}m"
+    },
+    {
+      "type": "memory",
+      "key": "\udb80\udf5b RAM",
+      "format": "{used} / {total}"
+    },
+    {
+      "type": "disk",
+      "folders": "/",
+      "key": "\udb80\udeca SSD",
+      "format": "{size-used} / {size-total}"
+    },
+    {
+      "type": "custom",
+      "format": "\\u001b[32m\uf111 \\u001b[36m\uf111 \\u001b[92m\uf111 \\u001b[96m\uf111 \\u001b[97m\uf111 \\u001b[90m\uf111 "
+    },
+    "break"
+  ]
+}

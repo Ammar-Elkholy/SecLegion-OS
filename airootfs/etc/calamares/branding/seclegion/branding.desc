@@ -1,0 +1,34 @@
+---
+componentName:  seclegion
+welcomeStyleCalamares:   false
+welcomeExpandingLogo:    true
+windowExpanding:         normal
+windowSize:              1020px,680px
+
+strings:
+    productName:         "SecLegion OS"
+    shortProductName:    "SecLegion"
+    version:             "2026.10"
+    shortVersion:        "2026.10"
+    versionedName:       "SecLegion OS 2026.10 (Offensive Security Edition)"
+    shortVersionedName:  "SecLegion 2026.10"
+    bootloaderEntryName: "SecLegion OS"
+    productUrl:          "https://github.com/aelkholy/SecLegion-OS"
+    supportUrl:          "https://github.com/aelkholy/SecLegion-OS/issues"
+    knownIssuesUrl:      "https://github.com/aelkholy/SecLegion-OS/blob/main/INSTALL.md#5-multi-gpu-kernel-parameters--display-drivers"
+    releaseNotesUrl:     "https://github.com/aelkholy/SecLegion-OS/releases"
+
+images:
+    productLogo:         "/usr/share/pixmaps/seclegion-logo.png"
+    productIcon:         "/usr/share/pixmaps/seclegion-logo.png"
+    productWelcome:      "/usr/share/backgrounds/seclegion-wallpaper.png"
+
+slideshow:               "show.qml"
+style:
+   SidebarBackground:        "#050a10"
+   SidebarText:              "#93c5fd"
+   SidebarTextCurrent:       "#00ff88"
+   SidebarBackgroundCurrent: "#0d2030"
+   stylesheet:               "stylesheet.qss"
+
+slideshowAPI: 2

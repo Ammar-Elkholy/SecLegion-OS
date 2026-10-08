@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ISO_PATH="/home/aelkholy/Dev_Lab/AE_ARCH/output/SecLegion-OS-2026.10.08-x86_64.iso"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ISO_PATH="${1:-$(ls -t "$SCRIPT_DIR"/output/SecLegion-OS-*.iso 2>/dev/null | head -n1 || true)}"
 TARGET_DRIVE="/dev/sdb"
 
 GREEN="\033[1;32m"
@@ -13,12 +14,18 @@ echo -e "${CYAN}================================================================
 echo -e "${CYAN}    SecLegion OS — USB Flashing Protocol                            ${RESET}"
 echo -e "${CYAN}====================================================================${RESET}"
 
+if [[ -z "$ISO_PATH" || ! -f "$ISO_PATH" ]]; then
+    echo -e "${RED}[FATAL ERROR] No SecLegion OS ISO found at '$ISO_PATH'!${RESET}"
+    echo -e "${RED}Please build the ISO first with ./build.sh${RESET}"
+    exit 1
+fi
+
 MODEL=$(lsblk -dn -o MODEL "$TARGET_DRIVE" 2>/dev/null || true)
 TRAN=$(lsblk -dn -o TRAN "$TARGET_DRIVE" 2>/dev/null || true)
 SIZE=$(lsblk -dn -o SIZE "$TARGET_DRIVE" 2>/dev/null || true)
 
 echo -e " Target Drive:   ${CYAN}${TARGET_DRIVE}${RESET} (${MODEL}, ${SIZE}, Transport: ${TRAN})"
-echo -e " Source ISO:     ${CYAN}${ISO_PATH}${RESET}"
+echo -e " Source ISO:     ${CYAN}${ISO_PATH}${RESET} ($(du -h "$ISO_PATH" | cut -f1))"
 
 if [[ "$TARGET_DRIVE" == "/dev/sda" ]]; then
     echo -e "${RED}[FATAL ERROR] Refusing to flash /dev/sda (Internal HDD). Aborting!${RESET}"

@@ -70,3 +70,4 @@ clean_host_system.sh
 preview_ascii_logos.sh
 show_all_30.sh
 build.log
+.fuse_hidden*

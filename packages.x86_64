@@ -158,14 +158,10 @@ ttf-liberation
 ttf-dejavu
 
 # --- Modern High-Performance CLI Tools ---
-bat
 fd
-zoxide
-btop
 tmux
 lazygit
 ripgrep
-fzf
 
 # --- Cybersecurity Tier-1 Suite (Lightweight CLI) ---
 nmap
@@ -189,6 +185,7 @@ blackarch-mirrorlist
 
 # --- Installation Frameworks ---
 archinstall
+calamares
 # --- Live ISO Bootloaders & Utilities ---
 syslinux
 edk2-ovmf

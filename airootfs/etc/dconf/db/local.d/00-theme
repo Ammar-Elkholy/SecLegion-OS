@@ -22,4 +22,4 @@ secondary-color='#000000'
 button-layout='appmenu:minimize,maximize,close'
 
 [org/gnome/shell]
-favorite-apps=['org.gnome.Nautilus.desktop', 'kitty.desktop', 'brave-browser.desktop', 'discord.desktop', 'org.gnome.Settings.desktop']
+favorite-apps=['calamares.desktop', 'org.gnome.Nautilus.desktop', 'kitty.desktop', 'brave-browser.desktop', 'discord.desktop', 'org.gnome.Settings.desktop']

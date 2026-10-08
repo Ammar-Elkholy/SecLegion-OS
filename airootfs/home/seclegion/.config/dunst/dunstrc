@@ -1,0 +1,98 @@
+# =============================================================================
+# AE-ARCH Dunst Config — Neon Green/Cyan SecLegion Branding
+# =============================================================================
+
+[global]
+    monitor           = 0
+    follow            = none
+    width             = (200, 380)
+    height            = (0, 150)
+    origin            = top-right
+    offset            = (20, 50)
+    scale             = 0
+    notification_limit = 5
+    progress_bar      = true
+    progress_bar_height = 8
+    progress_bar_frame_width = 0
+    progress_bar_min_width = 180
+    progress_bar_max_width = 340
+    progress_bar_corner_radius = 4
+    progress_bar_corners = all
+    icon_corner_radius = 0
+    indicate_hidden   = yes
+    transparency      = 15
+    separator_height  = 1
+    padding           = 12
+    horizontal_padding = 16
+    text_icon_padding = 12
+    frame_width       = 1
+    frame_color       = "#00ffcc"
+    separator_color   = frame
+    sort              = yes
+    font              = JetBrainsMono Nerd Font 11
+    line_height       = 2
+    markup            = full
+    format            = "<b>%s</b>\n%b"
+    alignment         = left
+    vertical_alignment = center
+    show_age_threshold = 60
+    ellipsize         = middle
+    ignore_newline    = no
+    stack_duplicates  = true
+    hide_duplicate_count = false
+    show_indicators   = yes
+    enable_recursive_icon_lookup = true
+    icon_theme        = Papirus-Dark
+    icon_position     = left
+    min_icon_size     = 32
+    max_icon_size     = 48
+    sticky_history    = yes
+    history_length    = 20
+    always_run_script = true
+    close_timer       = no
+
+    # Corner rounding
+    corner_radius     = 12
+    corners           = all
+
+    # Mouse actions
+    mouse_left_click   = close_current
+    mouse_middle_click = do_action, close_current
+    mouse_right_click  = close_all
+
+[urgency_low]
+    background   = "#0d1117"
+    foreground   = "#00ffcc"
+    frame_color  = "#00e5ff"
+    timeout      = 2
+    override_pause_level = 0
+
+[urgency_normal]
+    background   = "#0d1117"
+    foreground   = "#e6f1ff"
+    frame_color  = "#00ffcc"
+    timeout      = 5
+    override_pause_level = 0
+
+[urgency_critical]
+    background   = "#1a0010"
+    foreground   = "#ff4488"
+    frame_color  = "#ff2266"
+    timeout      = 0
+    override_pause_level = 100
+
+# ── OSD Overrides (minimal, center-bottom, large) ───────────────────────────
+[osd]
+    appname         = AE-OS
+    width           = (200, 360)
+    height          = (60, 100)
+    origin          = bottom-center
+    offset          = (0, 80)
+    font            = JetBrainsMono Nerd Font 13
+    background      = "#0a0f1aee"
+    foreground      = "#00ffcc"
+    frame_color     = "#00e5ff"
+    timeout         = 2
+    corner_radius   = 14
+    progress_bar_height = 6
+    progress_bar_corner_radius = 3

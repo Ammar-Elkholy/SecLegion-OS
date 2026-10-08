@@ -1,0 +1,146 @@
+* {
+    font-family: "JetBrainsMono Nerd Font", "JetBrainsMono NF", "CaskaydiaCove Nerd Font", monospace;
+    font-size: 14px;
+    min-height: 0;
+    font-weight: bold;
+}
+window#waybar {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.9);
+    transition-property: background-color;
+    transition-duration: 0.3s;
+}
+#window {
+    margin: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.9);
+}
+button {
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+}
+button:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+}
+#workspaces button {
+    padding: 0 8px;
+    margin: 4px 2px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.3);
+    color: rgba(255, 255, 255, 0.6);
+    transition: all 0.3s ease;
+}
+#workspaces button.focused {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 0.95);
+}
+#workspaces button.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.9);
+}
+#workspaces button.urgent {
+    background-color: rgba(255, 100, 100, 0.4);
+    color: rgba(255, 255, 255, 0.95);
+}
+#language,
+#pulseaudio,
+#clock,
+#battery,
+#cpu,
+#memory,
+#disk,
+#temperature,
+#backlight,
+#wireplumber,
+#tray,
+#network,
+#mode,
+#scratchpad {
+    margin-top: 4px;
+    margin-bottom: 4px;
+    margin-left: 4px;
+    margin-right: 4px;
+    padding-left: 12px;
+    padding-right: 12px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.3);
+    color: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+}
+#language {
+    min-width: 50px;
+}
+#pulseaudio:hover,
+#clock:hover,
+#battery:hover,
+#backlight:hover,
+#network:hover,
+#language:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+#clock {
+    color: rgba(255, 255, 255, 0.9);
+}
+#pulseaudio {
+    color: rgba(255, 255, 255, 0.9);
+}
+#backlight {
+    color: rgba(255, 255, 255, 0.9);
+}
+#network {
+    color: rgba(255, 255, 255, 0.9);
+}
+#battery {
+    color: rgba(255, 255, 255, 0.9);
+}
+#battery.warning {
+    background-color: rgba(255, 200, 100, 0.3);
+    color: rgba(255, 255, 255, 0.95);
+}
+#battery.critical {
+    background-color: rgba(255, 100, 100, 0.4);
+    color: rgba(255, 255, 255, 0.95);
+}
+.modules-left widget:first-child #workspaces {
+    margin-left: 4px;
+}
+.modules-right widget:last-child #workspaces {
+    margin-right: 4px;
+}
+#custom-vpn {
+    color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
+}
+#custom-media {
+    margin: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+#custom-launcher {
+    background-image: url("/usr/share/pixmaps/seclegion-logo-transparent.png");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 20px 20px;
+    min-width: 28px;
+    padding: 0 4px;
+    margin: 4px 6px 4px 2px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+#custom-launcher:hover {
+    background-color: rgba(0, 255, 136, 0.25);
+}
