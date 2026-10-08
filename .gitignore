@@ -68,6 +68,5 @@ seclegion-bootstrap-tier2.sh
 browse_logos.sh
 clean_host_system.sh
 preview_ascii_logos.sh
-sanitize_system.sh
 show_all_30.sh
 build.log

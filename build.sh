@@ -22,25 +22,28 @@ log_success() { echo -e "${GREEN}[SUCCESS]${RESET} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${RESET} $1"; }
 log_error() { echo -e "${RED}[ERROR]${RESET} $1"; }
 
-if [[ $EUID -ne 0 ]]; then
-   log_error "This script must be run as root: sudo bash build.sh"
-   exit 1
-fi
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Using /var/tmp (disk-backed) to prevent /tmp RAM tmpfs exhaustion during squashfs compression
-WORK_DIR="/var/tmp/ae-arch-work"
+if [[ $EUID -eq 0 ]]; then
+    WORK_DIR="/var/tmp/ae-arch-work"
+else
+    WORK_DIR="/var/tmp/seclegion-build-work"
+fi
 OUT_DIR="$SCRIPT_DIR/output"
 
 echo -e "${CYAN}====================================================================${RESET}"
-echo -e "${CYAN}    SecLegion OS — Building Universal Offensive Security ISO                ${RESET}"
-echo -e "${CYAN}    Engineered by: Ammar Elkholy (SecLegion Edition)               ${RESET}"
+echo -e "${CYAN}    SecLegion OS — Building Universal Offensive Security ISO         ${RESET}"
+echo -e "${CYAN}    Engineered by: Ammar Elkholy (SecLegion Edition)                ${RESET}"
 echo -e "${CYAN}====================================================================${RESET}"
 
 # 1. Install archiso if missing
 if ! command -v mkarchiso &>/dev/null; then
-    log_info "Installing archiso..."
-    pacman -S --needed --noconfirm archiso
+    if [[ $EUID -eq 0 ]]; then
+        log_info "Installing archiso..."
+        pacman -S --needed --noconfirm archiso
+    else
+        log_error "mkarchiso is missing. Please install it first with 'sudo pacman -S archiso'."
+        exit 1
+    fi
 fi
 
 # 2. Prepare Output & Work Directories
@@ -60,9 +63,8 @@ log_info "Profile directory: $SCRIPT_DIR"
 log_info "Work directory:    $WORK_DIR (disk-backed on /var/tmp)"
 log_info "Output directory:  $OUT_DIR"
 
-# Host OS-Release synchronization hook
+# Host OS-Release synchronization hook (if permitted)
 if [[ -f "$SCRIPT_DIR/airootfs/etc/os-release" ]]; then
-    log_info "Synchronizing host OS identity with SecLegion OS..."
     cp -f "$SCRIPT_DIR/airootfs/etc/os-release" /etc/os-release 2>/dev/null || true
 fi
 
@@ -81,12 +83,12 @@ chmod 755 "$SCRIPT_DIR/airootfs/usr/local/bin"/* 2>/dev/null || true
 chmod -R 755 "$SCRIPT_DIR/airootfs/usr/share/applications" 2>/dev/null || true
 chmod 400 "$SCRIPT_DIR/airootfs/etc/shadow" "$SCRIPT_DIR/airootfs/etc/gshadow" 2>/dev/null || true
 
-# 4. Run mkarchiso
+# 5. Run mkarchiso
 log_info "Executing mkarchiso build..."
 mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$SCRIPT_DIR"
 
 echo -e "\n${CYAN}====================================================================${RESET}"
-echo -e "${GREEN} ✅ AE_ARCH ISO BUILT SUCCESSFULLY!                                ${RESET}"
+echo -e "${GREEN} ✅ SECLEGION OS ISO BUILT SUCCESSFULLY!                           ${RESET}"
 echo -e "${CYAN}====================================================================${RESET}"
 
 ISO_FILE=$(ls -t "$OUT_DIR"/SecLegion-OS-*.iso 2>/dev/null | head -n1 || true)
@@ -95,8 +97,5 @@ if [[ -n "$ISO_FILE" ]]; then
     echo -e " File Size:      $(du -h "$ISO_FILE" | cut -f1)"
     echo -e " Generating SHA256 checksum..."
     sha256sum "$ISO_FILE" | tee "$ISO_FILE.sha256"
-    echo -e "\n ${YELLOW}Burn to a USB Drive (8GB minimum required, bigger is fine):${RESET}"
-    echo -e "   sudo dd if=${ISO_FILE} of=/dev/sdX bs=4M status=progress oflag=sync"
-    echo -e "   (Replace /dev/sdX with your USB drive letter)"
 fi
 echo -e "${CYAN}====================================================================${RESET}"

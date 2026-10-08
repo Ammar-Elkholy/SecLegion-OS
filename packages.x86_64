@@ -15,6 +15,16 @@ linux-firmware
 linux-firmware-amdgpu
 linux-firmware-intel
 linux-firmware-nvidia
+intel-ucode
+amd-ucode
+mkinitcpio
+mkinitcpio-archiso
+mkinitcpio-nfs-utils
+arch-install-scripts
+parted
+gptfdisk
+mtools
+squashfs-tools
 sof-firmware
 alsa-firmware
 sudo
