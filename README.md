@@ -1,40 +1,70 @@
 # SecLegion OS
 
-An Arch-based security distribution: a Hyprland desktop with a curated tool set, a
-safe-by-default installer (erase, alongside in free space, or manual), btrfs snapshots,
-and KVM labs. It is built for two audiences at once: experienced Linux/DevOps/security
-professionals (nothing hides or blocks full control) and beginner students (defaults are
-safe and self-explanatory).
+A personal Arch-based security workstation, in the spirit of Omarchy. Hyprland is the only session, the
+installer is archinstall underneath, and every package comes from the official Arch repositories or the
+project's own signed `[seclegion]` repo: no third-party repos, no telemetry.
 
-**Status: pre-alpha, milestone M0 (project foundation). There is no SecLegion ISO yet.**
-The only ISO the tree can build today is the stock Arch `releng` profile used as a
-placeholder for the build/boot harness. Read [PROJECT_STATUS.md](PROJECT_STATUS.md) for what
-is actually done, and [TESTING.md](TESTING.md) for generated evidence. Nothing is claimed
-that is not backed by an `evidence/` record.
+**Status: 1.0 (ISO #11, 2026-10-31).** Progress meter 81% (1.0 = 80%, perfected = 100%). All 36 VM gates
+pass on this ISO; results are in [TESTING.md](TESTING.md), current work in [docs/STATUS.md](docs/STATUS.md).
 
-## How this project works
+## Download
 
-- Plan: [docs/spec/v1/spec.md](docs/spec/v1/spec.md) (binding), [full-plan.md](docs/spec/v1/full-plan.md),
-  [owner directives](docs/spec/v1/owner-directives-r7.md). Decisions index: [docs/decisions.md](docs/decisions.md).
-- Strict milestones M0-M12; nothing starts until the previous gate is green with evidence.
-- Test results are generated (`tools/gen-testing-md`) and verified (`tools/verify-evidence`);
-  a hand-edited PASS fails the check.
+- **ISO (one file, Google Drive):**
+  https://drive.google.com/file/d/1GwBHFBnmCiHaOUqgsTNOkrvhYSPKD5RY/view
+- sha256 `7fe0becda986554cc45398213286843acd03430ffe2d693d6e36fe3d86b47771` (check with `sha256sum`)
+- The same ISO is in the GitHub release `iso11-2026.10.31` as three parts; `JOIN.txt` there joins them.
 
-## Developing
+Flash it (replace `/dev/sdX` with the USB stick shown by `lsblk`; everything on it is erased):
 
 ```
-make bootstrap   # create .venv with pytest, ruff, reuse, shellcheck (no root)
+sudo dd if=seclegion-2026.10.31-x86_64.iso of=/dev/sdX bs=4M oflag=direct conv=fsync status=progress
+```
+
+Then follow [docs/USB-MIGRATION.md](docs/USB-MIGRATION.md) (Windows prep, firmware, live checks, install).
+After installing, [docs/NEXT-ON-NEW-OS.md](docs/NEXT-ON-NEW-OS.md) lists the hardware checks and the work left.
+
+## What you get
+
+- **Desktop:** Hyprland with waybar, swaync, hyprlock/hypridle, a theme engine (`seclegion-theme`), a GTK4
+  Settings app and the `seclegion-set` CLI. Login through greetd + regreet. `Super+/` shows every keybind.
+- **Installer:** a GUI (English and Arabic) over archinstall. Erase the disk, install alongside Windows in
+  free space, or partition manually. Optional LUKS encryption.
+- **System:** systemd-boot with a unified kernel image, btrfs subvolumes with snapper snapshots and
+  rollback (`seclegion-rescue`), ufw on, sshd off, a first-boot wizard and hardware detection for
+  hybrid AMD/NVIDIA laptops.
+- **Security tools:** a curated catalog (nmap, masscan, tcpdump, wireshark, hashcat, john, hydra,
+  impacket, responder, gobuster, ffuf, nikto, exploitdb, …); see [docs/security-tools.md](docs/security-tools.md).
+- **Opt-in extras:** KVM/libvirt labs with NAT and isolated networks (`seclegion-virt`), local AI
+  through ollama, off by default (`seclegion-ai`), gaming with multilib and Steam (`seclegion-gaming`).
+  Vendor apps (Brave, VS Code, Claude) are fetched on first boot, never shipped.
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `pkgs/` | PKGBUILDs for the `seclegion-*` packages, built and signed into the local `[seclegion]` repo |
+| `iso/` | archiso profile, package lists, GRUB theme |
+| `installer/` | archinstall configurator, post-install, GUI and schemas |
+| `desktop/` | Hyprland, waybar, swaync and theme components |
+| `tools/` | build, theme, settings, evidence and progress tools |
+| `tests/` | pytest: unit tests by default, QEMU/OVMF VM gates marked `iso` |
+
+## Building
+
+```
+make bootstrap   # .venv with pytest, ruff, reuse, shellcheck (no root)
 make lint        # shellcheck, ruff, reuse, container-start check
 make test        # unit tests
-make iso         # build the placeholder ISO in a pinned privileged container -> out/
-make vm          # boot out/*.iso in QEMU/OVMF, record evidence
-make evidence    # regenerate + verify TESTING.md
+tools/build-iso  # build the packages, then the ISO, in a container -> out/
+make evidence    # regenerate and verify TESTING.md
+tools/seclegion-progress --all
 ```
 
-The ISO build needs the `docker` group, 25 GiB free on a Linux filesystem under
-`/var/tmp` (never NTFS), and QEMU with edk2-ovmf for the boot test. See [docs/testing.md](docs/testing.md).
+The ISO build needs the `docker` group and 25 GiB free on a Linux filesystem under `/var/tmp`. VM gates
+need QEMU with edk2-ovmf: `SECLEGION_ISO=out/<iso> .venv/bin/python -m pytest -m iso tests/install`.
+See [docs/testing.md](docs/testing.md).
 
 ## Licence
 
 MIT, see [LICENSE](LICENSE). Per-file licences are tracked with REUSE ([docs/PROVENANCE.md](docs/PROVENANCE.md)).
-The owner's branding images are not yet licensed for redistribution.
+The SecLegion branding images are all rights reserved until a licence is chosen.
