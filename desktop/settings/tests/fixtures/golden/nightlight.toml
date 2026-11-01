@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Written by SecLegion Settings.
+[nightlight]
+enabled = true
+temperature = 4000

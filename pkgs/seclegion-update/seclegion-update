@@ -1,0 +1,157 @@
+#!/usr/bin/python3 -I
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-update: one snapshotted system upgrade, then the pending migrations.
+
+  seclegion-update                         upgrade (asks for sudo when not root)
+  seclegion-update --refresh-config NAME   re-copy a packaged default (hypr, waybar, swaync)
+
+Every external command goes through `runner` so tests can inject a fake. Root paths take
+SECLEGION_ROOT or --root. snap-pac would take its own pre/post pair around `pacman -Syu`; we run
+pacman with SNAP_PAC_SKIP=y (snap-pac's documented switch) so exactly one pair exists per update.
+"""
+
+import argparse
+import datetime
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+MIN_BATTERY = 20
+MIN_FREE = 2 * 1024**3
+REFRESH_ALLOW = ("hypr", "waybar", "swaync")
+DESC = "seclegion-update"
+
+
+class Abort(Exception):
+    pass
+
+
+def default_runner(argv, env=None):
+    """Run argv (env overlays os.environ); stdout is captured, stderr passes through."""
+    full = None if env is None else {**os.environ, **env}
+    return subprocess.run(argv, env=full, stdout=subprocess.PIPE, text=True)
+
+
+def say(msg):
+    print(f"seclegion-update: {msg}", file=sys.stderr)
+
+
+def preflight(root, disk_free):
+    for bat in sorted((root / "sys/class/power_supply").glob("BAT*")):
+        try:
+            cap = int((bat / "capacity").read_text())
+            status = (bat / "status").read_text().strip()
+        except (OSError, ValueError):
+            continue
+        if status == "Discharging" and cap < MIN_BATTERY:
+            raise Abort(f"on battery at {cap}% (< {MIN_BATTERY}%); plug in first")
+    free = disk_free(root)
+    if free < MIN_FREE:
+        raise Abort(f"only {free // 1024**2} MiB free on / (need 2 GiB)")
+    if (root / "var/lib/pacman/db.lck").exists():
+        raise Abort("pacman database is locked (var/lib/pacman/db.lck); is another pacman running?")
+
+
+def snapper(runner, *args):
+    r = runner(["snapper", "-c", "root", "create", *args, "--cleanup-algorithm", "number",
+                "--description", DESC, "--userdata", "seclegion=update"])
+    if r.returncode != 0:
+        raise Abort("snapper could not create a snapshot")
+    return (r.stdout or "").strip()
+
+
+def missing_ukis(root):
+    out = []
+    for preset in sorted((root / "etc/mkinitcpio.d").glob("*.preset")):
+        for m in re.finditer(r"""^\s*default_uki=["']?([^"'\s]+)""", preset.read_text(), re.M):
+            if not (root / m.group(1).lstrip("/")).is_file():
+                out.append(m.group(1))
+    return out
+
+
+def migrations(root):
+    d = root / "usr/share/seclegion/migrate"
+    return sorted(d.glob("[0-9][0-9][0-9][0-9]-*.sh")) if d.is_dir() else []
+
+
+def run_migrations(root, runner):
+    state = root / "var/lib/seclegion/migrations"
+    for m in migrations(root):
+        num = m.name[:4]
+        if (state / num).exists():
+            continue
+        say(f"migration {m.name}")
+        r = runner(["bash", str(m)], env={"SECLEGION_ROOT": str(root)})
+        if r.returncode != 0:
+            raise Abort(f"migration {m.name} failed (exit {r.returncode}); later ones not run")
+        state.mkdir(parents=True, exist_ok=True)
+        (state / num).write_text(m.name + "\n")
+
+
+def update(root, runner, disk_free):
+    preflight(root, disk_free)
+    pre = snapper(runner, "--type", "pre", "--print-number")
+    if not pre.isdigit():
+        raise Abort(f"snapper printed {pre!r}, not a snapshot number")
+    r = runner(["pacman", "-Syu"], env={"SNAP_PAC_SKIP": "y"})
+    if r.returncode != 0:
+        raise Abort(f"pacman -Syu failed; pre snapshot {pre} kept")
+    snapper(runner, "--type", "post", "--pre-number", pre)
+    gone = missing_ukis(root)
+    if gone:
+        raise Abort(f"unified kernel image missing after upgrade: {', '.join(gone)}; "
+                    f"do not reboot. Pre snapshot {pre} kept; rebuild with mkinitcpio -P")
+    run_migrations(root, runner)
+
+
+KEEP_ON_REFRESH = {"hypr": ("user.lua",)}
+
+
+def refresh_config(root, name, home, now=None):
+    if name not in REFRESH_ALLOW:
+        raise Abort(f"cannot refresh {name!r}; allowed: {', '.join(REFRESH_ALLOW)}")
+    src = root / "usr/share/seclegion" / name
+    if not src.is_dir():
+        raise Abort(f"packaged default {src} not found")
+    dest = home / ".config" / name
+    bak = None
+    if dest.exists() or dest.is_symlink():
+        stamp = (now or datetime.datetime.now()).strftime("%Y%m%d-%H%M%S")
+        bak = home / ".local/state/seclegion/refresh" / stamp
+        bak.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(dest), str(bak / name))
+        say(f"backed up {dest} to {bak / name}")
+    shutil.copytree(src, dest)
+    if bak is not None:
+        for keep in KEEP_ON_REFRESH.get(name, ()):  # the user's own overrides survive a refresh
+            if (bak / name / keep).is_file() and not (bak / name / keep).is_symlink():
+                shutil.copy2(bak / name / keep, dest / keep)
+                say(f"kept {dest / keep}")
+    say(f"refreshed {dest}")
+
+
+def main(argv=None, runner=default_runner, disk_free=lambda p: shutil.disk_usage(p).free):
+    ap = argparse.ArgumentParser(prog="seclegion-update")
+    ap.add_argument("--root", default=os.environ.get("SECLEGION_ROOT", "/"))
+    ap.add_argument("--refresh-config", metavar="NAME")
+    a = ap.parse_args(argv)
+    root = Path(a.root)
+    try:
+        if a.refresh_config:
+            refresh_config(root, a.refresh_config, Path(os.environ["HOME"]))
+        else:
+            if os.geteuid() != 0 and a.root == "/":
+                os.execvp("sudo", ["sudo", sys.argv[0], *sys.argv[1:]])
+            update(root, runner, disk_free)
+    except Abort as e:
+        say(str(e))
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

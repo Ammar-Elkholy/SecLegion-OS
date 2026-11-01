@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# base.list: the base system. On the live ISO, in the offline cache, and so on the
+# installed target. One official core/extra package per line; '#' starts a comment.
+# No openssh (spec A3).
+base
+linux
+linux-lts
+linux-firmware
+sof-firmware
+alsa-ucm-conf
+amd-ucode
+intel-ucode
+mkinitcpio
+systemd-ukify
+archlinux-keyring
+arch-install-scripts
+sudo
+util-linux
+polkit
+networkmanager
+wpa_supplicant
+wireless-regdb
+iw
+btrfs-progs
+dosfstools
+e2fsprogs
+cryptsetup
+efibootmgr
+gptfdisk
+parted
+snapper
+snap-pac
+zram-generator
+terminus-font
+nano
+vim
+less
+man-db
+man-pages
+zsh
+usbutils
+pciutils
+rsync

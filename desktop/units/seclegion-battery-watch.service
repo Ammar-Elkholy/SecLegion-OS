@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Started by uwsm via graphical-session.target (wants symlink shipped by seclegion-desktop).
+# Notifies at 15 % (normal) and 7 % (critical, sticky); does nothing on machines without a battery.
+[Unit]
+Description=SecLegion: low battery notifications
+PartOf=graphical-session.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+ConditionPathExistsGlob=/sys/class/power_supply/BAT*
+
+[Service]
+ExecStart=/usr/bin/seclegion-battery-watch
+Restart=on-failure
+RestartSec=5
+Slice=app-graphical.slice
+
+[Install]
+WantedBy=graphical-session.target

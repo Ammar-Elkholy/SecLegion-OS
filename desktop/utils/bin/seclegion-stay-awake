@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# seclegion-stay-awake [toggle|on|off|status]: hold a systemd-inhibit (idle+sleep) from a
+# background process whose pid is in a pid file; on/off are idempotent. Env (tests):
+# SL_STATE_DIR (default $XDG_RUNTIME_DIR/seclegion), SL_INHIBIT (default systemd-inhibit),
+# SL_NOTIFY (default notify-send).
+set -u
+dir="${SL_STATE_DIR:-${XDG_RUNTIME_DIR:-/tmp}/seclegion}"
+pidf="$dir/stay-awake.pid"
+inhibit="${SL_INHIBIT:-systemd-inhibit}"
+notify="${SL_NOTIFY:-notify-send}"
+running() { [ -r "$pidf" ] && p="$(cat "$pidf")" && [ -n "$p" ] && kill -0 "$p" 2>/dev/null; }
+say() { "$notify" -a SecLegion "Stay awake" "$1" >/dev/null 2>&1 || true; }
+on() {
+    running && return 0
+    mkdir -p "$dir"
+    "$inhibit" --what=idle:sleep --who=SecLegion --why="Stay awake is on" sleep infinity >/dev/null 2>&1 &
+    echo $! > "$pidf"
+    say "On: the screen will not lock or sleep"
+}
+off() {
+    if running; then kill "$p" 2>/dev/null || true; fi
+    rm -f "$pidf"
+    say "Off"
+}
+case "${1:-toggle}" in
+    on) on ;;
+    off) off ;;
+    status) if running; then echo on; else echo off; fi ;;
+    toggle) if running; then off; else on; fi ;;
+    *) echo "usage: seclegion-stay-awake [toggle|on|off|status]" >&2; exit 2 ;;
+esac

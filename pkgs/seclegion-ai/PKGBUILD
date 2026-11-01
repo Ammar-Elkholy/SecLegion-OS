@@ -1,0 +1,44 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# Local AI runtime control, OFF by default. ollama (Arch [extra], ~61 MiB installed) is an optdepend,
+# not a depend: it is not in the offline cache and `seclegion-ai enable` installs it on request when
+# online. The package ships a loopback-only drop-in and no wants link, so nothing listens on :11434
+# until the user enables it. No models are shipped.
+pkgname=seclegion-ai
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='SecLegion OS local AI runtime control (off by default): seclegion-ai, AI Center, model catalog, loopback-only ollama drop-in'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('MIT')
+depends=('python' 'systemd' 'libsecret' 'python-gobject' 'gtk4' 'libadwaita')
+# seclegion-settings (the off-thread helper) is a sibling: not in depends=(), see pkgs/README.md;
+# the installer's package list installs them together.
+optdepends=('ollama: the local model runtime (installed by seclegion-ai enable)'
+            'aichat: terminal chat for the local model and configured providers (seclegion-aichat; not in the offline lists)')
+source=(seclegion-src.tar.zst)
+sha256sums=('SKIP')  # generated for the build from tracked files
+
+package() {
+    install -Dm755 "$srcdir/ai/cli/seclegion_ai.py" "$pkgdir/usr/bin/seclegion-ai"
+    install -Dm644 "$srcdir/ai/catalog.toml" "$pkgdir/usr/share/seclegion/ai/catalog.toml"
+    install -Dm644 "$srcdir/ai/runtime/10-seclegion.conf" \
+        "$pkgdir/usr/lib/systemd/system/ollama.service.d/10-seclegion.conf"
+    # AI Center (ai/center): cloud provider API keys live in the Secret Service only (secret-tool).
+    install -Dm755 "$srcdir/ai/center/bin/seclegion-ai-center" "$pkgdir/usr/bin/seclegion-ai-center"
+    while IFS= read -r -d '' f; do
+        install -Dm644 "$srcdir/ai/center/$f" "$pkgdir/usr/lib/seclegion/python/$f"
+    done < <(cd "$srcdir/ai/center" && find seclegion_ai_center -type f ! -path '*/__pycache__/*' -print0)
+    install -Dm644 "$srcdir/ai/center/applications/seclegion-ai-center.desktop" \
+        "$pkgdir/usr/share/applications/seclegion-ai-center.desktop"
+    # aichat integration (ai/aichat): wrapper, Super+A picker, roles. aichat itself is an optdepend.
+    install -Dm755 "$srcdir/ai/aichat/seclegion_aichat.py" "$pkgdir/usr/bin/seclegion-aichat"
+    install -Dm755 "$srcdir/ai/aichat/seclegion_ai_pick.py" "$pkgdir/usr/bin/seclegion-ai-pick"
+    for f in "$srcdir"/ai/aichat/roles/*.md; do
+        install -Dm644 "$f" "$pkgdir/usr/share/seclegion/aichat/roles/${f##*/}"
+    done
+    install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

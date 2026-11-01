@@ -1,0 +1,125 @@
+/* SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors */
+/* SPDX-License-Identifier: MIT */
+/* SecLegion Settings. Loaded after colors.css (@sl_* tokens); maps the tokens onto libadwaita's
+   named colours (libadwaita 1.10 aliases its --*-color variables to these names). Every @sl_*
+   used here must exist in colors.css: tests/settings/css_tokens.py checks it. */
+
+@define-color window_bg_color @sl_bg;
+@define-color window_fg_color @sl_text;
+@define-color view_bg_color @sl_surface;
+@define-color view_fg_color @sl_text;
+@define-color headerbar_bg_color @sl_surface;
+@define-color headerbar_fg_color @sl_text;
+@define-color headerbar_border_color @sl_border_active;
+@define-color sidebar_bg_color @sl_bg;
+@define-color sidebar_fg_color @sl_text;
+@define-color sidebar_backdrop_color @sl_bg;
+@define-color card_bg_color @sl_surface2;
+@define-color card_fg_color @sl_text;
+@define-color popover_bg_color @sl_surface;
+@define-color popover_fg_color @sl_text;
+@define-color dialog_bg_color @sl_surface;
+@define-color dialog_fg_color @sl_text;
+@define-color accent_bg_color @sl_accent;
+@define-color accent_fg_color @sl_bg;
+@define-color accent_color @sl_accent;
+@define-color destructive_bg_color @sl_crit;
+@define-color destructive_color @sl_crit;
+@define-color warning_bg_color @sl_warn;
+@define-color warning_color @sl_warn;
+@define-color success_bg_color @sl_ok;
+@define-color success_color @sl_ok;
+@define-color error_bg_color @sl_err;
+@define-color error_color @sl_err;
+@define-color borders @sl_border_active;
+
+/* -- type -------------------------------------------------------------------------------------- */
+.title-1, .title-2, .title-3, .title-4, .heading, .sl-brand, .sl-value, .sl-mono,
+preferencesgroup > box > box > label.heading {
+  font-family: "JetBrainsMono Nerd Font", "JetBrainsMono Nerd Font Mono", monospace;
+}
+.sl-brand { font-weight: bold; letter-spacing: 1px; }
+.sl-value { color: @sl_text; }
+.sl-muted, .sl-unavailable { color: @sl_muted; }
+.sl-group-label {
+  font-family: "JetBrainsMono Nerd Font", monospace;
+  font-size: 0.8em;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: @sl_muted;
+  margin: 12px 12px 4px 12px;
+}
+
+/* -- cards: sl_surface2 with a 1 px sl_border_inactive frame ------------------------------------ */
+preferencesgroup list.boxed-list,
+list.boxed-list {
+  background-color: @sl_surface2;
+  border: 1px solid @sl_border_inactive;
+  box-shadow: none;
+}
+list.boxed-list > row { background-color: transparent; }
+/* 1 px accent frame on the focused row */
+list.boxed-list > row:focus-within,
+list.boxed-list > row:focus-visible {
+  outline: 1px solid @sl_accent;
+  outline-offset: -1px;
+}
+
+/* -- status chips ------------------------------------------------------------------------------ */
+.sl-chip {
+  font-family: "JetBrainsMono Nerd Font", monospace;
+  font-size: 0.75em;
+  font-weight: bold;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+}
+.sl-chip-live { color: @sl_ok; }
+.sl-chip-reboot { color: @sl_warn; }
+.sl-chip-root { color: @sl_crit; }
+.sl-path {
+  font-family: "JetBrainsMono Nerd Font", monospace;
+  font-size: 0.85em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background-color: @sl_bg;
+  color: @sl_accent2;
+}
+
+/* -- details block ----------------------------------------------------------------------------- */
+.sl-details { padding: 8px 12px 12px 12px; }
+.sl-details-key { color: @sl_muted; font-family: "JetBrainsMono Nerd Font", monospace; }
+.sl-details-text {
+  font-family: "JetBrainsMono Nerd Font", monospace;
+  font-size: 0.9em;
+  background-color: @sl_bg;
+  color: @sl_text;
+  border: 1px solid @sl_border_inactive;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+.sl-details-text.sl-error { color: @sl_err; }
+
+/* -- power profile buttons --------------------------------------------------------------------- */
+.sl-profiles { margin-bottom: 12px; }
+button.sl-profile {
+  min-height: 56px;
+  font-family: "JetBrainsMono Nerd Font", monospace;
+  font-weight: bold;
+  background-color: @sl_surface2;
+  color: @sl_text;
+  border: 1px solid @sl_border_inactive;
+  box-shadow: none;
+}
+button.sl-profile:hover { border-color: @sl_accent; }
+button.sl-profile:checked {
+  background-color: @sl_accent;
+  color: @sl_bg;
+  border-color: @sl_accent;
+}
+
+/* battery: a thin accent bar */
+progressbar.sl-battery-bar > trough { min-height: 3px; background-color: @sl_bg; }
+progressbar.sl-battery-bar > trough > progress { min-height: 3px; background-color: @sl_accent; }
+
+.sl-coming { color: @sl_muted; }

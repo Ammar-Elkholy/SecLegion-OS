@@ -1,0 +1,25 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# Fetcher for the Brave browser. It ships NO Brave binary: only the fetch script, the pinned manifest
+# and the package template. `seclegion-brave-fetch`, run by the user on an online machine, downloads
+# the pinned release zip, checks its sha256 (and Brave's published .sha256 file) and installs it into
+# /opt/brave with a local makepkg run.
+pkgname=seclegion-brave-fetch
+pkgver=1.97.59
+pkgrel=1
+pkgdesc='Fetcher for the Brave browser (pinned version and sha256; the Brave binary is downloaded on your machine)'
+arch=('any')
+url='https://brave.com'
+license=('MIT')
+depends=('bash' 'curl' 'coreutils' 'sed' 'pacman' 'sudo')
+source=(seclegion-src.tar.zst)
+sha256sums=('SKIP')   # generated for the build
+
+package() {
+    install -Dm755 "$srcdir/tools/seclegion-vendor-fetch" "$pkgdir/usr/bin/seclegion-brave-fetch"
+    install -Dm644 "$startdir/brave.toml" "$pkgdir/usr/share/seclegion/vendor/brave.toml"
+    install -Dm644 "$startdir/brave.PKGBUILD" "$pkgdir/usr/share/seclegion/vendor/brave.PKGBUILD"
+}

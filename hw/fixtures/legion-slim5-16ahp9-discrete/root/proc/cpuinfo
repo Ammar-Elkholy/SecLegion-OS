@@ -1,0 +1,4 @@
+processor	: 0
+vendor_id	: AuthenticAMD
+model name	: AMD Ryzen 7 8845HS w/ Radeon 780M Graphics
+flags		: fpu vme sse4_2 avx2

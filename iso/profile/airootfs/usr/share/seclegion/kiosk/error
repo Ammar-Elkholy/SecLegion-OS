@@ -1,0 +1,19 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Run as root by seclegion-kiosk-error.service when the kiosk ends. Saves the kiosk log and puts a
+# plain-text error screen, with the log path, on tty1. Prints no secrets: the log is the kiosk
+# unit's own journal.
+LOG=/var/log/seclegion/kiosk.log
+mkdir -p /var/log/seclegion
+journalctl -b -u seclegion-kiosk.service --no-pager > "$LOG" 2>&1
+chmod 0644 "$LOG"
+chvt 1 2>/dev/null
+{
+    printf '\033c'
+    printf 'SecLegion OS installer: the kiosk stopped unexpectedly.\n\n'
+    printf 'Log: %s\n\n' "$LOG"
+    printf 'Reboot and pick Install again, or choose Rescue from the boot menu.\n'
+} > /dev/tty1 2>/dev/null
+echo "SECLEGION-KIOSK-ERROR log=$LOG" > /dev/ttyS0 2>/dev/null
+exit 0

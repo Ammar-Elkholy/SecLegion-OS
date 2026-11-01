@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Merge into ~/.config/dolphinrc.
+# Dolphin 26.08 has no ShowSpaceInfo key: free space is part of the status
+# bar, shown in FullWidth mode (kcfg ShowStatusBar: Small|FullWidth|Disabled).
+# ShowSpaceInfo is the key older Dolphin releases read; newer ones ignore it.
+[General]
+ShowStatusBar=FullWidth
+ShowSpaceInfo=true

@@ -1,0 +1,49 @@
+{
+  "boot_entries": [],
+  "env": {
+    "WLR_NO_HARDWARE_CURSORS": "1",
+    "WLR_RENDERER_ALLOW_SOFTWARE": "1"
+  },
+  "facts": {
+    "cpu_vendor": "GenuineIntel",
+    "displays": [],
+    "gpus": [
+      {
+        "addr": "0000:00:01.0",
+        "boot_vga": true,
+        "class": "030000",
+        "nvidia_family": null,
+        "pci_id": "1af4:1050"
+      }
+    ],
+    "hybrid": false,
+    "kernel": "stock",
+    "laptop": false,
+    "touchpad": false,
+    "virt": "qemu"
+  },
+  "kernel_params": [],
+  "messages": [],
+  "packages": [
+    "linux-firmware",
+    "sof-firmware",
+    "alsa-ucm-conf",
+    "intel-ucode",
+    "amd-ucode",
+    "qemu-guest-agent",
+    "spice-vdagent",
+    "mesa",
+    "vulkan-swrast"
+  ],
+  "rules_applied": [
+    "always-firmware",
+    "virt-qemu",
+    "virt-compositor-env",
+    "virt-gpu"
+  ],
+  "schema": 1,
+  "services": [],
+  "settings": {},
+  "udev_rules": [],
+  "warnings": []
+}

@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Path
+Target = etc/mkinitcpio.d/*.preset
+
+[Action]
+Description = Checking that mkinitcpio presets build UKIs...
+When = PostTransaction
+Exec = /usr/share/libalpm/scripts/seclegion-uki-check

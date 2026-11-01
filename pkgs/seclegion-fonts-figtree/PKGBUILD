@@ -1,0 +1,23 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# Figtree font, SIL OFL-1.1. Upstream release tag tarball, pinned by sha256 (docs/third-party.md).
+# Only the two variable-weight TTFs (upright and italic) are installed.
+pkgname=seclegion-fonts-figtree
+pkgver=2.0.3
+pkgrel=1
+pkgdesc='Figtree variable font (SIL OFL-1.1), the SecLegion UI typeface'
+arch=('any')
+url='https://github.com/erikdkennedy/figtree'
+license=('OFL-1.1')
+source=("figtree-$pkgver.tar.gz::https://github.com/erikdkennedy/figtree/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('0338c574a26a0f0ba0b796c0c205a4174d09399cf7deed2e4c4123bae789d7f3')
+
+package() {
+    cd "$srcdir/figtree-$pkgver"
+    install -Dm644 -t "$pkgdir/usr/share/fonts/TTF" \
+        'fonts/variable/Figtree[wght].ttf' 'fonts/variable/Figtree-Italic[wght].ttf'
+    install -Dm644 OFL.txt "$pkgdir/usr/share/licenses/$pkgname/OFL.txt"
+}

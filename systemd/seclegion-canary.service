@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# Vendor update SLA check (spec O8) for the OWNER's host only; never installed on a SecLegion system.
+# User unit: copy this and seclegion-canary.timer to ~/.config/systemd/user/, point ExecStart at your
+# checkout, then `systemctl --user enable --now seclegion-canary.timer` (docs/third-party.md).
+# A failed run (a vendor more than 7 days ahead of the pin) shows in `systemctl --user --failed`.
+[Unit]
+Description=SecLegion vendor update canary (VS Code and Brave pins at most 7 days behind)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/SecLegion-OS/tools/canary

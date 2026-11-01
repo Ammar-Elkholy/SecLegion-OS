@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Repo files seclegion-wifi needs (tools/pkg-source packs them into seclegion-src.tar.zst).
+desktop/wifi/seclegion_wifi
+desktop/wifi/seclegion-wifi.desktop
+tools/seclegion-wifi
+LICENSE

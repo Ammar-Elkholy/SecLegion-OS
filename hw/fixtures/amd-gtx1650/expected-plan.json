@@ -1,0 +1,73 @@
+{
+  "boot_entries": [],
+  "env": {
+    "AQ_DRM_DEVICES": "/dev/dri/seclegion-igpu:/dev/dri/seclegion-dgpu"
+  },
+  "facts": {
+    "cpu_vendor": "AuthenticAMD",
+    "displays": [],
+    "gpus": [
+      {
+        "addr": "0000:01:00.0",
+        "boot_vga": false,
+        "class": "030200",
+        "nvidia_family": "turing-plus",
+        "pci_id": "10de:1f9d"
+      },
+      {
+        "addr": "0000:05:00.0",
+        "boot_vga": true,
+        "class": "030000",
+        "nvidia_family": null,
+        "pci_id": "1002:1638"
+      }
+    ],
+    "hybrid": true,
+    "kernel": "stock",
+    "laptop": true,
+    "touchpad": true,
+    "virt": "none"
+  },
+  "kernel_params": [
+    "nvidia-drm.modeset=1",
+    "nvidia.NVreg_PreserveVideoMemoryAllocations=1"
+  ],
+  "messages": [],
+  "packages": [
+    "linux-firmware",
+    "sof-firmware",
+    "alsa-ucm-conf",
+    "intel-ucode",
+    "amd-ucode",
+    "mesa",
+    "vulkan-radeon",
+    "libva-mesa-driver",
+    "nvidia-open",
+    "nvidia-utils",
+    "libva-nvidia-driver",
+    "switcheroo-control",
+    "nvidia-prime"
+  ],
+  "rules_applied": [
+    "always-firmware",
+    "touchpad-tap-to-click",
+    "gpu-amd",
+    "nvidia-open-stock",
+    "hybrid-offload",
+    "hybrid-nvidia-prime"
+  ],
+  "schema": 1,
+  "services": [
+    "nvidia-suspend.service",
+    "nvidia-resume.service",
+    "nvidia-hibernate.service"
+  ],
+  "settings": {
+    "input.touchpad.tap_to_click": true
+  },
+  "udev_rules": [
+    "KERNEL==\"card*\", KERNELS==\"0000:05:00.0\", SUBSYSTEM==\"drm\", SUBSYSTEMS==\"pci\", SYMLINK+=\"dri/seclegion-igpu\"",
+    "KERNEL==\"card*\", KERNELS==\"0000:01:00.0\", SUBSYSTEM==\"drm\", SUBSYSTEMS==\"pci\", SYMLINK+=\"dri/seclegion-dgpu\""
+  ],
+  "warnings": []
+}

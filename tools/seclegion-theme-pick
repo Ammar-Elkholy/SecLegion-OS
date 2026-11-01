@@ -1,0 +1,60 @@
+#!/bin/bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# seclegion-theme-pick: rofi quick picker for the SecLegion theme.
+# Lists `seclegion-theme list --json` plus "Auto theme" and "Reset" entries and applies the choice
+# with `seclegion-theme apply --theme ID`, `auto on|off` or `reset`. Themed by the current theme's
+# rofi-colors.rasi. Env: SECLEGION_THEME (the seclegion-theme to run; default: the one beside this
+# script, else on PATH), SECLEGION_ROFI (default: rofi).
+set -u
+
+here="$(dirname -- "$(readlink -f -- "$0")")"
+theme="${SECLEGION_THEME:-}"
+if [ -z "$theme" ]; then
+    if [ -x "$here/seclegion-theme" ]; then theme="$here/seclegion-theme"; else theme=seclegion-theme; fi
+fi
+rofi="${SECLEGION_ROFI:-rofi}"
+colors="${XDG_STATE_HOME:-$HOME/.local/state}/seclegion/theme/current/rofi-colors.rasi"
+
+die() { printf 'seclegion-theme-pick: %s\n' "$*" >&2; exit 1; }
+command -v "$rofi" >/dev/null 2>&1 || die "rofi is not installed"
+
+json="$("$theme" list --json)" || die "seclegion-theme list failed"
+auto="$("$theme" auto status 2>/dev/null)"
+[ "$auto" = on ] || auto=off
+
+# actions[i] is "<kind> <arg>" (theme|auto|reset); labels[i] is what rofi shows for it
+actions=() labels=()
+while IFS=$'\t' read -r id label accent current; do
+    mark=" "
+    [ "$current" = 1 ] && mark="*"
+    actions+=("theme $id")
+    labels+=("$mark $label  $accent")
+done < <(printf '%s' "$json" | python3 -I -c '
+import json, sys
+for t in json.load(sys.stdin):
+    f = [str(t.get(k, "")).replace("\t", " ").replace("\n", " ") for k in ("id", "label", "accent")]
+    print("\t".join(f + ["1" if t.get("current") else "0"]))')
+if [ "$auto" = on ]; then
+    actions+=("auto off")
+    labels+=("Auto theme: on (select to turn off)")
+else
+    actions+=("auto on")
+    labels+=("Auto theme: off (select to turn on)")
+fi
+actions+=("reset -")
+labels+=("Reset to SecLegion Dark")
+
+args=(-dmenu -i -no-custom -format i -p Theme)
+if [ -r "$colors" ]; then
+    args+=(-theme-str "@import \"$colors\" window { border: 2px; border-color: @sl-accent; background-color: @sl-bg; } element selected { background-color: @sl-surface; text-color: @sl-accent; }")
+fi
+pick="$(printf '%s\n' "${labels[@]}" | "$rofi" "${args[@]}")" || exit 0   # Escape: nothing to do
+[[ "$pick" =~ ^[0-9]+$ ]] && [ "$pick" -lt "${#actions[@]}" ] || exit 0
+
+read -r kind arg <<<"${actions[$pick]}"
+case "$kind" in
+    theme) exec "$theme" apply --theme "$arg" ;;
+    auto) exec "$theme" auto "$arg" ;;
+    reset) exec "$theme" reset ;;
+esac

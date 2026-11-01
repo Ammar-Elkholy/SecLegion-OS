@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: 0BSD
+# Maintainer: SecLegion contributors
+#
+# The pacman keyring for the [seclegion] repository: PUBLIC keys only, in the format
+# pacman-key --populate reads (<name>.gpg, <name>-trusted, <name>-revoked).
+#
+# The three source files are not in git. tools/lib/mkrepo.sh generates the per-build
+# throwaway DEV key and drops the exported public key, its trust line and an (empty)
+# revocation list next to this PKGBUILD in the build copy, then runs makepkg. A release
+# build (a later job) puts the owner's public key there instead. The checksums are SKIP
+# on purpose: the files are generated for that one build, and the build checks them.
+pkgname=seclegion-keyring
+pkgver=1
+pkgrel=1
+pkgdesc='SecLegion package signing keyring (public keys only)'
+arch=('any')
+url='https://github.com/seclegion/seclegion-os'
+license=('MIT')
+install=seclegion-keyring.install
+source=(seclegion.gpg seclegion-trusted seclegion-revoked)
+sha256sums=('SKIP' 'SKIP' 'SKIP')
+
+package() {
+    install -d "$pkgdir/usr/share/pacman/keyrings"
+    install -m 0644 seclegion.gpg seclegion-trusted seclegion-revoked \
+        "$pkgdir/usr/share/pacman/keyrings/"
+}

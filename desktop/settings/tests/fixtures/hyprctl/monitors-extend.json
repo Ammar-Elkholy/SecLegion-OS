@@ -1,0 +1,84 @@
+[
+ {
+  "id": 0,
+  "name": "eDP-1",
+  "description": "BOE 0x0BC9",
+  "make": "BOE",
+  "model": "",
+  "serial": "",
+  "width": 2560,
+  "height": 1600,
+  "refreshRate": 165.00101,
+  "x": 0,
+  "y": 0,
+  "activeWorkspace": {
+   "id": 1,
+   "name": "1"
+  },
+  "specialWorkspace": {
+   "id": 0,
+   "name": ""
+  },
+  "reserved": [
+   0,
+   32,
+   0,
+   0
+  ],
+  "scale": 1.6,
+  "transform": 0,
+  "focused": true,
+  "dpmsStatus": true,
+  "vrr": false,
+  "solitary": "0",
+  "activelyTearing": false,
+  "directScanoutTo": "0",
+  "disabled": false,
+  "currentFormat": "XRGB8888",
+  "mirrorOf": "none",
+  "availableModes": [
+   "2560x1600@165.00Hz"
+  ]
+ },
+ {
+  "id": 1,
+  "name": "HDMI-A-1",
+  "description": "Dell Inc. DELL P2422H",
+  "make": "Dell",
+  "model": "",
+  "serial": "",
+  "width": 1920,
+  "height": 1080,
+  "refreshRate": 59.951,
+  "x": 1600,
+  "y": 0,
+  "activeWorkspace": {
+   "id": 2,
+   "name": "2"
+  },
+  "specialWorkspace": {
+   "id": 0,
+   "name": ""
+  },
+  "reserved": [
+   0,
+   32,
+   0,
+   0
+  ],
+  "scale": 1.0,
+  "transform": 0,
+  "focused": false,
+  "dpmsStatus": true,
+  "vrr": false,
+  "solitary": "0",
+  "activelyTearing": false,
+  "directScanoutTo": "0",
+  "disabled": false,
+  "currentFormat": "XRGB8888",
+  "mirrorOf": "none",
+  "availableModes": [
+   "1920x1080@59.95Hz"
+  ]
+ }
+]

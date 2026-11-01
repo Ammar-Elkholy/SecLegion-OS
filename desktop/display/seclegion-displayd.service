@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# seclegion-host:managed display
+# Clears ghost monitors after an HDMI unplug (owner issue 15), on a host that never reaches
+# graphical-session.target: started with the user manager and retried until the session has exported
+# HYPRLAND_INSTANCE_SIGNATURE (the daemon exits 1 without it). Installed systems use the packaged
+# unit in desktop/units instead. Written by `seclegion-host apply display`; rollback disables and removes it.
+[Unit]
+Description=SecLegion: clear ghost monitors after an unplug (host)
+StartLimitIntervalSec=0
+
+[Service]
+ExecStart=%h/.local/share/seclegion/host/display/seclegion-displayd
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

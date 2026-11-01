@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# make lint-pkgs: checks pkgs/ only.
+#   1. reuse lint-file over every git-tracked file under pkgs/ (licence and copyright per file);
+#   2. namcap over the built packages in out/repo/seclegion (tools/build-pkgs), minus the findings
+#      listed in pkgs/namcap-allow.txt (one extended regex per line, '#' comments). Skipped with a
+#      message when namcap is not installed or nothing is built yet.
+# Prints `lint-pkgs: N errors`; exit 1 when N > 0. The structure of each PKGBUILD is checked by
+# tests/pkgs/test_packages.py.
+set -uo pipefail
+
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+cd "$root" || exit 2
+errors=0
+
+if command -v reuse >/dev/null; then
+    mapfile -t files < <(git ls-files pkgs)
+    if ! reuse lint-file "${files[@]}"; then
+        errors=$((errors + 1))
+    fi
+else
+    echo "lint-pkgs: reuse not installed, SKIPPED the licence check (run 'make bootstrap')" >&2
+fi
+
+allow=$root/pkgs/namcap-allow.txt
+if ! command -v namcap >/dev/null; then
+    echo "lint-pkgs: namcap not installed, SKIPPED the package check"
+else
+    shopt -s nullglob
+    built=("$root"/out/repo/seclegion/*.pkg.tar.zst)
+    if [[ ${#built[@]} -eq 0 ]]; then
+        echo "lint-pkgs: no built packages in out/repo/seclegion (run tools/build-pkgs), SKIPPED the package check"
+    else
+        patterns=$(mktemp)
+        trap 'rm -f -- "$patterns"' EXIT
+        grep -vE '^[[:space:]]*(#|$)' "$allow" > "$patterns" || true
+        for p in "${built[@]}"; do
+            out=$(namcap "$p" 2>&1) || true
+            if [[ -s $patterns ]]; then
+                out=$(grep -vEf "$patterns" <<< "$out" || true)
+            fi
+            if [[ -n $out ]]; then
+                printf '%s\n' "$out"
+                errors=$((errors + $(wc -l <<< "$out")))
+            fi
+        done
+    fi
+fi
+
+echo "lint-pkgs: $errors errors"
+[[ $errors -eq 0 ]]

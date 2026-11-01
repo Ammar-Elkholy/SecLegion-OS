@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Repo files seclegion-sysmon needs (tools/pkg-source packs them into seclegion-src.tar.zst).
+desktop/sysmon/seclegion_sysmon
+desktop/sysmon/seclegion-sysmon.desktop
+tools/seclegion-sysmon
+LICENSE

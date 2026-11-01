@@ -1,0 +1,46 @@
+{
+  "boot_entries": [],
+  "env": {},
+  "facts": {
+    "cpu_vendor": "GenuineIntel",
+    "displays": [],
+    "gpus": [
+      {
+        "addr": "0000:00:02.0",
+        "boot_vga": true,
+        "class": "030000",
+        "nvidia_family": null,
+        "pci_id": "8086:a7a0"
+      }
+    ],
+    "hybrid": false,
+    "kernel": "stock",
+    "laptop": true,
+    "touchpad": true,
+    "virt": "none"
+  },
+  "kernel_params": [],
+  "messages": [],
+  "packages": [
+    "linux-firmware",
+    "sof-firmware",
+    "alsa-ucm-conf",
+    "intel-ucode",
+    "amd-ucode",
+    "mesa",
+    "vulkan-intel",
+    "intel-media-driver"
+  ],
+  "rules_applied": [
+    "always-firmware",
+    "touchpad-tap-to-click",
+    "gpu-intel"
+  ],
+  "schema": 1,
+  "services": [],
+  "settings": {
+    "input.touchpad.tap_to_click": true
+  },
+  "udev_rules": [],
+  "warnings": []
+}

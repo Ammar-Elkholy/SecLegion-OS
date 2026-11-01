@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+[Desktop Entry]
+Type=Application
+Name=Wi-Fi
+GenericName=Wi-Fi Networks
+Comment=See Wi-Fi networks in range and join one
+Exec=seclegion-wifi
+Icon=network-wireless
+Terminal=false
+Categories=Network;Settings;
+Keywords=wifi;wi-fi;wireless;wlan;network;internet;
+StartupNotify=true
+StartupWMClass=org.seclegion.Wifi

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# nm-applet shim. `nm-applet --indicator` registers a StatusNotifier tray item,
+# which duplicates the bar's own network module (and runs into the glycin hang).
+# Without --indicator the applet offers only the XEmbed icon, which Wayland bars
+# do not show, but it keeps running as the NetworkManager secret agent, so
+# Wi-Fi password prompts still appear. Every argument but --indicator is passed
+# through unchanged.
+#
+# Installed as ~/.local/bin/nm-applet (the `waybar` host component). The real
+# binary is run by absolute path, never by name, so the shim cannot call itself.
+set -u
+real="${SL_NMAPPLET_REAL:-/usr/bin/nm-applet}"   # SL_NMAPPLET_REAL: tests only
+args=()
+for a in "$@"; do
+    [ "$a" = --indicator ] || args+=("$a")
+done
+exec "$real" ${args[@]+"${args[@]}"}

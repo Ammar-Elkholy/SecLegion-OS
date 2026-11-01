@@ -1,0 +1,289 @@
+# SecLegion OS progress. weight = planned agent hours. 1.0 maps to 0-80%, 1.1 ("perfected") to 80-100%.
+# status: done | doing | todo. Update when a job merges or a checkpoint run passes.
+
+[[item]]
+id = "R0"
+name = "clean-chroot package builds"
+tier = "1.0"
+weight = 2
+status = "done"
+
+[[item]]
+id = "R1"
+name = "signed [seclegion] repo"
+tier = "1.0"
+weight = 5
+status = "done"
+
+[[item]]
+id = "J0"
+name = "M2 gates"
+tier = "1.0"
+weight = 6
+status = "done"
+
+[[item]]
+id = "R2"
+name = "system packages"
+tier = "1.0"
+weight = 4
+status = "done"
+
+[[item]]
+id = "R3"
+name = "desktop and theme packages"
+tier = "1.0"
+weight = 9
+status = "done"
+
+[[item]]
+id = "R4"
+name = "hwdetect"
+tier = "1.0"
+weight = 5
+status = "done"
+
+[[item]]
+id = "R5"
+name = "VS Code/Brave fetchers"
+tier = "1.0"
+weight = 4
+status = "done"
+
+[[item]]
+id = "T1"
+name = "tools catalog batch 1 + CLI"
+tier = "1.0"
+weight = 5
+status = "done"
+
+[[item]]
+id = "T2"
+name = "tools catalog batch 2 + docs"
+tier = "1.0"
+weight = 4
+status = "done"
+
+[[item]]
+id = "CP-A"
+name = "checkpoint A: ISO + VM gates"
+tier = "1.0"
+weight = 2
+status = "done"
+
+[[item]]
+id = "I1"
+name = "configurator: questions, archinstall JSON, refusals"
+tier = "1.0"
+weight = 4
+status = "done"
+
+[[item]]
+id = "I-devloop"
+name = "install dev loop VM"
+tier = "1.0"
+weight = 2
+status = "done"
+
+[[item]]
+id = "I2"
+name = "archinstall run + seclegion-post"
+tier = "1.0"
+weight = 5
+status = "done"
+
+[[item]]
+id = "I3"
+name = "VM install matrix (erase, LUKS, alongside)"
+tier = "1.0"
+weight = 4
+status = "done"
+
+[[item]]
+id = "I4"
+name = "target-clean + mutation suite"
+tier = "1.0"
+weight = 4
+status = "done"
+
+[[item]]
+id = "CP-B"
+name = "checkpoint B: install engine"
+tier = "1.0"
+weight = 3
+status = "done"
+
+[[item]]
+id = "D1"
+name = "roles, uwsm, user.lua"
+tier = "1.0"
+weight = 4
+status = "done"
+
+[[item]]
+id = "D2"
+name = "greetd + regreet login, branding, browsers"
+tier = "1.0"
+weight = 4
+status = "done"
+
+[[item]]
+id = "U1"
+name = "first boot setup"
+tier = "1.0"
+weight = 2
+status = "done"
+
+[[item]]
+id = "U3"
+name = "NTFS fixtures + dual-boot guide"
+tier = "1.0"
+weight = 3
+status = "done"
+
+[[item]]
+id = "U5"
+name = "fast install end to end (<900 s)"
+tier = "1.0"
+weight = 1.5
+status = "done"
+
+[[item]]
+id = "V2"
+name = "rescue and rollback drills"
+tier = "1.0"
+weight = 4
+status = "done"
+
+[[item]]
+id = "CP-C"
+name = "checkpoint C: installed desktop"
+tier = "1.0"
+weight = 3
+status = "todo"
+
+[[item]]
+id = "S8-9"
+name = "keybind + notification spike"
+tier = "1.0"
+weight = 2
+status = "done"
+
+[[item]]
+id = "W1"
+name = "key matrix + workflow probes"
+tier = "1.0"
+weight = 5
+status = "todo"
+
+[[item]]
+id = "W2"
+name = "menu, cheat sheet, capture"
+tier = "1.0"
+weight = 5
+status = "done"
+
+[[item]]
+id = "W3"
+name = "updates, migrations, refresh-config"
+tier = "1.0"
+weight = 5
+status = "doing"
+
+[[item]]
+id = "W4"
+name = "remaining utilities"
+tier = "1.0"
+weight = 4
+status = "done"
+
+[[item]]
+id = "CP-D"
+name = "checkpoint D: owner workflow"
+tier = "1.0"
+weight = 2.5
+status = "todo"
+
+[[item]]
+id = "L1"
+name = "desktop leftovers"
+tier = "1.0"
+weight = 6
+status = "done"
+
+[[item]]
+id = "RL1"
+name = "release tooling"
+tier = "1.0"
+weight = 6
+status = "doing"
+
+[[item]]
+id = "OD1"
+name = "owner-reported desktop issues (DAILY-DRIVER gaps 13-18)"
+tier = "1.0"
+weight = 4
+status = "doing"
+
+[[item]]
+id = "CP-G"
+name = "release candidate: all gates on one ISO"
+tier = "1.0"
+weight = 4
+status = "todo"
+
+[[item]]
+id = "S1"
+name = "kiosk compositor spike (GUI installer)"
+tier = "1.1"
+weight = 2
+status = "todo"
+
+[[item]]
+id = "U2-U4"
+name = "GTK GUI installer + Plymouth splash"
+tier = "1.1"
+weight = 12.5
+status = "doing"
+
+[[item]]
+id = "D3"
+name = "welcome app"
+tier = "1.1"
+weight = 3
+status = "done"
+
+[[item]]
+id = "D4"
+name = "screensaver"
+tier = "1.1"
+weight = 2
+status = "done"
+
+[[item]]
+id = "H1"
+name = "NVIDIA and gaming"
+tier = "1.1"
+weight = 4
+status = "done"
+
+[[item]]
+id = "A1-A3"
+name = "local AI runtime, AI Center, aichat"
+tier = "1.1"
+weight = 14
+status = "done"
+
+[[item]]
+id = "V1"
+name = "libvirt networks"
+tier = "1.1"
+weight = 4
+status = "doing"
+
+[[item]]
+id = "CP-E"
+name = "checkpoint E: hardware, AI, virtualisation"
+tier = "1.1"
+weight = 3
+status = "todo"

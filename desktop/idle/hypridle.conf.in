@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Template for seclegion-autolock: @TIMEOUT@ becomes the delay in seconds and the result
+# is written to ~/.local/share/seclegion/host/idle/hypridle.conf. This second hypridle
+# only locks; the owner's instance (from ~/.config/hypr/hypridle.conf) runs lock_cmd.
+general {
+    # our own systemd inhibitor (seclegion-idle-inhibit.service) must not block this instance
+    ignore_systemd_inhibit = true
+    # the owner's instance holds the org.freedesktop.ScreenSaver name
+    ignore_dbus_inhibit = true
+    # a video that inhibits through Wayland still keeps the screen unlocked
+    ignore_wayland_inhibit = false
+}
+
+listener {
+    timeout = @TIMEOUT@
+    on-timeout = loginctl lock-session
+}

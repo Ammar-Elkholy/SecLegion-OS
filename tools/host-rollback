@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# host-rollback [--last|<id>|baseline-0]
+# Thin wrapper kept for the old name; the tool is tools/seclegion-host.
+set -Eeuo pipefail
+exec "$(dirname "${BASH_SOURCE[0]}")/seclegion-host" rollback "$@"

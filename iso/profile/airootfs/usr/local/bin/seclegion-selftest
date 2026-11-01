@@ -1,0 +1,484 @@
+#!/usr/bin/python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""In-guest self test for the VM gate (plan r13 J2c, tests/iso/test_m2_targets.py).
+
+Runs only when the VM harness passes the system credential `seclegion.selftest` (an SMBIOS
+OEM string; seclegion-selftest.service has ConditionCredential=), so a normal boot never runs
+it. It waits for the job queue to settle (jobs stuck behind time-sync.target are tolerated: offline,
+systemd-time-wait-sync never finishes), then prints one JSON object per line on the serial
+console, each prefixed `SECLEGION-SELFTEST `. It reports status only: user names, modes,
+return codes, unit names, file paths. It never prints a password hash (passwd -S gives a
+status letter) and refuses to emit any line that looks like one.
+
+The credential value is the action: `report` (default) or `kill-kiosk` (also kill the
+installer kiosk and show that the error screen appears; install mode only).
+"""
+
+import ctypes
+import ctypes.util
+import glob
+import json
+import os
+import pwd
+import re
+import subprocess
+import sys
+import tempfile
+import time
+
+PREFIX = "SECLEGION-SELFTEST "
+OUT = os.environ.get("SECLEGION_SELFTEST_OUT", "/dev/ttyS0")  # the override is for host dry runs
+CREDENTIAL = "/run/credentials/@system/seclegion.selftest"
+LIVE, INSTALLER = "seclegion-live", "seclegion-installer"
+SELF_UNIT = "seclegion-selftest.service"
+SSHD_UNITS = ("sshd.service", "sshd.socket")
+CACHE = "/opt/seclegion/cache"
+# A crypt(3) hash ($y$, $6$, $2b$ ...): never allowed on the console.
+HASH_RE = re.compile(r"\$(?:y|7|6|5|2[abxy]?|1|sha\d+)\$[./0-9A-Za-z$,=-]{6,}")
+UNITS_PER_LINE = 12
+RULES_RUN = "/run/polkit-1/rules.d"
+INSTALL_PROGRAM = "/usr/bin/seclegion-install"
+PASSWORDLESS = "NOPASS" + "WD"  # not spelled out: the static gate greps the image for it
+
+
+def run(argv, timeout=60, stdin=None):
+    """(returncode, stdout). Never raises: a missing tool or a timeout is rc 127 / 124."""
+    try:
+        proc = subprocess.run(argv, capture_output=True, text=True, timeout=timeout,
+                              input=stdin, check=False)
+        return proc.returncode, proc.stdout
+    except subprocess.TimeoutExpired:
+        return 124, ""
+    except OSError:
+        return 127, ""
+
+
+class Console:
+    """Opens the console for every line: serial-getty@ttyS0 starting mid-run hangs up any fd held open
+    across it (later writes fail with EIO and the gate never sees "done"), while a fresh open still works."""
+
+    def __init__(self, path):
+        self.path = path
+
+    def emit(self, section, **fields):
+        line = PREFIX + json.dumps({"section": section, **fields})
+        if HASH_RE.search(line):
+            line = PREFIX + json.dumps({"section": "error", "reason": f"{section}: hash-like text"})
+        for attempt in range(5):
+            try:
+                fd = os.open(self.path, os.O_WRONLY | os.O_NOCTTY | os.O_APPEND)
+                try:
+                    os.write(fd, (line + "\n").encode())
+                finally:
+                    os.close(fd)
+                return
+            except OSError:
+                if attempt == 4:
+                    raise
+                time.sleep(0.5)
+
+
+def mode_of_boot():
+    with open("/proc/cmdline", encoding="utf-8") as handle:
+        found = re.search(r"systemd\.unit=seclegion-(\w+)\.target", handle.read())
+    return found.group(1) if found else "unknown"
+
+
+def action():
+    try:
+        with open(CREDENTIAL, encoding="utf-8") as handle:
+            return handle.read().strip() or "report"
+    except OSError:
+        return "report"
+
+
+TIME_SYNC = ("time-sync.target", "systemd-time-wait-sync.service")
+SETTLE_SECONDS = 300
+QUIET_POLLS = 5  # consecutive polls with no unexplained job
+
+
+def pending_jobs():
+    """Units that still have a queued or running job."""
+    _, out = run(["systemctl", "list-jobs", "--plain", "--no-legend", "--no-pager"])
+    return sorted({line.split()[1] for line in out.splitlines() if len(line.split()) > 1})
+
+
+def waits_for_time_sync(unit):
+    """True if `unit`'s pending job is explained by the stuck time-sync chain (offline, qemu net=none,
+    systemd-time-wait-sync never finishes): the chain itself, anything ordered after time-sync.target
+    (pacman-init), and the aggregating .timer/.target units queued behind them (timers, multi-user.target,
+    the mode target). A pending .service/.socket/.mount outside the chain is NOT explained: a hung
+    kiosk or greeter must keep the gate red."""
+    if unit in TIME_SYNC or unit.endswith((".timer", ".target")):
+        return True
+    _, tree = run(["systemctl", "list-dependencies", "--after", "--plain", "--no-pager", unit])
+    return "time-sync.target" in tree.split()
+
+
+def settle():
+    """Wait until every remaining job is part of the stuck time-sync chain. (Type=simple: our own start
+    job is already done. `systemctl is-system-running --wait` would never return offline.)
+    Returns (state, pending jobs, jobs not explained by the time-sync chain)."""
+    quiet = 0
+    for _ in range(SETTLE_SECONDS):
+        pending = pending_jobs()
+        unexplained = [u for u in pending if not waits_for_time_sync(u)]
+        quiet = quiet + 1 if not unexplained else 0
+        if quiet >= QUIET_POLLS:
+            break
+        run(["sleep", "1"])
+    else:
+        return "timeout", pending, unexplained
+    _, state = run(["systemctl", "is-system-running"])
+    return state.strip() or "unknown", pending, unexplained
+
+
+def unit_names(*args):
+    _, out = run(["systemctl", "list-units", "--plain", "--no-legend", "--no-pager", *args])
+    return sorted(line.split()[0] for line in out.splitlines() if line.split())
+
+
+def processes():
+    """[(user, comm, cmdline)] from /proc, no external tool."""
+    found = []
+    for pid in filter(str.isdigit, os.listdir("/proc")):
+        try:
+            with open(f"/proc/{pid}/status", encoding="utf-8") as handle:
+                status = handle.read()
+            uid = int(re.search(r"^Uid:\s+(\d+)", status, re.M).group(1))
+            comm = re.search(r"^Name:\s+(\S+)", status, re.M).group(1)
+            with open(f"/proc/{pid}/cmdline", "rb") as handle:
+                cmd = handle.read().replace(b"\0", b" ").decode("utf-8", "replace").strip()
+            try:
+                user = pwd.getpwuid(uid).pw_name
+            except KeyError:
+                user = str(uid)
+            found.append((user, comm, cmd))
+        except (OSError, AttributeError, ValueError):
+            continue  # exited while we looked
+    return found
+
+
+def sudo_rc(user):
+    """Exit status of `sudo -n true` run as `user` (0 = passwordless sudo works).
+
+    setpriv, not runuser: runuser opens a PAM session, pam_systemd then starts the user's manager
+    (systemd + sd-pam) and a "manager" login session, which the isolation probe reports as a live
+    user session in install mode."""
+    try:
+        pw = pwd.getpwnam(user)
+    except KeyError:
+        return 127
+    return run(["setpriv", f"--reuid={pw.pw_uid}", f"--regid={pw.pw_gid}", "--init-groups",
+                "--reset-env", "--", "sudo", "-n", "true"])[0]
+
+
+def account(name):
+    try:
+        entry = pwd.getpwnam(name)
+    except KeyError:
+        return {"exists": False}
+    _, out = run(["passwd", "-S", name])
+    fields = out.split()
+    return {"exists": True, "uid": entry.pw_uid, "shell": entry.pw_shell,
+            "password": fields[1] if len(fields) > 1 else "?"}  # L locked, P usable, NP empty
+
+
+def pam_empty_password_succeeds(user, service="login"):
+    """True if PAM accepts an EMPTY password for `user` (it must never)."""
+    libpam = ctypes.CDLL(ctypes.util.find_library("pam") or "libpam.so.0")
+    libc = ctypes.CDLL(ctypes.util.find_library("c") or "libc.so.6")
+    libc.calloc.restype = ctypes.c_void_p
+    libc.strdup.restype = ctypes.c_void_p
+
+    class Message(ctypes.Structure):
+        _fields_ = [("style", ctypes.c_int), ("text", ctypes.c_char_p)]
+
+    class Response(ctypes.Structure):
+        _fields_ = [("text", ctypes.c_void_p), ("retcode", ctypes.c_int)]  # void*: PAM free()s it
+
+    conv_t = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.POINTER(Message)),
+                              ctypes.POINTER(ctypes.POINTER(Response)), ctypes.c_void_p)
+
+    def answer(count, messages, responses, _data):
+        block = libc.calloc(count, ctypes.sizeof(Response))
+        array = ctypes.cast(block, ctypes.POINTER(Response))
+        for i in range(count):
+            if messages[i].contents.style in (1, 2):  # a prompt: answer with the empty password
+                array[i].text = libc.strdup(b"")
+        responses[0] = array
+        return 0
+
+    class Conv(ctypes.Structure):
+        _fields_ = [("conv", conv_t), ("data", ctypes.c_void_p)]
+
+    callback = conv_t(answer)
+    conv = Conv(callback, None)
+    handle = ctypes.c_void_p()
+    libpam.pam_start.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.POINTER(Conv),
+                                 ctypes.POINTER(ctypes.c_void_p)]
+    libpam.pam_authenticate.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    libpam.pam_end.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    if libpam.pam_start(service.encode(), user.encode(), ctypes.byref(conv), ctypes.byref(handle)):
+        raise RuntimeError("pam_start failed")
+    rc = libpam.pam_authenticate(handle, 0)
+    libpam.pam_end(handle, rc)
+    run(["faillock", "--user", user, "--reset"])  # leave no failure record behind
+    return rc == 0
+
+
+def nullok_files():
+    hits = []
+    for root in ("/etc/pam.d", "/etc/security", "/usr/lib/pam.d"):
+        for base, _dirs, files in os.walk(root):
+            for name in files:
+                path = os.path.join(base, name)
+                try:
+                    with open(path, encoding="utf-8", errors="replace") as handle:
+                        if re.search(r"\bnullok\b", handle.read()):
+                            hits.append(path)
+                except OSError:
+                    continue
+    return sorted(hits)
+
+
+def nopasswd_files():
+    hits = []
+    try:
+        extra = sorted(os.path.join("/etc/sudoers.d", n) for n in os.listdir("/etc/sudoers.d"))
+    except OSError:
+        extra = []
+    for path in ["/etc/sudoers", *extra]:
+        try:
+            with open(path, encoding="utf-8") as handle:
+                if any(PASSWORDLESS in ln for ln in handle if not ln.lstrip().startswith("#")):
+                    hits.append(path)
+        except OSError:
+            continue
+    return hits
+
+
+def privilege():
+    accounts = {name: account(name) for name in ("root", LIVE, INSTALLER)}
+    empty = {name: pam_empty_password_succeeds(name) for name in accounts if accounts[name]["exists"]}
+    return {
+        "accounts": accounts,
+        "uid_zero": sorted(e.pw_name for e in pwd.getpwall() if e.pw_uid == 0),
+        "empty_password_login": empty,
+        "nullok_files": nullok_files(),
+        "nopasswd_files": [os.path.basename(p) for p in nopasswd_files()],
+        "sudo_n": {LIVE: sudo_rc(LIVE), INSTALLER: sudo_rc(INSTALLER), "nobody": sudo_rc("nobody")},
+    }
+
+
+def isolation():
+    procs = processes()
+    _, sessions = run(["loginctl", "list-sessions", "--no-legend"])
+    session_users = sorted({ln.split()[2] for ln in sessions.splitlines() if len(ln.split()) > 2})
+    return {
+        "live_user_processes": sorted({c for u, c, _ in procs if u == LIVE}),
+        "installer_processes": sorted({c for u, c, _ in procs if u == INSTALLER}),
+        "session_users": session_users,
+        "autologin_processes": sorted(cmd for _u, comm, cmd in procs
+                                      if comm in ("agetty", "login", "greetd") and "autologin" in cmd),
+        "greetd": run(["systemctl", "is-active", "greetd.service"])[1].strip(),
+        "kiosk": run(["systemctl", "is-active", "seclegion-kiosk.service"])[1].strip(),
+        "kiosk_user": sorted({u for u, c, _ in procs if c == "cage"}),
+        "rescue_shell": run(["systemctl", "is-active", "seclegion-rescue-shell.service"])[1].strip(),
+        "sshd": run(["systemctl", "is-active", "sshd.service"])[1].strip(),
+    }
+
+
+def installer():
+    """The install kiosk's GUI and its one privilege, pkexec of seclegion-install (spec A3).
+
+    Every mode reports the polkit rules under /run (only install mode may have one). Install mode also runs
+    pkexec as the installer user: seclegion-install --help must work, any other program must be refused."""
+    out = {"rules_run": sorted(glob.glob(os.path.join(RULES_RUN, "*"))),
+           "rules_etc": sorted(glob.glob("/etc/polkit-1/rules.d/*"))}
+    if mode_of_boot() != "install":
+        return out
+    gui = False
+    for _ in range(120):  # the GUI starts a little after the kiosk unit is active
+        gui = any(u == INSTALLER and "seclegion-installer-gui" in cmd for u, _c, cmd in processes())
+        if gui:
+            break
+        run(["sleep", "0.5"])
+    as_installer = ["runuser", "-u", INSTALLER, "--", "pkexec"]
+    rc, text = run([*as_installer, INSTALL_PROGRAM, "--help"])
+    out.update(gui_running=gui, pkexec_help_rc=rc, pkexec_help_usage="usage:" in text,
+               pkexec_other_rc=run([*as_installer, "/usr/bin/id"])[0])
+    return out
+
+
+def lock():
+    procs = processes()
+    lockers = ("hyprlock", "swaylock", "gtklock", "waylock", "swaylock-effects")
+    _, sessions = run(["loginctl", "list-sessions", "--no-legend"])
+    hints = {}
+    for line in sessions.splitlines():
+        if line.split():
+            sid = line.split()[0]
+            hints[sid] = run(["loginctl", "show-session", sid, "-p", "LockedHint", "--value"])[1].strip()
+    path = f"/home/{LIVE}/.config/hypr/hypridle.conf"
+    try:
+        with open(path, encoding="utf-8") as handle:
+            conf = [ln for ln in handle.read().splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
+    except OSError:
+        conf = []
+    return {
+        "locker_processes": sorted({c for _u, c, _ in procs if c in lockers}),
+        "locked_hints": hints,
+        "hypridle_conf_lock_lines": [ln.strip() for ln in conf
+                                     if re.search(r"lock_cmd|before_sleep_cmd|hyprlock|lock-session|loginctl", ln)],
+        "hypridle_conf_dpms": any("dpms off" in ln for ln in conf),
+        "hypridle_running": any(c == "hypridle" for _u, c, _ in procs),  # report only: nothing starts it yet
+    }
+
+
+def repos():
+    sections, siglevels, servers = [], [], []
+    with open("/etc/pacman.conf", encoding="utf-8") as handle:
+        for raw in handle:
+            line = raw.split("#")[0].strip()
+            found = re.match(r"\[(.+)\]$", line)
+            if found:
+                sections.append(found.group(1))
+            elif line.startswith("SigLevel"):
+                siglevels.append(re.sub(r"\s+", " ", line))
+            elif line.startswith("Server"):
+                servers.append(line.split("=", 1)[1].strip())
+            elif line.startswith("Include"):
+                servers.append("Include " + line.split("=", 1)[1].strip())
+    return {
+        "sections": sections, "siglevels": sorted(set(siglevels)),
+        "servers": sorted({re.sub(r"/repos/\d{4}/\d{2}/\d{2}/", "/repos/<date>/", s) for s in servers}),
+        "archive_dates": sorted({m for s in servers for m in re.findall(r"repos/(\d{4}/\d{2}/\d{2})/", s)}),
+        # openssh arrives as a dependency (gvfs -> gcr-4); the policy is "no SSH server", not "no package"
+        # (docs/decisions.md M2-openssh): sshd masked, no host keys, nothing listening on :22.
+        "openssh_installed": run(["pacman", "-Q", "openssh"])[0] == 0,
+        "sshd_state": {unit: run(["systemctl", "is-enabled", unit])[1].strip() or "unknown" for unit in SSHD_UNITS},
+        "ssh_host_keys": sorted(glob.glob("/etc/ssh/ssh_host_*")),
+        "listening_22": listening(22),
+    }
+
+
+def listening(port):
+    """True if any TCP socket (v4 or v6) is in LISTEN state on `port`; read from /proc, no external tool."""
+    for table in ("/proc/net/tcp", "/proc/net/tcp6"):
+        try:
+            with open(table, encoding="utf-8") as handle:
+                rows = handle.read().splitlines()[1:]
+        except OSError:
+            continue
+        for row in rows:
+            fields = row.split()
+            if len(fields) > 3 and fields[3] == "0A" and int(fields[1].rsplit(":", 1)[1], 16) == port:
+                return True
+    return False
+
+
+def verify_signature(ring, package):
+    """gpgv exit status: 0 good signature, 1 BAD signature, 2 could not check (no key, no file).
+    Independent of pacman-init: the keyring is the packaged archlinux.gpg, not the initialised one."""
+    return run(["gpgv", "--keyring", ring, package + ".sig", package], timeout=120)[0]
+
+
+def build_keyring(tmp):
+    """Binary keyring of the packaged Arch signing keys in a throwaway gnupg home; None if it fails."""
+    home = os.path.join(tmp, "gnupg")
+    os.makedirs(home, mode=0o700)
+    ring = os.path.join(tmp, "archlinux.gpg")
+    rc, _ = run(["gpg", "--homedir", home, "--batch", "--dearmor", "--output", ring,
+                 "/usr/share/pacman/keyrings/archlinux.gpg"])
+    return ring if rc == 0 and os.path.isfile(ring) else None
+
+
+def cache():
+    names = sorted(os.listdir(CACHE)) if os.path.isdir(CACHE) else []
+    packages = [n for n in names if ".pkg.tar." in n and not n.endswith(".sig")]
+    unsigned = [p for p in packages if p + ".sig" not in names]
+    result = {"packages": len(packages), "sigs": sum(1 for n in names if n.endswith(".sig")),
+              "without_sig": len(unsigned), "database": "seclegion-cache.db.tar.zst" in names}
+    with tempfile.TemporaryDirectory() as tmp:
+        # pacman resolves --cachedir at start-up and exits 1 ("failed to resolve path") if it is missing.
+        os.makedirs(os.path.join(tmp, "pkg"))
+        os.makedirs(os.path.join(tmp, "db", "local"))
+        with open(os.path.join(tmp, "db", "local", "ALPM_DB_VERSION"), "w", encoding="utf-8") as handle:
+            handle.write("9\n")
+        conf = os.path.join(tmp, "pacman.conf")
+        with open(conf, "w", encoding="utf-8") as handle:
+            handle.write("[options]\nArchitecture = auto\nSigLevel = Required DatabaseOptional\n"
+                         f"[seclegion-cache]\nServer = file://{CACHE}\n")
+        base = ["pacman", "--config", conf, "--dbpath", os.path.join(tmp, "db"),
+                "--cachedir", os.path.join(tmp, "pkg"), "--logfile", "/dev/null", "--noconfirm"]
+        result["sync_rc"] = run([*base, "-Sy"])[0]
+        rc, out = run([*base, "-Sp", "--print-format", "%n", "hyprland", "firefox", "greetd", "linux"])
+        resolved = set(out.split())
+        result["resolve_rc"] = rc
+        result["resolves"] = sorted(resolved & {"hyprland", "firefox", "greetd", "linux"})
+        result["resolved_count"] = len(resolved)
+        # Signatures: up to four samples, then a one-byte-tampered copy of the smallest package must fail.
+        samples = [p for p in packages if re.match(r"(hyprland|firefox|linux|greetd)-\d", p)][:4]
+        ring = build_keyring(tmp) or os.path.join(tmp, "no-keyring")
+        result["sig_verified"] = {p.split("-")[0]: verify_signature(ring, os.path.join(CACHE, p)) == 0
+                                  for p in samples}
+        if packages:
+            small = min(packages, key=lambda p: os.path.getsize(os.path.join(CACHE, p)))
+            bad = os.path.join(tmp, small)
+            with open(os.path.join(CACHE, small), "rb") as handle:
+                data = bytearray(handle.read())
+            data[len(data) // 2] ^= 0xFF
+            with open(bad, "wb") as handle:
+                handle.write(data)
+            with open(os.path.join(CACHE, small + ".sig"), "rb") as src, open(bad + ".sig", "wb") as dst:
+                dst.write(src.read())
+            # exit 1 = BAD signature; 2 would only mean "could not check", which proves nothing
+            result["tampered_rejected"] = verify_signature(ring, bad) == 1
+    return result
+
+
+def kill_kiosk():
+    """SIGKILL the installer's cage; the kiosk unit must fail and the error screen must come up."""
+    killed = run(["pkill", "-KILL", "-x", "-u", INSTALLER, "cage"])[0] == 0
+    for _ in range(60):
+        state = run(["systemctl", "is-active", "seclegion-kiosk-error.service"])[1].strip()
+        if state == "active":
+            break
+        run(["sleep", "0.5"])
+    log = "/var/log/seclegion/kiosk.log"
+    return {"killed": killed, "kiosk": run(["systemctl", "is-active", "seclegion-kiosk.service"])[1].strip(),
+            "error_unit": state, "log": log, "log_exists": os.path.isfile(log)}
+
+
+def main():
+    console = Console(OUT)
+    mode = mode_of_boot()
+    todo = action()
+    console.emit("start", mode=mode, action=todo)
+    state, pending, unexplained = settle()
+    failed = unit_names("--state=failed")
+    console.emit("state", mode=mode, system=state, failed=failed, pending_jobs=pending,
+                 unexplained_jobs=unexplained)
+    active = [u for u in unit_names("--type=service,socket", "--state=active") if u != SELF_UNIT]
+    chunks = [active[i:i + UNITS_PER_LINE] for i in range(0, len(active), UNITS_PER_LINE)] or [[]]
+    for number, chunk in enumerate(chunks, 1):
+        console.emit("units", mode=mode, part=number, of=len(chunks), active=chunk)
+    for section, probe in (("privilege", privilege), ("isolation", isolation), ("installer", installer),
+                           ("lock", lock), ("repos", repos), ("cache", cache)):
+        try:
+            console.emit(section, mode=mode, **probe())
+        except Exception as exc:  # noqa: BLE001 - a probe bug must show up as an error line, not a hang
+            console.emit("error", mode=mode, probe=section, reason=type(exc).__name__ + ": " + str(exc)[:200])
+    if todo == "kill-kiosk":
+        try:
+            console.emit("kiosk_error", mode=mode, **kill_kiosk())
+        except Exception as exc:  # noqa: BLE001
+            console.emit("error", mode=mode, probe="kiosk_error", reason=type(exc).__name__ + ": " + str(exc)[:200])
+    console.emit("done", mode=mode)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

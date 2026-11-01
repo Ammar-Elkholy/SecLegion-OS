@@ -1,0 +1,5 @@
+SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+SPDX-License-Identifier: MIT
+
+Generated (pure Python, zlib + struct): 1920x1080, a vertical gradient from the SecLegion Dark bg
+#050F0E to surface #0B1E1C (desktop/theme/tokens.toml). The default background for every output.

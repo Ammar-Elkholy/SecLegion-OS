@@ -1,0 +1,50 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# The Settings app (python package seclegion_settings, the seclegion-set / seclegion-settings /
+# seclegion-root-apply launchers, the desktop entry, the ideapad conservation_mode udev rule, the polkit
+# action that lets the app run seclegion-root-apply through pkexec) and the read-only seclegion-doctor.
+# Its Appearance page runs the seclegion-theme command: that package must be installed with this
+# one. It is not in depends=() because the container build resolves depends from the Arch
+# repositories only, where seclegion-theme does not exist (pkgs/README.md); the ISO package list
+# installs both.
+pkgname=seclegion-settings
+pkgver=0.1.0
+pkgrel=2
+pkgdesc='SecLegion OS Settings app, its command-line twin and the desktop doctor'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('MIT')
+depends=('python' 'python-gobject' 'gtk4' 'libadwaita' 'polkit')
+source=(seclegion-src.tar.zst)
+sha256sums=('SKIP')  # generated for the build from tracked files (tools/pkg-source)
+
+_tree() {
+    local f
+    while IFS= read -r -d '' f; do
+        install -Dm644 "$srcdir/$1/$f" "$pkgdir/$2/$f"
+    done < <(cd "$srcdir/$1" && find . -type f ! -name '*.license' ! -path '*/__pycache__/*' -print0)
+}
+
+package() {
+    _tree desktop/settings/seclegion_settings usr/lib/seclegion/python/seclegion_settings
+    local t
+    for t in seclegion-set seclegion-settings seclegion-root-apply; do
+        install -Dm755 "$srcdir/tools/$t" "$pkgdir/usr/bin/$t"
+    done
+    # the doctor is stdlib-only Python with an env shebang: pin it to the system interpreter, isolated
+    install -d "$pkgdir/usr/bin"
+    sed '1s|.*|#!/usr/bin/python3 -I|' "$srcdir/tools/seclegion-doctor" > "$pkgdir/usr/bin/seclegion-doctor"
+    chmod 755 "$pkgdir/usr/bin/seclegion-doctor"
+    install -Dm644 "$srcdir/desktop/settings/seclegion-settings.desktop" \
+        "$pkgdir/usr/share/applications/seclegion-settings.desktop"
+    # lets the wheel group write the battery conservation_mode attribute (no root helper)
+    install -Dm644 "$srcdir/desktop/settings/62-seclegion-ideapad.rules" \
+        "$pkgdir/usr/lib/udev/rules.d/62-seclegion-ideapad.rules"
+    # pkexec runs only /usr/bin/seclegion-root-apply under this action (admin password, active session)
+    install -Dm644 "$srcdir/desktop/settings/org.seclegion.settings.policy" \
+        "$pkgdir/usr/share/polkit-1/actions/org.seclegion.settings.policy"
+    install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

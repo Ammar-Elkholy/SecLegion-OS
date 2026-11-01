@@ -1,0 +1,25 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# Opt-in gaming set: pulls GameMode, MangoHud, gamescope and vulkan-tools, and ships the GameMode
+# defaults. Installed only when the user opts in at install time (hints gaming: true).
+# Steam is not a dependency: it lives in Arch [multilib], which the installer enables only for this
+# opt-in (D-H1). seclegion-steam.service installs it on the first online boot; seclegion-install-steam
+# does the same by hand.
+pkgname=seclegion-gaming
+pkgver=0.1.0
+pkgrel=2
+pkgdesc='SecLegion OS opt-in gaming set: GameMode, MangoHud, gamescope, Vulkan tools'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('MIT')
+depends=('gamemode' 'mangohud' 'gamescope' 'vulkan-tools')
+backup=('etc/gamemode.ini')
+
+package() {
+    install -Dm644 "$startdir/gamemode.ini" "$pkgdir/etc/gamemode.ini"
+    install -Dm755 "$startdir/seclegion-install-steam" "$pkgdir/usr/bin/seclegion-install-steam"
+    install -Dm644 "$startdir/seclegion-steam.service" "$pkgdir/usr/lib/systemd/system/seclegion-steam.service"
+}

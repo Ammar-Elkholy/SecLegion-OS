@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# Build the ISO in the pinned privileged container (via tools/docker-build.sh, the
+# only container entry point) and copy ISO, SHA256SUMS and packages.lock (the resolved
+# package set of the archive pin) into ./out.
+#
+# tools/build-pkgs runs first: it makes the signed [seclegion] repository (and its throwaway DEV
+# key) in the container's workdir, which the ISO build then embeds. A fresh repository, and
+# so a fresh key, for every ISO.
+set -euo pipefail
+
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+workdir=${SECLEGION_WORKDIR:-/var/tmp/seclegion-build}
+
+"$repo_root/tools/build-pkgs"
+"$repo_root/tools/docker-build.sh" iso
+
+mkdir -p "$repo_root/out"
+rm -f "$repo_root"/out/*.iso "$repo_root/out/SHA256SUMS" "$repo_root/out/packages.lock"
+cp -- "$workdir"/out/*.iso "$workdir/out/SHA256SUMS" "$workdir/out/packages.lock" "$repo_root/out/"
+(cd "$repo_root/out" && sha256sum -c SHA256SUMS)

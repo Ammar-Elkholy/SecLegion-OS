@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# seclegion-host:managed idle
+# A second hypridle that locks after the delay chosen with `seclegion-autolock set 15m|30m|60m`.
+# Written by `seclegion-host apply idle`.
+[Unit]
+Description=SecLegion: lock after a longer idle delay
+ConditionPathExists=%h/.local/share/seclegion/host/idle/hypridle.conf
+
+[Service]
+ExecStart=/usr/bin/hypridle -c %h/.local/share/seclegion/host/idle/hypridle.conf
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

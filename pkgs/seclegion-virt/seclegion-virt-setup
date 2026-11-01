@@ -1,0 +1,102 @@
+#!/usr/bin/python3 -I
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-virt-setup (root): libvirt networks, socket activation, libvirt group, ufw rules.
+
+Idempotent. Live (--root /): networks go through virsh net-define/net-autostart, only when absent.
+Offline (--root DIR, e.g. the installer's chroot target): the same definitions are written to
+DIR/etc/libvirt/qemu/networks/ with autostart symlinks, since no libvirtd runs there.
+
+ufw rules (the complete set; NOTHING for the isolated bridge virbr1, which has no route out):
+  ufw allow in on virbr0 to any port 67 proto udp     # DHCP from guests
+  ufw allow in on virbr0 to any port 53 proto udp     # DNS from guests (libvirt's dnsmasq)
+  ufw allow in on virbr0 to any port 53 proto tcp
+  ufw route allow in on virbr0                        # guest -> any interface, NAT'd by libvirt
+ufw's default FORWARD policy is DROP; the route rule is what lets NAT'd guest traffic out.
+libvirt is switched to the nftables backend (/etc/libvirt/network.conf) so its chains sit beside ufw's.
+"""
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+
+SHARE = "/usr/share/seclegion/virt/networks"
+NETWORKS = ("default", "seclegion-isolated")
+NAT_BRIDGE = "virbr0"
+UFW_RULES = (
+    ["allow", "in", "on", NAT_BRIDGE, "to", "any", "port", "67", "proto", "udp"],
+    ["allow", "in", "on", NAT_BRIDGE, "to", "any", "port", "53", "proto", "udp"],
+    ["allow", "in", "on", NAT_BRIDGE, "to", "any", "port", "53", "proto", "tcp"],
+    ["route", "allow", "in", "on", NAT_BRIDGE],
+)
+
+
+def real_run(argv):
+    return subprocess.run(argv, check=False).returncode
+
+
+def set_conf_key(text, key, value):
+    line = f'{key} = "{value}"'
+    pat = re.compile(rf"^\s*#?\s*{re.escape(key)}\s*=.*$", re.M)
+    if pat.search(text):
+        return pat.sub(line, text, count=1)
+    return text + ("" if text.endswith("\n") or not text else "\n") + line + "\n"
+
+
+def setup(root, user, run, share=SHARE, live=None):
+    """Returns the list of network names it defined (empty on a second run)."""
+    live = os.path.abspath(root) == "/" if live is None else live
+    defined = []
+    netdir = os.path.join(root, "etc/libvirt/qemu/networks")
+    for name in NETWORKS:
+        xml = os.path.join(share, f"{name}.xml")
+        if live:
+            if run(["virsh", "net-info", name]) == 0:
+                continue
+            run(["virsh", "net-define", xml])
+            run(["virsh", "net-autostart", name])
+        else:
+            dest = os.path.join(netdir, f"{name}.xml")
+            if os.path.exists(dest):
+                continue
+            os.makedirs(os.path.join(netdir, "autostart"), exist_ok=True)
+            with open(xml) as s, open(dest, "w") as d:
+                d.write(s.read())
+            link = os.path.join(netdir, "autostart", f"{name}.xml")
+            if not os.path.lexists(link):
+                os.symlink(f"../{name}.xml", link)
+        defined.append(name)
+
+    conf = os.path.join(root, "etc/libvirt/network.conf")
+    os.makedirs(os.path.dirname(conf), exist_ok=True)
+    old = open(conf).read() if os.path.exists(conf) else ""
+    new = set_conf_key(old, "firewall_backend", "nftables")
+    if new != old:
+        with open(conf, "w") as f:
+            f.write(new)
+
+    run(["systemctl", "--root", root, "enable", "libvirtd.socket"])
+    if user:
+        run(["usermod", "-aG", "libvirt", user])
+    for rule in UFW_RULES:
+        run(["ufw", *rule])
+    return defined
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(prog="seclegion-virt-setup")
+    ap.add_argument("--root", default="/")
+    ap.add_argument("--user", default=None, help="user to add to the libvirt group")
+    a = ap.parse_args(argv)
+    if a.root == "/" and os.geteuid() != 0:
+        print("seclegion-virt-setup: must run as root", file=sys.stderr)
+        return 1
+    done = setup(a.root, a.user, real_run)
+    print("defined: " + (", ".join(done) or "nothing (already set up)"))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

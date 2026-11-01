@@ -1,0 +1,40 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# cache.list: only in the offline cache (/opt/seclegion/cache), for the installed
+# target (spec A4, A10). Cache set = base + desktop + this list, with all dependencies.
+# NVIDIA is the open kernel modules only (no DKMS).
+nvidia-open
+nvidia-open-lts
+nvidia-utils
+nvidia-prime
+libva-nvidia-driver
+switcheroo-control
+vulkan-nouveau
+vulkan-swrast
+qemu-guest-agent
+spice-vdagent
+open-vm-tools
+virtualbox-guest-utils
+hyperv
+ufw
+gamemode
+mangohud
+gamescope
+vulkan-tools
+
+# dev profile (post-packages.list; openssh comes in as gcr-4's dependency, gnupg as pacman's)
+git
+base-devel
+docker
+socat
+
+# opt-in virtualisation set (hints virt: true; pkgs/seclegion-virt)
+libvirt
+qemu-desktop
+virt-manager
+dnsmasq
+edk2-ovmf
+swtpm
+# alongside installs only: the UEFI shell behind the Windows entry (installer/installd/winboot.py)
+edk2-shell

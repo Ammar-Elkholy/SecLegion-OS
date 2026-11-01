@@ -1,0 +1,12 @@
+// SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+// SPDX-License-Identifier: MIT
+// Copied to /run/polkit-1/rules.d/ by seclegion-kiosk-polkit.service, which only the install target
+// wants (spec A3). The kiosk user has no shell and no sudo; this is its one privilege: pkexec of
+// /usr/bin/seclegion-install, which validates its own answers and refuses unsafe targets itself.
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.policykit.exec" &&
+        action.lookup("program") == "/usr/bin/seclegion-install" &&
+        subject.user == "seclegion-installer") {
+        return polkit.Result.YES;
+    }
+});

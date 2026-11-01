@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# One owner per desktop role (spec A9). Checked by desktop/roles_check.py.
+# start = "unit"  : a systemd user unit in desktop/units, bound to graphical-session.target (uwsm)
+#         "bind"  : launched on demand by a keybind, no daemon
+#         "dbus"  : D-Bus/PAM activated, no unit of ours
+
+[role.notifications]
+package = "swaync"
+binary = "/usr/bin/swaync"
+start = "unit"
+unit = "seclegion-swaync.service"
+dbus_name = "org.freedesktop.Notifications"
+
+[role.polkit]
+package = "hyprpolkitagent"
+binary = "/usr/lib/hyprpolkitagent/hyprpolkitagent"
+start = "unit"
+unit = "seclegion-polkit-agent.service"
+
+[role.secrets]
+package = "gnome-keyring"
+binary = "/usr/bin/gnome-keyring-daemon"
+start = "dbus"
+
+[role.osd]
+package = "swayosd"
+binary = "/usr/bin/swayosd-server"
+start = "unit"
+unit = "seclegion-swayosd.service"
+
+[role.idle]
+package = "hypridle"
+binary = "/usr/bin/hypridle"
+start = "unit"
+unit = "seclegion-hypridle.service"
+
+[role.lock]
+package = "hyprlock"
+binary = "/usr/bin/hyprlock"
+start = "bind"
+
+[role.bar]
+package = "waybar"
+binary = "/usr/bin/waybar"
+start = "unit"
+unit = "seclegion-waybar.service"
+
+[role.launcher]
+package = "rofi"
+binary = "/usr/bin/rofi"
+start = "bind"

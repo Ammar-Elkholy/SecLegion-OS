@@ -1,0 +1,42 @@
+{
+  "contrast": "normal",
+  "mode": "default",
+  "requested_mode": "default",
+  "schema": 1,
+  "source": {
+    "accent_override": null,
+    "sha256": null,
+    "wallpaper": null
+  },
+  "tokens": {
+    "accent": "#00ff88",
+    "accent2": "#00f0ff",
+    "ansi0": "#12302c",
+    "ansi1": "#ff6666",
+    "ansi10": "#00ff88",
+    "ansi11": "#ffe08a",
+    "ansi12": "#94c0ff",
+    "ansi13": "#e4b0ff",
+    "ansi14": "#7ffaff",
+    "ansi15": "#e0fff4",
+    "ansi2": "#3ddc84",
+    "ansi3": "#ffcc66",
+    "ansi4": "#6ea8ff",
+    "ansi5": "#d58cff",
+    "ansi6": "#00f0ff",
+    "ansi7": "#c8e6dd",
+    "ansi8": "#6f9a90",
+    "ansi9": "#ff2266",
+    "bg": "#050f0e",
+    "border_active": "#00ff88",
+    "border_inactive": "#0b1e1c",
+    "crit": "#ff2266",
+    "err": "#ff6666",
+    "muted": "#8fb5ab",
+    "ok": "#3ddc84",
+    "surface": "#0b1e1c",
+    "surface2": "#12302c",
+    "text": "#e0fff4",
+    "warn": "#ffcc66"
+  }
+}

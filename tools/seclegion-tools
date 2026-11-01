@@ -1,0 +1,409 @@
+#!/usr/bin/env -S python3 -I
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-tools - the Tier-1 security tools catalog (PRD 8.2): list, info, test, lint.
+
+    seclegion-tools [--catalog DIR] list [--json] [--category X]
+    seclegion-tools [--catalog DIR] info NAME
+    seclegion-tools [--catalog DIR] test NAME | --all
+    seclegion-tools [--catalog DIR] lint
+    seclegion-tools [--catalog DIR] docs [--check FILE]
+
+The catalog is every catalog/*.toml in the repository (or --catalog DIR); each file holds
+[[tool]] tables, so a new batch only adds files. Installed state and the version come from
+`pacman -Q` at run time; the catalog stores no version. Stdlib only.
+
+`test` runs each tool's safe_test (an argv list, never a shell string) with a timeout and prints
+PASS/FAIL/SKIP per tool. A tool that is not installed is SKIP. Exit status: 1 if any test
+FAILed, 3 if a named tool is not installed, else 0. `lint` exits 1 on any catalog error.
+"""
+
+import argparse
+import ipaddress
+import json
+import re
+import shutil
+import subprocess
+import sys
+import tomllib
+from pathlib import Path
+from urllib.parse import urlsplit
+
+DEFAULT_CATALOG = Path(__file__).resolve().parent.parent / "catalog"
+
+SOURCES = ("arch-core", "arch-extra", "seclegion")
+CATEGORIES = ("recon", "network", "web", "passwords", "wireless", "forensics", "reversing")
+PRIVILEGES = ("none", "cap_net_raw", "root")
+REQUIRED = (
+    "name",
+    "package",
+    "source",
+    "category",
+    "purpose",
+    "privileges",
+    "privileges_why",
+    "safe_test",
+    "safe_test_expect",
+    "removal",
+    "update_policy",
+    "docs",
+    "needs_internet",
+)
+OPTIONAL = ("safe_test_exit", "safe_test_timeout", "licence")
+MAX_TIMEOUT = 10
+SHELL_CHARS = set(";|&$`<>\n\r\\")
+SHELL_NAMES = {"sh", "bash", "zsh", "dash", "fish", "ksh", "env", "eval", "xargs"}
+SCAN_TOOLS = {"nmap", "masscan"}
+SCAN_ONLY_LOOPBACK = "127.0.0.1"
+# Flags that pull targets or config from files, or random hosts: not checkable by parsing argv.
+INDIRECT_TARGET_FLAGS = {"-iL", "-iR", "--includefile", "--conf", "--iL", "--iR"}
+IFACE_FLAGS = {"-i", "-I", "--interface"}
+IPISH = re.compile(r"^[0-9.*\-]+$")
+HOSTISH = re.compile(r"^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)+$")
+
+
+def _host_of(part):
+    """The host a command-line token names, or None when it does not look like a target."""
+    try:
+        ipaddress.ip_address(part)
+        return part
+    except ValueError:
+        pass
+    if "://" in part:
+        try:
+            return urlsplit(part).hostname or part
+        except ValueError:
+            return part
+    if part.startswith("[") and "]" in part:
+        return part[1 : part.index("]")]
+    if part.count(":") > 1:
+        return part  # bare IPv6-looking token that did not parse: fail closed
+    if part.count(":") == 1:
+        part = part.rsplit(":", 1)[0]  # host:port
+    base = part.split("/", 1)[0]
+    if "." in base and (IPISH.match(base) or HOSTISH.match(base)):
+        return part  # a "/" suffix (CIDR, path) stays in the token and fails the checks below
+    return None
+
+
+def _target_errors(argv):
+    errors = []
+    tool = Path(argv[0]).name
+    strict = tool in SCAN_TOOLS
+    args = argv[1:]
+    for i, arg in enumerate(args):
+        if arg in INDIRECT_TARGET_FLAGS or (strict and arg == "-c"):
+            errors.append(f"flag {arg} takes targets from outside argv")
+        if arg in IFACE_FLAGS and i + 1 < len(args) and args[i + 1] != "lo":
+            errors.append(f"interface {args[i + 1]!r} is not lo")
+        if arg.startswith("--interface=") and arg.split("=", 1)[1] != "lo":
+            errors.append(f"interface {arg.split('=', 1)[1]!r} is not lo")
+        value = arg
+        if arg.startswith("-"):
+            if "=" not in arg:
+                continue
+            value = arg.split("=", 1)[1]
+        for part in re.split(r"[,\s]+", value):
+            host = _host_of(part) if part else None
+            if host is None:
+                continue
+            if strict:
+                if host != SCAN_ONLY_LOOPBACK:
+                    errors.append(f"{tool} target {part!r} must be exactly {SCAN_ONLY_LOOPBACK}")
+                continue
+            if host == "localhost":
+                continue
+            try:
+                ok = ipaddress.ip_address(host).is_loopback
+            except ValueError:
+                ok = False
+            if not ok:
+                errors.append(f"argument {part!r} is not loopback")
+    return errors
+
+
+def lint_entry(entry):
+    """List of problems with one catalog entry (empty when valid)."""
+    name = entry.get("name", "<unnamed>")
+    errors = []
+
+    def err(msg):
+        errors.append(f"{name}: {msg}")
+
+    for key in REQUIRED:
+        if key not in entry:
+            err(f"missing field {key!r}")
+    for key in entry:
+        if key not in REQUIRED and key not in OPTIONAL:
+            err(f"unknown field {key!r}")
+    for key in REQUIRED:
+        if key in entry and key not in ("safe_test", "needs_internet"):
+            if not isinstance(entry[key], str) or not entry[key].strip():
+                err(f"{key} must be a non-empty string")
+    if "source" in entry and entry["source"] not in SOURCES:
+        err(f"source {entry['source']!r} must be one of {', '.join(SOURCES)}")
+    if "category" in entry and entry["category"] not in CATEGORIES:
+        err(f"category {entry['category']!r} must be one of {', '.join(CATEGORIES)}")
+    if "privileges" in entry and entry["privileges"] not in PRIVILEGES:
+        err(f"privileges {entry['privileges']!r} must be one of {', '.join(PRIVILEGES)}")
+    if "needs_internet" in entry and entry["needs_internet"] is not False:
+        err("needs_internet must be false for the safe test")
+    if isinstance(entry.get("safe_test_expect"), str):
+        try:
+            re.compile(entry["safe_test_expect"])
+        except re.error as exc:
+            err(f"safe_test_expect is not a valid regex: {exc}")
+    if "safe_test_exit" in entry and (
+        not isinstance(entry["safe_test_exit"], int) or isinstance(entry["safe_test_exit"], bool)
+    ):
+        err("safe_test_exit must be an integer")
+    timeout = entry.get("safe_test_timeout", MAX_TIMEOUT)
+    if isinstance(timeout, bool) or not isinstance(timeout, int) or not 0 < timeout <= MAX_TIMEOUT:
+        err(f"safe_test_timeout must be an integer 1..{MAX_TIMEOUT}")
+
+    if "safe_test" in entry:
+        argv = entry["safe_test"]
+        if isinstance(argv, str):
+            err("safe_test is a shell string, it must be an argv list")
+        elif not isinstance(argv, list) or not argv or not all(isinstance(a, str) for a in argv):
+            err("safe_test must be a non-empty list of strings")
+        else:
+            if Path(argv[0]).name in SHELL_NAMES:
+                err(f"safe_test runs a shell or wrapper ({argv[0]})")
+            for arg in argv:
+                if SHELL_CHARS & set(arg):
+                    err(f"safe_test argument {arg!r} holds a shell metacharacter")
+            if re.search(r"\s", argv[0]):
+                err("safe_test[0] must be a bare program name")
+            errors.extend(f"{name}: {m}" for m in _target_errors(argv))
+    return errors
+
+
+def load_catalog(directory):
+    """([(file name, entry)], errors) for every *.toml in directory."""
+    entries, errors = [], []
+    files = sorted(Path(directory).glob("*.toml"))
+    if not files:
+        errors.append(f"{directory}: no catalog files")
+    for path in files:
+        try:
+            data = tomllib.loads(path.read_text(encoding="utf-8"))
+        except (OSError, tomllib.TOMLDecodeError) as exc:
+            errors.append(f"{path.name}: {exc}")
+            continue
+        extra = set(data) - {"tool"}
+        if extra:
+            errors.append(f"{path.name}: unknown top-level keys {sorted(extra)}")
+        entries.extend((path.name, entry) for entry in data.get("tool", []))
+    return entries, errors
+
+
+def lint_catalog(directory):
+    entries, errors = load_catalog(directory)
+    seen = {}
+    for fname, entry in entries:
+        errors.extend(f"{fname}: {m}" for m in lint_entry(entry))
+        name = entry.get("name")
+        if name in seen:
+            errors.append(f"{fname}: duplicate name {name!r} (also in {seen[name]})")
+        seen.setdefault(name, fname)
+    return errors
+
+
+def installed_version(package):
+    """Version string from `pacman -Q`, or None when not installed (or no pacman)."""
+    try:
+        out = subprocess.run(
+            ["pacman", "-Q", package], capture_output=True, text=True, timeout=10, check=False
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    parts = out.stdout.split()
+    return parts[1] if out.returncode == 0 and len(parts) == 2 else None
+
+
+def run_safe_test(entry):
+    """('PASS'|'FAIL', detail) after running the entry's safe_test."""
+    argv = entry["safe_test"]
+    if shutil.which(argv[0]) is None:
+        return "FAIL", f"{argv[0]} not on PATH"
+    try:
+        proc = subprocess.run(
+            argv,
+            capture_output=True,
+            text=True,
+            errors="replace",
+            stdin=subprocess.DEVNULL,
+            timeout=entry.get("safe_test_timeout", MAX_TIMEOUT),
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return "FAIL", "timed out"
+    expected_rc = entry.get("safe_test_exit", 0)
+    if proc.returncode != expected_rc:
+        return "FAIL", f"exit {proc.returncode}, expected {expected_rc}"
+    if not re.search(entry["safe_test_expect"], proc.stdout + proc.stderr, re.MULTILINE):
+        return "FAIL", f"output does not match /{entry['safe_test_expect']}/"
+    return "PASS", ""
+
+
+def _entries(args):
+    entries, errors = load_catalog(args.catalog)
+    if errors:
+        for line in errors:
+            print(f"error: {line}", file=sys.stderr)
+        sys.exit(2)
+    return [e for _, e in entries]
+
+
+def cmd_list(args):
+    rows = []
+    for e in sorted(_entries(args), key=lambda e: (e["category"], e["name"])):
+        if args.category and e["category"] != args.category:
+            continue
+        version = installed_version(e["package"])
+        rows.append(
+            {
+                "name": e["name"],
+                "package": e["package"],
+                "source": e["source"],
+                "category": e["category"],
+                "status": "installed" if version else "missing",
+                "version": version,
+            }
+        )
+    if args.json:
+        print(json.dumps(rows, indent=2))
+    else:
+        for r in rows:
+            print(
+                f"{r['name']:<14} {r['category']:<10} {r['source']:<11} "
+                f"{r['status']:<9} {r['version'] or '-'}"
+            )
+    return 0
+
+
+def cmd_info(args):
+    for e in _entries(args):
+        if e["name"] == args.name:
+            version = installed_version(e["package"])
+            for key in REQUIRED:
+                print(f"{key}: {e[key]}")
+            print(f"status: {'installed' if version else 'missing'}")
+            print(f"version: {version or '-'}")
+            return 0
+    print(f"error: no such tool {args.name!r}", file=sys.stderr)
+    return 2
+
+
+def cmd_test(args):
+    entries = _entries(args)
+    if not args.all:
+        entries = [e for e in entries if e["name"] == args.name]
+        if not entries:
+            print(f"error: no such tool {args.name!r}", file=sys.stderr)
+            return 2
+    failed = skipped = 0
+    for e in entries:
+        if installed_version(e["package"]) is None:
+            print(f"SKIP {e['name']} ({e['package']} not installed)")
+            skipped += 1
+            continue
+        status, detail = run_safe_test(e)
+        print(f"{status} {e['name']}" + (f": {detail}" if detail else ""))
+        failed += status == "FAIL"
+    if failed:
+        return 1
+    return 3 if skipped and not args.all else 0
+
+
+def render_docs(entries):
+    """Markdown for docs/security-tools.md: a table per category, generated from the catalog."""
+    lines = [
+        "<!-- generated by `seclegion-tools docs`; do not hand-edit -->",
+        "",
+        "# Security tools",
+        "",
+        "Generated from the catalog (`catalog/*.toml`) by `seclegion-tools docs`. "
+        "Regenerate with `tools/seclegion-tools docs > docs/security-tools.md`; "
+        "`tools/seclegion-tools docs --check docs/security-tools.md` fails if this file is stale.",
+        "",
+    ]
+    by_category = {}
+    for e in entries:
+        by_category.setdefault(e["category"], []).append(e)
+    header = (
+        "| name | package | source | purpose | privileges | safe test | removal | update policy |"
+    )
+    sep = "|---|---|---|---|---|---|---|---|"
+    for category in sorted(by_category):
+        lines.append(f"## {category}")
+        lines.append("")
+        lines.append(header)
+        lines.append(sep)
+        for e in sorted(by_category[category], key=lambda e: e["name"]):
+            safe_test = " ".join(e["safe_test"])
+            row = [
+                e["name"],
+                e["package"],
+                e["source"],
+                e["purpose"],
+                e["privileges"],
+                f"`{safe_test}`",
+                e["removal"],
+                e["update_policy"],
+            ]
+            lines.append("| " + " | ".join(c.replace("|", "\\|") for c in row) + " |")
+        lines.append("")
+    return "\n".join(lines).rstrip("\n") + "\n"
+
+
+def cmd_docs(args):
+    entries = sorted(_entries(args), key=lambda e: (e["category"], e["name"]))
+    text = render_docs(entries)
+    if args.check:
+        current = args.check.read_text(encoding="utf-8") if args.check.exists() else None
+        if current != text:
+            print(f"error: {args.check} is stale or hand-edited", file=sys.stderr)
+            return 1
+        return 0
+    print(text, end="")
+    return 0
+
+
+def cmd_lint(args):
+    errors = lint_catalog(args.catalog)
+    for line in errors:
+        print(f"error: {line}", file=sys.stderr)
+    if not errors:
+        print("catalog ok")
+    return 1 if errors else 0
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(prog="seclegion-tools", description=__doc__.split("\n")[0])
+    parser.add_argument("--catalog", type=Path, default=DEFAULT_CATALOG, help="catalog directory")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("list")
+    p.add_argument("--json", action="store_true")
+    p.add_argument("--category")
+    p.set_defaults(func=cmd_list)
+    p = sub.add_parser("info")
+    p.add_argument("name")
+    p.set_defaults(func=cmd_info)
+    p = sub.add_parser("test")
+    group = p.add_mutually_exclusive_group(required=True)
+    group.add_argument("name", nargs="?")
+    group.add_argument("--all", action="store_true")
+    p.set_defaults(func=cmd_test)
+    p = sub.add_parser("lint")
+    p.set_defaults(func=cmd_lint)
+    p = sub.add_parser("docs")
+    p.add_argument("--check", type=Path, default=None, metavar="FILE")
+    p.set_defaults(func=cmd_docs)
+    args = parser.parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

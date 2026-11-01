@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# seclegion-notify-test [--dry-run] [all|low|normal|critical|replace|progress]
+# Sends test notifications and asserts the notification stack is healthy.
+# Default (all): low, normal, critical, replace-id, single bus owner, swaync-client.
+# Prints PASS/FAIL per check; exits 1 if any check failed. --dry-run prints
+# the commands and sends nothing.
+set -uo pipefail
+
+DRY=0
+if [ "${1:-}" = "--dry-run" ]; then DRY=1; shift; fi
+MODE="${1:-all}"
+FAILS=0
+APP=(-a "SecLegion test")
+
+pass() { printf 'PASS %s\n' "$1"; }
+fail() { printf 'FAIL %s\n' "$1"; FAILS=$((FAILS + 1)); }
+
+# Print the id notify-send -p returned (digits only); fail if not numeric.
+send_id() {
+    local out
+    out=$(notify-send -p "$@" 2>/dev/null) || return 1
+    out=${out//[$'\r\n ']/}
+    case "$out" in ''|*[!0-9]*) return 1 ;; esac
+    printf '%s' "$out"
+}
+
+check_send() { # name, notify-send args...
+    local name=$1 id; shift
+    if [ "$DRY" = 1 ]; then
+        printf '+ notify-send -p %s\n' "${APP[*]} $*" >&2
+        pass "send $name (dry-run, not sent)"; return
+    fi
+    if id=$(send_id "${APP[@]}" "$@"); then pass "send $name (id $id)"
+    else fail "send $name (no numeric id from notify-send -p)"; fi
+}
+
+check_owner() {
+    local out n comm
+    if [ "$DRY" = 1 ]; then
+        printf '+ busctl --user status org.freedesktop.Notifications\n' >&2
+        pass "bus owner (dry-run, not checked)"; return
+    fi
+    out=$(busctl --user status org.freedesktop.Notifications 2>/dev/null) || out=""
+    n=$(printf '%s\n' "$out" | grep -c '^Comm=')
+    comm=$(printf '%s\n' "$out" | sed -n 's/^Comm=//p' | head -n1)
+    if [ "$n" = 1 ]; then pass "bus owner: exactly one (comm=$comm)"
+    else fail "bus owner: expected exactly 1, found $n"; fi
+}
+
+check_replace() {
+    local a b
+    if [ "$DRY" = 1 ]; then
+        printf '+ notify-send -p %s\n' "${APP[*]} Replace-test first" >&2
+        printf '+ notify-send -p -r <id> %s\n' "${APP[*]} Replace-test second" >&2
+        pass "replace-id (dry-run, not sent)"; return
+    fi
+    a=$(send_id "${APP[@]}" "Replace test" "first") || { fail "replace-id: first send"; return; }
+    b=$(send_id -r "$a" "${APP[@]}" "Replace test" "second (replaced)") \
+        || { fail "replace-id: second send"; return; }
+    if [ "$a" = "$b" ]; then pass "replace-id (id $a reused)"
+    else fail "replace-id: sent $a then got $b"; fi
+}
+
+check_swaync() {
+    local c
+    if [ "$DRY" = 1 ]; then
+        printf '+ swaync-client --count\n' >&2
+        pass "swaync-client (dry-run, not checked)"; return
+    fi
+    c=$(timeout 3 swaync-client --count 2>/dev/null) || c=""
+    c=${c//[$'\r\n ']/}
+    case "$c" in
+        ''|*[!0-9]*) fail "swaync-client --count (got '${c}')" ;;
+        *) pass "swaync-client --count = $c" ;;
+    esac
+}
+
+progress() {
+    local v
+    for v in 10 35 60 85 100; do
+        if [ "$DRY" = 1 ]; then
+            printf '+ notify-send progress %s\n' "$v" >&2
+        else
+            notify-send "${APP[@]}" -u low -i audio-volume-medium \
+                -h string:x-canonical-private-synchronous:seclegion-test \
+                -h "int:value:$v" "Progress" "$v%"
+            sleep 0.4
+        fi
+    done
+}
+
+LOW=(-u low -i dialog-information "Low urgency" "Auto-dismisses after about 2 seconds.")
+NORMAL=(-u normal -i dialog-information "Normal urgency" "Auto-dismisses after about 5 seconds.")
+CRIT=(-u critical -i dialog-warning "Critical urgency" "Stays until you close it.")
+
+case "$MODE" in
+    low)      check_send low "${LOW[@]}" ;;
+    normal)   check_send normal "${NORMAL[@]}" ;;
+    critical) check_send critical "${CRIT[@]}" ;;
+    replace)  check_replace ;;
+    progress) progress ;;
+    all)
+        check_owner
+        check_send low "${LOW[@]}"
+        check_send normal "${NORMAL[@]}"
+        check_send critical "${CRIT[@]}"
+        check_replace
+        check_swaync ;;
+    *)
+        echo "usage: seclegion-notify-test [--dry-run] [all|low|normal|critical|replace|progress]" >&2
+        exit 2 ;;
+esac
+
+[ "$FAILS" -eq 0 ]

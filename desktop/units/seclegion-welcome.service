@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Started by uwsm via graphical-session.target (wants symlink shipped by seclegion-desktop).
+# Shows the welcome window once per user: --autostart writes welcome.done as it opens, and the
+# condition keeps every later session from starting it. Reachable later from the launcher.
+[Unit]
+Description=SecLegion: welcome window (first login only)
+PartOf=graphical-session.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+ConditionPathExists=!%h/.local/state/seclegion/welcome.done
+
+[Service]
+ExecStart=/usr/bin/seclegion-welcome --autostart
+Slice=app-graphical.slice
+
+[Install]
+WantedBy=graphical-session.target

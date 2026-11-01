@@ -1,0 +1,15 @@
+{
+  "colors": {
+    "dark": {
+      "primary": "#7dd8c0",
+      "secondary": "#b0ccc3",
+      "tertiary": "#a9cbe4",
+      "surface": "#0e1513",
+      "on_surface": "#dde4e1"
+    },
+    "light": {"primary": "#006b5a"}
+  },
+  "image": "wall.png",
+  "is_dark_mode": true,
+  "mode": "dark"
+}

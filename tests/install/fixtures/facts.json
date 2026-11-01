@@ -1,0 +1,190 @@
+{
+  "install_mode": true,
+  "dev_build": true,
+  "boot_medium": "/dev/sda",
+  "root_disk": null,
+  "by_id": {
+    "/dev/disk/by-id/ata-QEMU_HARDDISK_vda": "/dev/vda",
+    "/dev/disk/by-id/ata-QEMU_HARDDISK_vdb": "/dev/vdb"
+  },
+  "lsblk": {
+    "blockdevices": [
+      {
+        "name": "vda",
+        "path": "/dev/vda",
+        "type": "disk",
+        "size": 107374182400,
+        "log-sec": 512,
+        "model": "QEMU HARDDISK",
+        "vendor": "ATA",
+        "pttype": "gpt",
+        "mountpoints": [
+          null
+        ],
+        "children": []
+      },
+      {
+        "name": "vdb",
+        "path": "/dev/vdb",
+        "type": "disk",
+        "size": 214748364800,
+        "log-sec": 512,
+        "model": "QEMU HARDDISK",
+        "vendor": "ATA",
+        "pttype": "gpt",
+        "mountpoints": [
+          null
+        ],
+        "children": [
+          {
+            "name": "vdb1",
+            "path": "/dev/vdb1",
+            "type": "part",
+            "start": 2048,
+            "size": 104857600,
+            "fstype": "vfat",
+            "parttype": "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",
+            "mountpoints": [
+              null
+            ]
+          },
+          {
+            "name": "vdb2",
+            "path": "/dev/vdb2",
+            "type": "part",
+            "start": 206848,
+            "size": 16777216,
+            "fstype": null,
+            "parttype": "e3c9e316-0b5c-4db8-817d-f92df00215ae",
+            "mountpoints": [
+              null
+            ]
+          },
+          {
+            "name": "vdb3",
+            "path": "/dev/vdb3",
+            "type": "part",
+            "start": 239616,
+            "size": 64424509440,
+            "fstype": "ntfs",
+            "parttype": "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7",
+            "mountpoints": [
+              null
+            ]
+          },
+          {
+            "name": "vdb4",
+            "path": "/dev/vdb4",
+            "type": "part",
+            "start": 126068736,
+            "size": 1073741824,
+            "fstype": "ntfs",
+            "parttype": "de94bba4-06d1-4d40-a16a-bfd50179d6ac",
+            "mountpoints": [
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "sda",
+        "path": "/dev/sda",
+        "type": "disk",
+        "size": 8589934592,
+        "log-sec": 512,
+        "model": "Flash Drive",
+        "vendor": "USB",
+        "pttype": "gpt",
+        "mountpoints": [
+          null
+        ],
+        "children": [
+          {
+            "name": "sda1",
+            "path": "/dev/sda1",
+            "type": "part",
+            "start": 2048,
+            "size": 8388608000,
+            "fstype": "iso9660",
+            "parttype": "0fc63daf-8483-4772-8e79-3d69d8477de4",
+            "mountpoints": [
+              "/run/archiso/bootmnt"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "vdc",
+        "path": "/dev/vdc",
+        "type": "disk",
+        "size": 107374182400,
+        "log-sec": 512,
+        "model": "QEMU DISK",
+        "vendor": "ATA",
+        "pttype": "gpt",
+        "mountpoints": [
+          null
+        ],
+        "children": [
+          {
+            "name": "vdc1",
+            "path": "/dev/vdc1",
+            "type": "part",
+            "start": 2048,
+            "size": 104857600000,
+            "fstype": "ext4",
+            "parttype": "0fc63daf-8483-4772-8e79-3d69d8477de4",
+            "mountpoints": [
+              "/"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "vdd",
+        "path": "/dev/vdd",
+        "type": "disk",
+        "size": 107374182400,
+        "log-sec": 512,
+        "model": "QEMU MBR",
+        "vendor": "ATA",
+        "pttype": "dos",
+        "mountpoints": [
+          null
+        ],
+        "children": []
+      },
+      {
+        "name": "nvme0n1",
+        "path": "/dev/nvme0n1",
+        "type": "disk",
+        "size": 536870912000,
+        "log-sec": 512,
+        "model": "Samsung SSD 980",
+        "vendor": "",
+        "pttype": "gpt",
+        "mountpoints": [
+          null
+        ],
+        "children": [
+          {
+            "name": "nvme0n11",
+            "path": "/dev/nvme0n11",
+            "type": "part",
+            "start": 2048,
+            "size": 524288000000,
+            "fstype": "ext4",
+            "parttype": "0fc63daf-8483-4772-8e79-3d69d8477de4",
+            "mountpoints": [
+              null
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "probes": {
+    "/dev/vdb3": "clean",
+    "/dev/vdb4": "clean"
+  }
+}

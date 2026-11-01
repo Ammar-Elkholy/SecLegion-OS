@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""Generate TESTING.md from evidence/<test-id>/<iso-sha256>/<UTC-timestamp>/result.json.
+
+Usage: gen-testing-md [--root DIR] [--check]
+  --check   do not write; exit 1 if TESTING.md differs from what would be generated.
+"""
+
+import argparse
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "lib"))
+import evidence  # noqa: E402
+
+
+def main(argv=None):
+    here = os.path.dirname(os.path.realpath(__file__))
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--root", default=os.path.dirname(here), help="repository root")
+    parser.add_argument("--check", action="store_true")
+    args = parser.parse_args(argv)
+
+    text = evidence.render_testing_md(evidence.load_results(os.path.join(args.root, "evidence")))
+    target = os.path.join(args.root, "TESTING.md")
+    if args.check:
+        current = open(target, encoding="utf-8").read() if os.path.exists(target) else None
+        if current != text:
+            print("gen-testing-md: TESTING.md is stale or hand-edited", file=sys.stderr)
+            return 1
+        return 0
+    with open(target, "w", encoding="utf-8") as handle:
+        handle.write(text)
+    print(f"gen-testing-md: wrote {target}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

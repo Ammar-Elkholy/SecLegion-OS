@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Display devices nothing above claimed: unknown vendor, an NVIDIA GPU newer than the table, or an
+# NVIDIA GPU on a kernel the prebuilt modules do not cover. Safe path: generic Mesa, a warning,
+# and a boot entry that disables kernel mode setting.
+
+[[rule]]
+id = "gpu-unknown"
+[rule.when]
+unclaimed_gpu = true
+[rule.add]
+packages = ["mesa", "vulkan-swrast"]
+warnings = [
+  "Unrecognised graphics device {pci_id}: using generic Mesa drivers. If the desktop does not start, boot the 'safe graphics' entry.",
+]
+[[rule.add.boot_entries]]
+id = "safe-graphics"
+title = "SecLegion OS (safe graphics)"
+params = ["nomodeset"]

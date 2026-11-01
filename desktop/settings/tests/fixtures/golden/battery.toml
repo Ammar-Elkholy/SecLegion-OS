@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Written by SecLegion Settings.
+[alerts]
+low = 20
+critical = 10

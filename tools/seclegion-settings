@@ -1,0 +1,19 @@
+#!/usr/bin/python3 -I
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Launcher. Isolated mode (-I) ignores PYTHON* env and the cwd; the package
+# comes from ../lib/seclegion/python next to this launcher (an extracted root) or /usr/lib/seclegion/python when installed, else from this checkout.
+import os
+import sys
+
+_here = os.path.dirname(os.path.realpath(__file__))
+for _cand in (os.path.join(_here, "python"), os.path.join(_here, "..", "lib", "seclegion", "python"),
+              "/usr/lib/seclegion/python",
+              os.path.join(_here, "..", "desktop", "settings")):
+    if os.path.isdir(os.path.join(_cand, "seclegion_settings")):
+        sys.path.insert(0, _cand)
+        break
+
+from seclegion_settings.ui.app import main  # noqa: E402
+
+sys.exit(main())

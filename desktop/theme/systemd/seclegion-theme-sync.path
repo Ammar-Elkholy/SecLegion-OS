@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# seclegion-host:managed theme-auto
+# Starts seclegion-theme-sync.service when the owner's wallpaper scripts write a new wallpaper.
+# Written by `seclegion-host apply theme-auto`; rollback disables and removes it.
+[Unit]
+Description=SecLegion: re-theme when the wallpaper changes
+
+[Path]
+PathChanged=%h/.cache/current_wallpaper
+PathChanged=%h/.cache/wallpaper_frame.png
+TriggerLimitIntervalSec=10
+
+[Install]
+WantedBy=default.target

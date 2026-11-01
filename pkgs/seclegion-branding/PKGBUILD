@@ -1,0 +1,29 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# The package recipe is MIT; the logo it installs is NOT: it is owner artwork, all rights reserved
+# until the owner picks a branding licence (docs/decisions.md M0-3). The licence field names the
+# placeholder text, which is also installed as /usr/share/licenses/seclegion-branding/LICENSE.
+# The default background (desktop/branding/default.png, a generated dark gradient) is MIT: it is what
+# seclegion-wallpaper paints on every output when there is no other wallpaper (owner issue 16).
+pkgname=seclegion-branding
+pkgver=0.1.0
+pkgrel=2
+pkgdesc='SecLegion OS logo (owner artwork, all rights reserved until a branding licence is chosen) and default background'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('LicenseRef-SecLegion-Branding' 'MIT')
+source=(seclegion-src.tar.zst)
+sha256sums=('SKIP')  # generated for the build from tracked files (tools/pkg-source)
+
+package() {
+    install -Dm644 "$srcdir/desktop/branding/seclegion-logo.png" \
+        "$pkgdir/usr/share/seclegion/branding/seclegion-logo.png"
+    install -Dm644 "$srcdir/desktop/branding/default.png" \
+        "$pkgdir/usr/share/backgrounds/seclegion/default.png"
+    install -Dm644 "$srcdir/LICENSES/LicenseRef-SecLegion-Branding.txt" \
+        "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/MIT"
+}

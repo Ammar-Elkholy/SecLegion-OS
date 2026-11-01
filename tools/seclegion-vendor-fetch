@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# seclegion-vscode-fetch / seclegion-brave-fetch / seclegion-claude-fetch: download a vendor binary named by a pinned manifest,
+# verify it, and install it with a local makepkg + pacman -U run. The vendor binary is never part of
+# our repository or ISO (licence); it is fetched on the user's machine, on the first online boot.
+#
+# One script, installed under each fetcher's name; the name picks the manifest:
+#   seclegion-<vendor>-fetch  ->  <vendor dir>/<vendor>.toml   (default /usr/share/seclegion/vendor)
+#
+# The manifest (flat `key = "value"` lines): version, url, sha256 (required), hash_url (optional: a
+# vendor-published hash file whose first field must equal sha256 too).
+#
+# Strict: only https:// (and file:// for tests) URLs; the download goes to a work file that is deleted
+# on any failure; the sha256 of the bytes must equal the pinned value, else nothing is installed.
+# Messages go to stderr (the journal when run from a unit).
+#
+# Usage: seclegion-<vendor>-fetch [--manifest FILE] [--workdir DIR]
+# Test hook: SECLEGION_FETCH_INSTALLER=<command> replaces the makepkg step (ignored as root). It is run
+# with VENDOR_NAME, VENDOR_VERSION, VENDOR_SHA256 and VENDOR_PAYLOAD (the verified file) in its environment.
+set -euo pipefail
+
+log() { printf 'seclegion-vendor-fetch: %s\n' "$*" >&2; }
+die() { log "refused: $*"; exit 1; }
+
+name=$(basename -- "$0")
+name=${name#seclegion-}
+name=${name%-fetch}
+vendor_dir=${SECLEGION_VENDOR_DIR:-/usr/share/seclegion/vendor}
+manifest=""
+workdir=""
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --manifest) manifest=${2:?--manifest needs a file}; shift 2 ;;
+        --workdir) workdir=${2:?--workdir needs a directory}; shift 2 ;;
+        *) die "unknown argument '$1' (usage: $0 [--manifest FILE] [--workdir DIR])" ;;
+    esac
+done
+[[ $name =~ ^[a-z0-9]+$ ]] || die "cannot derive a vendor name from '$0' (want seclegion-<vendor>-fetch)"
+[[ -n $manifest ]] || manifest=$vendor_dir/$name.toml
+[[ -r $manifest ]] || die "manifest '$manifest' not found"
+
+toml_get() {
+    sed -n -E "s/^$1[[:space:]]*=[[:space:]]*\"([^\"]*)\"[[:space:]]*(#.*)?\$/\\1/p" "$manifest" | head -n 1
+}
+version=$(toml_get version)
+url=$(toml_get url)
+sha256=$(toml_get sha256)
+hash_url=$(toml_get hash_url)
+
+[[ $version =~ ^[0-9][0-9.]*$ ]] || die "manifest version '$version' is not a plain dotted number"
+[[ $sha256 =~ ^[0-9a-f]{64}$ ]] || die "manifest sha256 '$sha256' is not 64 lowercase hex digits"
+
+check_url() {
+    local what=$1 u=$2
+    case ${u,,} in
+        https://*|file:///*) ;;
+        http://*) die "$what '$u' uses http://, which is not allowed (https only)" ;;
+        *) die "$what '$u' is not an https:// URL" ;;
+    esac
+}
+check_url url "$url"
+[[ -z $hash_url ]] || check_url hash_url "$hash_url"
+
+if [[ -z $workdir ]]; then
+    workdir=${XDG_CACHE_HOME:-${HOME:?HOME is not set}/.cache}/seclegion-vendor/$name
+fi
+mkdir -p -- "$workdir"
+part=$workdir/payload.part
+payload=$workdir/payload
+rm -f -- "$part" "$payload"
+trap 'rm -f -- "$part"' EXIT
+
+fetch() {
+    curl --fail --silent --show-error --location --proto '=https,file' --proto-redir '=https' \
+        --connect-timeout 30 --max-time 3600 --output "$2" -- "$1"
+}
+
+log "$name $version: downloading $url"
+fetch "$url" "$part" || die "download of $url failed; nothing was installed"
+got=$(sha256sum -- "$part" | cut -d ' ' -f 1)
+if [[ $got != "$sha256" ]]; then
+    rm -f -- "$part"
+    die "sha256 mismatch for $name $version: manifest says $sha256, the download is $got; nothing was installed"
+fi
+
+if [[ -n $hash_url ]]; then
+    vendor_hash_file=$workdir/vendor-hash.part
+    trap 'rm -f -- "$part" "$vendor_hash_file"' EXIT
+    fetch "$hash_url" "$vendor_hash_file" || die "cannot fetch the vendor hash file $hash_url; nothing was installed"
+    vendor_hash=$(head -n 1 -- "$vendor_hash_file" | cut -d ' ' -f 1)
+    rm -f -- "$vendor_hash_file"
+    if [[ $vendor_hash != "$sha256" ]]; then
+        rm -f -- "$part"
+        die "the vendor-published hash $vendor_hash differs from the pinned $sha256; nothing was installed"
+    fi
+    log "$name $version: sha256 matches the pin and the vendor-published hash"
+else
+    log "$name $version: sha256 matches the pin (no vendor hash file in the manifest)"
+fi
+
+mv -- "$part" "$payload"
+trap 'rm -f -- "$part" "$payload"' EXIT
+export VENDOR_NAME=$name VENDOR_VERSION=$version VENDOR_SHA256=$sha256 VENDOR_PAYLOAD=$payload
+
+if [[ -n ${SECLEGION_FETCH_INSTALLER:-} && $EUID -ne 0 ]]; then
+    log "test installer: $SECLEGION_FETCH_INSTALLER"
+    "$SECLEGION_FETCH_INSTALLER"
+else
+    [[ $EUID -ne 0 ]] || die "run as your normal user, not root (makepkg refuses root; it calls sudo for pacman -U)"
+    template=$(dirname -- "$manifest")/$name.PKGBUILD
+    [[ -r $template ]] || die "no package template '$template'"
+    build=$workdir/build
+    rm -rf -- "$build"
+    mkdir -p -- "$build"
+    cp -- "$template" "$build/PKGBUILD"
+    log "$name $version: building and installing with makepkg"
+    (cd "$build" && SRCDEST=$build makepkg --force --install) || die "makepkg failed; see the output above"
+    rm -rf -- "$build"
+fi
+log "$name $version: installed"

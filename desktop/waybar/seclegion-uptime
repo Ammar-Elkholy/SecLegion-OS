@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Waybar custom/sl-uptime: time since boot from /proc/uptime (shell builtins only,
+# no child process). Hidden (exit 0, nothing on stderr) when /proc/uptime is not readable.
+# SL_UPTIME_FILE: tests only.
+f="${SL_UPTIME_FILE:-/proc/uptime}"
+up=""
+[ -r "$f" ] && read -r up _ < "$f" 2>/dev/null
+up="${up%%.*}"
+case "$up" in
+    ''|*[!0-9]*) echo '{"text":"","class":"hidden"}'; exit 0 ;;
+esac
+d=$(( up / 86400 )); h=$(( up % 86400 / 3600 )); m=$(( up % 3600 / 60 ))
+if [ "$d" -gt 0 ]; then t="${d}d ${h}h"
+elif [ "$h" -gt 0 ]; then t="${h}h ${m}m"
+else t="${m}m"; fi
+printf '{"text":"󰔟 %s","tooltip":"Up %s","class":"ok"}\n' "$t" "$t"

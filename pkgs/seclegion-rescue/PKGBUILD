@@ -1,0 +1,17 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+pkgname=seclegion-rescue
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='SecLegion OS rescue CLI skeleton: status, list-snapshots, rollback (rollback lands in V2)'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('MIT')
+depends=('bash' 'snapper' 'btrfs-progs')
+source=()
+
+package() {
+    install -Dm755 "$startdir/seclegion-rescue" "$pkgdir/usr/bin/seclegion-rescue"
+}

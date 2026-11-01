@@ -1,0 +1,39 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# The theme engine (python package seclegion_theme and the seclegion-theme / seclegion-theme-pick
+# commands), the token file and the shipped default theme that seclegion-host.lua and the settings
+# app read. The sources come from the repository through source.list (see pkgs/README.md).
+pkgname=seclegion-theme
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='SecLegion OS theme engine, tokens and default theme'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('MIT')
+depends=('python' 'bash')
+optdepends=('matugen: palettes derived from the wallpaper'
+            'rofi: the quick theme picker (seclegion-theme-pick)')
+source=(seclegion-src.tar.zst)
+sha256sums=('SKIP')  # generated for the build from tracked files (tools/pkg-source)
+
+# _tree <srcdir-relative dir> <dest dir under $pkgdir>: regular files, 0644, no REUSE sidecars.
+_tree() {
+    local f
+    while IFS= read -r -d '' f; do
+        install -Dm644 "$srcdir/$1/$f" "$pkgdir/$2/$f"
+    done < <(cd "$srcdir/$1" && find . -type f ! -name '*.license' ! -path '*/__pycache__/*' -print0)
+}
+
+package() {
+    _tree desktop/theme/seclegion_theme usr/lib/seclegion/python/seclegion_theme
+    _tree desktop/theme/default usr/share/seclegion/theme/default
+    _tree desktop/theme/systemd usr/share/seclegion/theme/systemd
+    install -Dm644 "$srcdir/desktop/theme/tokens.toml" "$pkgdir/usr/share/seclegion/theme/tokens.toml"
+    install -Dm644 "$srcdir/desktop/theme/default-colors.css" "$pkgdir/usr/share/seclegion/theme/default-colors.css"
+    install -Dm755 "$srcdir/tools/seclegion-theme" "$pkgdir/usr/bin/seclegion-theme"
+    install -Dm755 "$srcdir/tools/seclegion-theme-pick" "$pkgdir/usr/bin/seclegion-theme-pick"
+    install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

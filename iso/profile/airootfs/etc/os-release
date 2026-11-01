@@ -1,0 +1,5 @@
+NAME="SecLegion OS"
+PRETTY_NAME="SecLegion OS (DEV BUILD)"
+ID=seclegion
+BUILD_ID=rolling
+ANSI_COLOR="0;36"

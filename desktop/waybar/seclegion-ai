@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""Waybar custom/sl-ai: local AI runtime pill. Reads `seclegion-ai status --json` (SL_AI_BIN: tests
+only) and the provider names in ai.toml. Hidden (empty text, exit 0) when the runtime is disabled
+and no provider is configured. Click opens the AI Center."""
+
+import json
+import os
+import subprocess
+import tomllib
+from pathlib import Path
+
+HIDDEN = '{"text":"","class":"hidden"}'
+
+
+def main():
+    try:
+        p = subprocess.run(
+            [os.environ.get("SL_AI_BIN", "seclegion-ai"), "status", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        st = json.loads(p.stdout)
+        if not isinstance(st, dict):
+            st = {}
+    except (OSError, ValueError, subprocess.SubprocessError):
+        st = {}
+    base = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
+    try:
+        n = len(tomllib.loads((Path(base) / "seclegion" / "ai.toml").read_text()).get("provider", []))
+    except (OSError, ValueError):
+        n = 0
+    on = bool(st.get("enabled"))
+    if not on and n == 0:
+        print(HIDDEN)
+        return
+    up = bool(st.get("listening"))
+    models = len(st.get("models", [])) if up else 0
+    if on and up:
+        text, tip, cls = f"󰧑 {models}", f"Local AI running, {models} model(s)", "active"
+    elif on:
+        text, tip, cls = "󰧑 …", "Local AI enabled, runtime not running", "idle"
+    else:
+        text, tip, cls = "󰧑 off", "Local AI off", "off"
+    if n:
+        tip += f"; {n} cloud provider(s) configured"
+    print(json.dumps({"text": text, "tooltip": tip, "class": cls}))
+
+
+main()

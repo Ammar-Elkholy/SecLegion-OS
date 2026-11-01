@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+NAME="SecLegion OS"
+PRETTY_NAME="SecLegion OS"
+ID=seclegion
+ID_LIKE=arch
+BUILD_ID=rolling
+ANSI_COLOR="0;36"
+HOME_URL="https://github.com/seclegion/SecLegion-OS"
+LOGO=seclegion-logo

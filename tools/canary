@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""tools/canary: vendor update SLA check (spec O8: Brave and VS Code at most 7 days behind the vendor).
+
+Prints, for each pinned vendor manifest (pkgs/seclegion-*-fetch/*.toml), the pinned version, the
+vendor's latest version and the days between their release dates; exits 1 when any vendor is more than
+7 days behind (exit 2 on a lookup error). Run weekly by systemd/seclegion-canary.timer on the owner's
+host. `--offline FILE` reads the latest versions from a JSON file instead of the network:
+    {"vscode": {"version": "1.143.0", "released": "2026-10-26"}, "brave": {...}}
+"""
+
+import argparse
+import json
+import sys
+import tomllib
+from datetime import date
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+MAX_DAYS = 7
+
+
+def load_manifests(root):
+    out = {}
+    for f in sorted((root / "pkgs").glob("seclegion-*-fetch/*.toml")):
+        m = tomllib.loads(f.read_text())
+        out[m["name"]] = m
+    return out
+
+
+def latest_online(name):
+    from importlib.machinery import SourceFileLoader  # noqa: PLC0415
+    from importlib.util import module_from_spec, spec_from_loader  # noqa: PLC0415
+
+    loader = SourceFileLoader("vendor_bump", str(Path(__file__).resolve().parent / "vendor-bump"))
+    mod = module_from_spec(spec_from_loader("vendor_bump", loader))
+    loader.exec_module(mod)
+    d = mod.LATEST[name]()
+    return {"version": d["version"], "released": d["released"]}
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
+    ap.add_argument("--offline", type=Path, metavar="FILE", help="latest versions from a JSON file")
+    ap.add_argument("--root", type=Path, default=REPO, help=argparse.SUPPRESS)
+    args = ap.parse_args(argv)
+
+    manifests = load_manifests(args.root)
+    if not manifests:
+        print("canary: no vendor manifests found", file=sys.stderr)
+        return 2
+    offline = json.loads(args.offline.read_text()) if args.offline else None
+    late, errors = [], 0
+    print(f"{'vendor':8} {'pinned':12} {'latest':12} days behind")
+    for name, m in manifests.items():
+        try:
+            latest = offline[name] if offline is not None else latest_online(name)
+            behind = (date.fromisoformat(latest["released"]) - date.fromisoformat(m["released"])).days
+        except (KeyError, ValueError, OSError, SystemExit) as e:
+            print(f"{name:8} {m['version']:12} {'?':12} lookup failed: {e}")
+            errors += 1
+            continue
+        behind = max(behind, 0)
+        mark = "  LATE" if behind > MAX_DAYS else ""
+        print(f"{name:8} {m['version']:12} {latest['version']:12} {behind}{mark}")
+        if behind > MAX_DAYS:
+            late.append(name)
+    if late:
+        print(f"canary: {', '.join(late)} more than {MAX_DAYS} days behind: run tools/vendor-bump <name>")
+        return 1
+    return 2 if errors else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,13 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Install-mode kiosk: cage with the installer GUI (package seclegion-installer). The kiosk must never
+# end, so ANY exit (a crash, a kill, even status 0) counts as a failure; the unit's OnFailure= then shows
+# the error screen. --kiosk makes the GUI run seclegion-install through pkexec (the polkit rule that
+# seclegion-kiosk-polkit.service writes); --log is a file the no-shell installer user can write.
+# GSK_RENDERER=cairo: no GPU driver is needed to draw the installer (VMs, NVIDIA hybrid laptops).
+export GSK_RENDERER=cairo
+cage -- /usr/bin/seclegion-installer-gui --kiosk --log "${STATE_DIRECTORY:-/var/lib/seclegion-installer}/install.log"
+rc=$?
+echo "seclegion-kiosk: cage exited with status $rc" >&2
+exit 1

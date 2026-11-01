@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""licence-check [--repo DIR]: licence completeness gate for release (RL1a).
+
+  1. every pkgs/*/PKGBUILD has a non-empty license=() of allowlisted SPDX ids (parsed statically)
+  2. theme and font packages install their licence files (package() mentions /usr/share/licenses/)
+  3. every catalog/*.toml [[tool]] has a licence field
+  4. every vendor row in docs/third-party.md has a licence, a version and a pin date
+Prints a table, exits 1 on any gap."""
+
+import argparse
+import os
+import re
+import sys
+import tomllib
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "lib"))
+import thirdparty  # noqa: E402
+
+ALLOWED = {
+    "MIT", "0BSD", "BSD-2-Clause", "BSD-3-Clause", "Apache-2.0", "ISC", "MPL-2.0", "OFL-1.1", "CC0-1.0",
+    "GPL-2.0-only", "GPL-2.0-or-later", "GPL-3.0-only", "GPL-3.0-or-later",
+    "LGPL-2.1-only", "LGPL-2.1-or-later", "LGPL-3.0-only", "LGPL-3.0-or-later",
+    "AGPL-3.0-only", "AGPL-3.0-or-later", "LicenseRef-SecLegion-Branding",
+}
+LICENCE_FILE_PKGS = re.compile(r"^seclegion-(themes|fonts)-")
+LICENSE_RE = re.compile(r"^license=\(([^)]*)\)", re.M)
+
+
+def pkg_licenses(text):
+    """license=() entries of a PKGBUILD, or None when the line is absent."""
+    m = LICENSE_RE.search(text)
+    if not m:
+        return None
+    return [a or b for a, b in re.findall(r"""['"]([^'"]+)['"]|(\S+)""", m.group(1))]
+
+
+def package_body(text):
+    m = re.search(r"^package[\w-]*\(\)\s*\{(.*?)^\}", text, re.M | re.S)
+    return m.group(1) if m else ""
+
+
+def spdx_ids(expr):
+    return [t for t in re.split(r"[\s()]+", expr) if t and t not in ("AND", "OR", "WITH")]
+
+
+def check(repo):
+    """-> [(kind, subject, value, problem or '')]"""
+    res = []
+    pk = os.path.join(repo, "pkgs")
+    for name in sorted(os.listdir(pk)) if os.path.isdir(pk) else []:
+        path = os.path.join(pk, name, "PKGBUILD")
+        if not os.path.isfile(path):
+            continue
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+        lic = pkg_licenses(text)
+        if not lic:
+            res.append(("pkg", name, "", "license=() missing or empty"))
+        else:
+            bad = [i for entry in lic for i in spdx_ids(entry) if i not in ALLOWED]
+            res.append(("pkg", name, " ".join(lic), f"unknown SPDX id {bad}" if bad else ""))
+        if LICENCE_FILE_PKGS.match(name):
+            ok = "/usr/share/licenses/" in package_body(text)
+            res.append(("pkg-files", name, "", "" if ok else "package() does not install /usr/share/licenses/"))
+    cat = os.path.join(repo, "catalog")
+    for fn in sorted(os.listdir(cat)) if os.path.isdir(cat) else []:
+        if not fn.endswith(".toml"):
+            continue
+        with open(os.path.join(cat, fn), "rb") as f:
+            for t in tomllib.load(f).get("tool", []):
+                v = str(t.get("licence", "")).strip()
+                bad = [i for i in spdx_ids(v) if i not in ALLOWED and not i.startswith("LicenseRef-")]
+                res.append(("catalog", t.get("name", "?"), v,
+                            "no licence field" if not v else (f"unknown SPDX id {bad}" if bad else "")))
+    tp = os.path.join(repo, "docs", "third-party.md")
+    if os.path.isfile(tp):
+        with open(tp, encoding="utf-8") as f:
+            rows = thirdparty.vendor_rows(f.read())
+        for r in rows:
+            miss = [k for k in ("licence", "version", "pinned") if not r[k]]
+            if r["pinned"] and not thirdparty.DATE_RE.match(r["pinned"]):
+                miss.append("pinned (not YYYY-MM-DD)")
+            res.append(("vendor", r["component"][:48], r["licence"][:30], f"missing {miss}" if miss else ""))
+    else:
+        res.append(("vendor", "docs/third-party.md", "", "file missing"))
+    return res
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(prog="licence-check")
+    ap.add_argument("--repo", default=os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    a = ap.parse_args(argv)
+    rows = check(a.repo)
+    for kind, subj, val, prob in rows:
+        print(f"{'FAIL' if prob else 'ok  '}  {kind:<9} {subj:<48} {val:<32} {prob}".rstrip())
+    gaps = [r for r in rows if r[3]]
+    print(f"{len(rows)} checked, {len(gaps)} gap(s)")
+    return 1 if gaps else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

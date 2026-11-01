@@ -1,0 +1,43 @@
+{
+  "boot_entries": [],
+  "env": {},
+  "facts": {
+    "cpu_vendor": "AuthenticAMD",
+    "displays": [],
+    "gpus": [
+      {
+        "addr": "0000:03:00.0",
+        "boot_vga": true,
+        "class": "030000",
+        "nvidia_family": null,
+        "pci_id": "1002:73ff"
+      }
+    ],
+    "hybrid": false,
+    "kernel": "stock",
+    "laptop": false,
+    "touchpad": false,
+    "virt": "none"
+  },
+  "kernel_params": [],
+  "messages": [],
+  "packages": [
+    "linux-firmware",
+    "sof-firmware",
+    "alsa-ucm-conf",
+    "intel-ucode",
+    "amd-ucode",
+    "mesa",
+    "vulkan-radeon",
+    "libva-mesa-driver"
+  ],
+  "rules_applied": [
+    "always-firmware",
+    "gpu-amd"
+  ],
+  "schema": 1,
+  "services": [],
+  "settings": {},
+  "udev_rules": [],
+  "warnings": []
+}

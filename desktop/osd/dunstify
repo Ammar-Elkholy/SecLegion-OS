@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# dunstify shim for swaync. The owner's scripts (ae-osd.sh) replace their own
+# OSD popup with dunst's `-h string:x-dunst-stack-tag:X`; swaync ignores that
+# hint and stacks a new popup per key press. swaync replaces a popup in place
+# for `x-canonical-private-synchronous:X`, so the tag is rewritten and every
+# other argument is passed through unchanged.
+#
+# Installed as ~/.local/bin/dunstify (the `osd` host component). The real
+# binary is run by absolute path, never by name, so the shim cannot call itself.
+set -u
+real="${SL_DUNSTIFY_REAL:-/usr/bin/dunstify}"   # SL_DUNSTIFY_REAL: tests only
+args=()
+for a in "$@"; do
+    case "$a" in
+        string:x-dunst-stack-tag:*) a="string:x-canonical-private-synchronous:${a#string:x-dunst-stack-tag:}" ;;
+        --hints=string:x-dunst-stack-tag:*) a="--hints=string:x-canonical-private-synchronous:${a#--hints=string:x-dunst-stack-tag:}" ;;
+        -hstring:x-dunst-stack-tag:*) a="-hstring:x-canonical-private-synchronous:${a#-hstring:x-dunst-stack-tag:}" ;;
+    esac
+    args+=("$a")
+done
+exec "$real" ${args[@]+"${args[@]}"}

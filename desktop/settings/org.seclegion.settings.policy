@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+SPDX-License-Identifier: MIT
+-->
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!--
+The Settings app changes a system setting (lid, power button, suspend mode, charge limit) by running
+`pkexec /usr/bin/seclegion-root-apply <id> <value>`. Only an active local session may ask, and it
+asks for the administrator password (kept for a few minutes); seclegion-root-apply re-checks the id
+against its allowlist and re-validates the value as root.
+-->
+<policyconfig>
+  <vendor>SecLegion OS</vendor>
+  <vendor_url>https://github.com/seclegion/SecLegion-OS</vendor_url>
+  <action id="org.seclegion.settings.root-apply">
+    <description>Change a SecLegion system setting</description>
+    <message>Authentication is required to change a system setting</message>
+    <icon_name>preferences-system</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/seclegion-root-apply</annotate>
+  </action>
+</policyconfig>

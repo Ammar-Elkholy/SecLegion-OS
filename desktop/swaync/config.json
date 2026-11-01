@@ -1,0 +1,52 @@
+{
+  "$schema": "/etc/xdg/swaync/configSchema.json",
+  "ignore-gtk-theme": true,
+  "positionX": "right",
+  "positionY": "top",
+  "layer": "overlay",
+  "layer-shell": true,
+  "cssPriority": "highest",
+  "control-center-layer": "overlay",
+  "control-center-positionX": "right",
+  "control-center-positionY": "top",
+  "control-center-margin-top": 50,
+  "control-center-margin-right": 20,
+  "control-center-margin-bottom": 20,
+  "control-center-margin-left": 0,
+  "control-center-width": 400,
+  "control-center-height": 600,
+  "control-center-exclusive-zone": false,
+  "notification-window-width": 380,
+  "notification-icon-size": 48,
+  "notification-body-image-height": 100,
+  "notification-body-image-width": 200,
+  "notification-grouping": true,
+  "notification-inline-replies": false,
+  "timeout": 5,
+  "timeout-low": 2,
+  "timeout-critical": 0,
+  "fit-to-screen": false,
+  "hide-on-clear": false,
+  "hide-on-action": true,
+  "transition-time": 200,
+  "relative-timestamps": true,
+  "keyboard-shortcuts": true,
+  "image-visibility": "when-available",
+  "text-empty": "No notifications",
+  "script-fail-notify": false,
+  "widgets": ["title", "dnd", "mpris", "notifications"],
+  "widget-config": {
+    "title": {
+      "text": "Notifications",
+      "clear-all-button": true,
+      "button-text": "Clear"
+    },
+    "dnd": {
+      "text": "Do Not Disturb"
+    },
+    "mpris": {
+      "image-size": 64,
+      "image-radius": 12
+    }
+  }
+}

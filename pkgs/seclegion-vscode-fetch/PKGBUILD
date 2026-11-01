@@ -1,0 +1,25 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# Fetcher for Visual Studio Code. It ships NO Microsoft binary (the licence does not let us
+# redistribute it in our repository or ISO): only the fetch script, the pinned manifest and the
+# package template. `seclegion-vscode-fetch`, run by the user on an online machine, downloads the
+# pinned tarball, checks its sha256 and installs it into /opt/vscode with a local makepkg run.
+pkgname=seclegion-vscode-fetch
+pkgver=1.142.0
+pkgrel=1
+pkgdesc='Fetcher for Visual Studio Code (pinned version and sha256; the Microsoft binary is downloaded on your machine)'
+arch=('any')
+url='https://code.visualstudio.com'
+license=('MIT')
+depends=('bash' 'curl' 'coreutils' 'sed' 'pacman' 'sudo')
+source=(seclegion-src.tar.zst)
+sha256sums=('SKIP')   # generated for the build
+
+package() {
+    install -Dm755 "$srcdir/tools/seclegion-vendor-fetch" "$pkgdir/usr/bin/seclegion-vscode-fetch"
+    install -Dm644 "$startdir/vscode.toml" "$pkgdir/usr/share/seclegion/vendor/vscode.toml"
+    install -Dm644 "$startdir/vscode.PKGBUILD" "$pkgdir/usr/share/seclegion/vendor/vscode.PKGBUILD"
+}

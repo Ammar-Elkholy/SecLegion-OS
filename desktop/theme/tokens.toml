@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# SecLegion Dark: the static default palette (owner tokens, workflow-inventory.md).
+# Used verbatim by `--mode default`, and as the source of the protected
+# semantic colours (ok/warn/err/crit) that auto/custom modes never derive.
+
+[meta]
+name = "SecLegion Dark"
+
+[colors]
+bg = "#050F0E"
+surface = "#0B1E1C"
+surface2 = "#12302C"
+text = "#E0FFF4"
+muted = "#8FB5AB"
+accent = "#00FF88"
+accent2 = "#00F0FF"
+border_active = "#00FF88"
+border_inactive = "#0B1E1C"
+# Protected semantics: fixed in every mode, never derived from a wallpaper.
+ok = "#3DDC84"
+warn = "#FFCC66"
+err = "#FF6666"
+crit = "#FF2266"
+
+# 16 ANSI colours, index 0..15. Slots 1/2/3/9 are the protected err/ok/warn/crit.
+[ansi]
+colors = [
+  "#12302C", "#FF6666", "#3DDC84", "#FFCC66",
+  "#6EA8FF", "#D58CFF", "#00F0FF", "#C8E6DD",
+  "#6F9A90", "#FF2266", "#00FF88", "#FFE08A",
+  "#94C0FF", "#E4B0FF", "#7FFAFF", "#E0FFF4",
+]
+
+# Owner notification colours (dunst look). Critical is protected/fixed.
+[notification.critical]
+bg = "#1A0010"
+fg = "#FF4488"

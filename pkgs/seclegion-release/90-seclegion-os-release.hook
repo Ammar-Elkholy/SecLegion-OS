@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Path
+Target = etc/os-release
+Target = usr/lib/os-release
+Target = usr/lib/seclegion/os-release
+
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = filesystem
+
+[Action]
+Description = Pointing /etc/os-release at SecLegion OS...
+When = PostTransaction
+Exec = /usr/bin/systemd-tmpfiles --create /usr/lib/tmpfiles.d/00-seclegion-release.conf

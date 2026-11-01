@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-post --root DIR [--hints FILE] [--dry-run] [--creds-dir DIR]"""
+import os
+import subprocess
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import post  # noqa: E402
+
+if __name__ == "__main__":
+    try:
+        sys.exit(post.main())
+    except subprocess.CalledProcessError as exc:  # one line: the failing tool's own stderr stays visible above
+        print(f"FAILED rc={exc.returncode}: {' '.join(map(str, exc.cmd))}", file=sys.stderr)
+        sys.exit(1)

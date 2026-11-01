@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#%PAM-1.0
+# Session-only stack for the installer kiosk unit (PAMName=): nobody can authenticate through it.
+auth     required pam_deny.so
+account  required pam_permit.so
+password required pam_deny.so
+session  required pam_loginuid.so
+session  required pam_unix.so
+session  optional pam_systemd.so

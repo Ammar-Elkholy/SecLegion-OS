@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-ocr: select a region, OCR it (tesseract, English + Arabic), copy the text and
+notify with the first line. `seclegion-ocr FILE` OCRs an image file instead of a region.
+
+Env (tests): SL_GRIM, SL_SLURP, SL_TESSERACT, SL_OCR_LANG (default eng+ara; languages that are
+not installed are dropped), SL_WLCOPY, SL_NOTIFY.
+"""
+import os
+import shlex
+import subprocess
+import sys
+import tempfile
+
+
+def cmd(var, default):
+    return shlex.split(os.environ.get(var, default))
+
+
+def notify(title, body=""):
+    subprocess.run(cmd("SL_NOTIFY", "notify-send") + ["-a", "seclegion-capture", title, body], check=False)
+
+
+def langs(tess):
+    want = os.environ.get("SL_OCR_LANG", "eng+ara").split("+")
+    r = subprocess.run(tess + ["--list-langs"], capture_output=True, text=True)
+    have = set(r.stdout.split()[1:]) if r.returncode == 0 else set()
+    return "+".join([l for l in want if l in have] or want)
+
+
+def main(argv):
+    with tempfile.TemporaryDirectory(prefix="seclegion-ocr-") as td:
+        if argv:
+            img = argv[0]
+        else:
+            r = subprocess.run(cmd("SL_SLURP", "slurp"), capture_output=True, text=True)
+            g = r.stdout.strip()
+            if r.returncode != 0 or not g:
+                return 0
+            img = os.path.join(td, "r.png")
+            if subprocess.run(cmd("SL_GRIM", "grim") + ["-g", g, img]).returncode != 0:
+                notify("OCR failed", "grim returned an error")
+                return 1
+        tess = cmd("SL_TESSERACT", "tesseract")
+        r = subprocess.run(tess + [img, "-", "-l", langs(tess)], capture_output=True, text=True)
+        text = r.stdout.strip()
+        if r.returncode != 0 or not text:
+            notify("OCR found no text")
+            return 1
+        subprocess.run(cmd("SL_WLCOPY", "wl-copy"), input=text, text=True, check=False)
+        notify("Text copied", text.splitlines()[0])
+        if argv:
+            print(text)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

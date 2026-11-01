@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Waybar custom/sl-dnd: the swaync notification bell. Bell-off with class "dnd"
+# while Do Not Disturb is on, a plain bell otherwise (with the unread count when
+# there is one). Short-lived swaync-client calls, no resident process. Hidden
+# (valid JSON, exit 0, silent) when swaync is not running.
+# SL_SWAYNC: tests only.
+sw="${SL_SWAYNC:-swaync-client}"
+hidden='{"text":"","class":"hidden"}'
+dnd="$(timeout 3 "$sw" -D 2>/dev/null)" || dnd=""
+case "$dnd" in
+    true)
+        printf '{"text":"󰂛","tooltip":"Do Not Disturb: on (right click to turn off)","class":"dnd"}\n'
+        exit 0
+        ;;
+    false) ;;
+    *) echo "$hidden"; exit 0 ;;
+esac
+n="$(timeout 3 "$sw" -c 2>/dev/null)" || n=0
+case "$n" in ''|*[!0-9]*) n=0 ;; esac
+if [ "$n" -gt 0 ]; then
+    printf '{"text":"󰂚 %s","tooltip":"%s notification(s) (right click: Do Not Disturb)","class":"unread"}\n' "$n" "$n"
+else
+    printf '{"text":"󰂚","tooltip":"No notifications (right click: Do Not Disturb)","class":"none"}\n'
+fi

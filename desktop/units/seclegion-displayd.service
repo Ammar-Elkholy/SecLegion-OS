@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Started by uwsm via graphical-session.target (wants symlink shipped by seclegion-desktop).
+# Clears ghost monitors after an HDMI unplug and enables them again on re-plug (owner issue 15).
+[Unit]
+Description=SecLegion: clear ghost monitors after an unplug
+PartOf=graphical-session.target
+After=graphical-session.target
+ConditionEnvironment=HYPRLAND_INSTANCE_SIGNATURE
+
+[Service]
+ExecStart=/usr/share/seclegion/display/seclegion-displayd
+Restart=on-failure
+RestartSec=2
+Slice=app-graphical.slice
+
+[Install]
+WantedBy=graphical-session.target

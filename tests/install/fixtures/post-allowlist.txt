@@ -1,0 +1,16 @@
+etc/default/ufw
+etc/greetd/config.toml
+etc/greetd/sessions/hyprland.desktop
+etc/pacman.conf
+etc/seclegion/keyboard-extra
+etc/systemd/system/sshd.service
+etc/systemd/system/sshd.socket
+etc/systemd/system/sshd@.service
+etc/systemd/system/sshd-unix-local.socket
+etc/ufw/ufw.conf
+etc/greetd/regreet.toml
+etc/greetd/regreet.css
+etc/snapper/configs/root
+etc/conf.d/snapper
+etc/ufw/after.rules
+etc/ufw/after6.rules

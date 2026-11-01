@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+
+[[rule]]
+id = "gpu-amd"
+claims_gpu = true
+[rule.when]
+pci_class = "03"
+pci_vendor = "1002"
+[rule.add]
+packages = ["mesa", "vulkan-radeon", "libva-mesa-driver"]

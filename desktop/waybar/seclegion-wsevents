@@ -1,0 +1,250 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-wsevents - render the workspace pills and tell waybar to redraw.
+
+Reads Hyprland's event socket (.socket2.sock) and, on workspace, window and
+urgent events, takes one hyprctl snapshot (seclegion-ws's snapshot/classify),
+writes every pill's JSON to $XDG_RUNTIME_DIR/seclegion/ws/<n>.json (atomic
+rename), then sends SIGRTMIN+8 to this user's waybar, which re-runs every
+custom/wsN module (signal 8): each only reads its file. Runs as the user unit
+seclegion-wsevents.service. Idle cost: one blocked read.
+
+- Debounced: a burst of events becomes one signal (quiet period 80 ms, never
+  later than 300 ms after the first event of the burst).
+- Urgent windows are kept in a state file (one address per line) that
+  seclegion-ws reads; a window leaves it when it gets focus or closes.
+- The waybar pid is found with `pgrep -x -u <uid> waybar` and signalled by pid
+  only. A restarted Hyprland or waybar is picked up on the next attempt.
+- The socket is the first candidate that accepts a connection: the instance
+  in HYPRLAND_INSTANCE_SIGNATURE, then every instance directory newest first.
+  A crashed Hyprland leaves its socket file behind; refusing ones are skipped.
+  hyprctl is then pointed at the instance followed (its signature is exported).
+- Pills 1..PILLS are rendered (gen-waybar-ws's default count); all hidden when
+  hyprctl fails. A module whose file is missing prints a hidden pill.
+- With no Hyprland listening it retries after 2 s, doubling up to 60 s; a
+  successful connection resets the delay.
+
+Environment (for tests): SL_WS_PGREP = the pgrep command, SL_WS_URGENT = the
+state file, SL_WS_SOCKET = the socket path, SL_WS_ONCE=1 = exit when the socket
+closes instead of reconnecting, SL_HYPRCTL = the hyprctl command.
+"""
+import importlib.util
+import json
+import os
+import select
+import shlex
+import signal
+import socket
+import subprocess
+import sys
+import time
+from importlib.machinery import SourceFileLoader
+
+
+def _load_ws():
+    """seclegion-ws, installed beside this file, as a module (no bytecode left behind)."""
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "seclegion-ws")
+    loader = SourceFileLoader("seclegion_ws", path)
+    mod = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
+    sys.dont_write_bytecode = True
+    loader.exec_module(mod)
+    return mod
+
+
+WS = _load_ws()
+
+QUIET = 0.08
+MAX_WAIT = 0.3
+RETRY_MIN = 2.0
+RETRY_MAX = 10.0
+PILLS = 20
+# Event names that change what the pills show. Prefix match, so the v2
+# variants (workspacev2, createworkspacev2, ...) are covered too.
+TRIGGERS = (
+    "workspace", "createworkspace", "destroyworkspace", "moveworkspace",
+    "focusedmon", "openwindow", "closewindow", "movewindow", "urgent",
+)
+
+
+def runtime_dir():
+    return os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
+
+
+def urgent_path():
+    return os.environ.get("SL_WS_URGENT") or os.path.join(runtime_dir(), "seclegion", "ws-urgent")
+
+
+def pill_dir():
+    return os.path.join(runtime_dir(), "seclegion", "ws")
+
+
+def candidates():
+    """Event sockets to try, best first: SL_WS_SOCKET alone if set, else the
+    signature in the environment, then every instance directory newest first."""
+    if os.environ.get("SL_WS_SOCKET"):
+        return [os.environ["SL_WS_SOCKET"]]
+    base = os.path.join(runtime_dir(), "hypr")
+    found = []
+    try:
+        for d in os.listdir(base):
+            p = os.path.join(base, d, ".socket2.sock")
+            try:
+                found.append((os.stat(p).st_mtime, p))
+            except OSError:
+                pass
+    except OSError:
+        pass
+    paths = [p for _, p in sorted(found, reverse=True)]
+    sig = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "")
+    mine = os.path.join(base, sig, ".socket2.sock")
+    if sig and mine in paths:
+        paths.remove(mine)
+        paths.insert(0, mine)
+    return paths
+
+
+def connect():
+    """A socket connected to the first candidate that accepts, or None. An
+    instance directory's signature is exported for hyprctl."""
+    for path in candidates():
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.settimeout(2)   # a hung Hyprland with a full backlog must not block the scan
+        try:
+            s.connect(path)
+            s.settimeout(None)
+        except OSError:
+            s.close()   # stale (refused) or gone: try the next one
+            continue
+        if not os.environ.get("SL_WS_SOCKET"):
+            os.environ["HYPRLAND_INSTANCE_SIGNATURE"] = os.path.basename(os.path.dirname(path))
+        return s
+    return None
+
+
+def waybar_pids():
+    cmd = shlex.split(os.environ.get("SL_WS_PGREP") or "pgrep") + ["-x", "-u", str(os.getuid()), "waybar"]
+    try:
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=5).stdout
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return [int(p) for p in out.split() if p.isdigit()]
+
+
+def render():
+    """One hyprctl snapshot -> pill_dir()/<n>.json for n = 1..PILLS. Every value
+    comes from classify (an int's digits, a fixed class name) via json.dumps."""
+    try:
+        snap = WS.snapshot()
+        pills = [WS.classify(n, *snap) for n in range(1, PILLS + 1)]
+    except (OSError, ValueError, subprocess.SubprocessError) as e:
+        print(f"seclegion-wsevents: {e}", file=sys.stderr)   # Hyprland away: hide them
+        pills = [WS.HIDDEN] * PILLS
+    d = pill_dir()
+    os.makedirs(d, mode=0o700, exist_ok=True)
+    for n, pill in enumerate(pills, 1):
+        path = os.path.join(d, f"{n}.json")
+        with open(path + ".tmp", "w") as fh:
+            fh.write(json.dumps(pill, separators=(",", ":")) + "\n")
+        os.replace(path + ".tmp", path)
+
+
+def redraw():
+    try:
+        render()
+    except OSError as e:
+        print(f"seclegion-wsevents: {e}", file=sys.stderr)
+    poke_waybar()
+
+
+def poke_waybar():
+    for pid in waybar_pids():
+        try:
+            os.kill(pid, signal.SIGRTMIN + 8)
+        except OSError:
+            pass
+
+
+def read_urgent():
+    try:
+        with open(urgent_path()) as fh:
+            return [ln.strip() for ln in fh if ln.strip()]
+    except OSError:
+        return []
+
+
+def write_urgent(addrs):
+    p = urgent_path()
+    os.makedirs(os.path.dirname(p), mode=0o700, exist_ok=True)
+    tmp = p + ".tmp"
+    with open(tmp, "w") as fh:
+        fh.write("".join(a + "\n" for a in addrs))
+    os.replace(tmp, p)
+
+
+def handle(line):
+    """Apply one event line; return True if the pills need a redraw."""
+    name, _, data = line.partition(">>")
+    if name == "urgent":
+        addrs = read_urgent()
+        if data and data not in addrs:
+            write_urgent(addrs + [data])
+        return True
+    if name in ("activewindowv2", "closewindow"):
+        addrs = read_urgent()
+        if data in addrs:
+            write_urgent([a for a in addrs if a != data])
+            return True
+    return name.startswith(TRIGGERS)
+
+
+def serve(s):
+    redraw()   # the state at (re)connect
+    buf = b""
+    first = last = None
+    while True:
+        timeout = None
+        if first is not None:
+            timeout = max(0.0, min(last + QUIET, first + MAX_WAIT) - time.monotonic())
+        ready, _, _ = select.select([s], [], [], timeout)
+        if ready:
+            chunk = s.recv(65536)
+            if not chunk:
+                return
+            buf += chunk
+            *lines, buf = buf.split(b"\n")
+            for ln in lines:
+                if handle(ln.decode("utf-8", "replace")):
+                    now = time.monotonic()
+                    first = first if first is not None else now
+                    last = now
+        if first is not None and time.monotonic() >= min(last + QUIET, first + MAX_WAIT):
+            redraw()
+            first = last = None
+
+
+def main(sleep=time.sleep):
+    try:
+        write_urgent([])   # a previous session's urgent windows are gone
+    except OSError as e:
+        print(f"seclegion-wsevents: {e}", file=sys.stderr)
+    delay = RETRY_MIN
+    while True:
+        s = connect()
+        if s is not None:
+            delay = RETRY_MIN
+            try:
+                with s:
+                    serve(s)
+            except OSError as e:
+                print(f"seclegion-wsevents: {e}", file=sys.stderr)
+            redraw()   # Hyprland gone or restarting
+        if os.environ.get("SL_WS_ONCE"):
+            return 0
+        sleep(delay)
+        if s is None:
+            delay = min(delay * 2, RETRY_MAX)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

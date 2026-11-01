@@ -1,0 +1,71 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# GRUB theme template. iso/grub-theme/build-theme.sh fills the at-sign placeholders
+# (colours from desktop/theme/tokens.toml, font names from the generated .pf2 files)
+# and writes the result as themes/seclegion/theme.txt. Nothing generated is committed.
+#
+# The logo sits bottom-left in the splash; the menu takes the right half.
+
+title-text: ""
+desktop-image: "background.png"
+desktop-color: "@BG@"
+terminal-font: "@FONT_BODY@"
+terminal-left: "6%"
+terminal-top: "6%"
+terminal-width: "88%"
+terminal-height: "88%"
+terminal-border: "0"
+
++ boot_menu {
+    left = 52%
+    top = 22%
+    width = 42%
+    height = 52%
+    item_font = "@FONT_BODY@"
+    item_color = "@MUTED@"
+    selected_item_font = "@FONT_BODY@"
+    selected_item_color = "@ACCENT@"
+    item_height = 34
+    item_padding = 10
+    item_spacing = 8
+    icon_width = 0
+    icon_height = 0
+    item_icon_space = 0
+    scrollbar = true
+    scrollbar_width = 6
+}
+
++ label {
+    left = 52%
+    top = 14%
+    width = 42%
+    height = 40
+    font = "@FONT_TITLE@"
+    color = "@ACCENT@"
+    align = "left"
+    text = "SecLegion OS"
+}
+
++ progress_bar {
+    id = "__timeout__"
+    left = 52%
+    top = 82%
+    width = 42%
+    height = 6
+    show_text = false
+    bg_color = "@SURFACE@"
+    fg_color = "@ACCENT@"
+    border_color = "@SURFACE2@"
+}
+
++ label {
+    left = 52%
+    top = 86%
+    width = 42%
+    height = 24
+    font = "@FONT_BODY@"
+    color = "@MUTED@"
+    align = "left"
+    text = "Up/Down select, Enter boot, e edit, c command line"
+}

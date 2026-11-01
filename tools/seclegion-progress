@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""Print SecLegion OS progress: 1.0 fills 0-80%, 1.1 ("perfected") fills 80-100%. doing counts half."""
+import argparse
+import tomllib
+from pathlib import Path
+
+SHARE = {"1.0": 80.0, "1.1": 20.0}
+CREDIT = {"done": 1.0, "doing": 0.5, "todo": 0.0}
+
+
+def percent(items):
+    total = 0.0
+    for tier, share in SHARE.items():
+        tier_items = [i for i in items if i["tier"] == tier]
+        weight = sum(i["weight"] for i in tier_items)
+        got = sum(i["weight"] * CREDIT[i["status"]] for i in tier_items)
+        total += share * got / weight
+    return total
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("file", nargs="?", type=Path,
+                    default=Path(__file__).resolve().parent.parent / "docs/progress.toml")
+    ap.add_argument("--all", action="store_true", help="list every unfinished item, not the next 3")
+    a = ap.parse_args(argv)
+    items = tomllib.loads(a.file.read_text())["item"]
+    pct = percent(items)
+    bar = "#" * round(pct / 2.5) + "-" * (40 - round(pct / 2.5))
+    print(f"SecLegion OS [{bar}] {pct:.0f}%   (1.0 = 80%, perfected = 100%)")
+    nxt = [i for i in items if i["status"] != "done"]
+    for i in nxt if a.all else nxt[:3]:
+        print(f"  {i['status']:5} {i['tier']:4} {i['id']:10} {i['name']}")
+
+if __name__ == "__main__":
+    main()

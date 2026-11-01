@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Waybar custom/sl-gpu: every GPU under the DRM root, one tooltip line each; the bar
+# shows the highest busy percent. Shell builtins only, except one nvidia-smi query
+# for an NVIDIA card that is already awake:
+#   AMD (0x1002)     gpu_busy_percent from sysfs.
+#   NVIDIA (0x10de)  runtime_status "suspended": "dGPU off", no child process (a
+#                    query would wake it); "active" on battery: "dGPU on", no query
+#                    (a 5 s poll would keep it from runtime-suspending); "active" on
+#                    AC: nvidia-smi for that PCI slot; no nvidia-smi on PATH (or no
+#                    answer): the card is left out.
+# Connector entries (card1-eDP-1) and other vendors are skipped. Hidden (empty text,
+# exit 0, nothing on stderr) when no GPU yields a line.
+# SL_DRM_ROOT, SL_PSU_ROOT: tests only.
+root="${SL_DRM_ROOT:-/sys/class/drm}"
+on_battery() {
+    local s st
+    for s in "${SL_PSU_ROOT:-/sys/class/power_supply}"/*; do
+        st=""
+        [ -r "$s/status" ] && read -r st 2>/dev/null < "$s/status"
+        [ "$st" = Discharging ] && return 0
+    done
+    return 1
+}
+max=-1
+tip=""
+add() { tip="${tip:+$tip\\n}$1"; }
+for card in "$root"/card*; do
+    name="${card##*/}"
+    case "${name#card}" in ''|*[!0-9]*) continue ;; esac
+    dev="$card/device"
+    vendor=""
+    [ -r "$dev/vendor" ] && read -r vendor 2>/dev/null < "$dev/vendor"
+    v=""
+    case "$vendor" in
+        0x1002)
+            [ -r "$dev/gpu_busy_percent" ] && read -r v 2>/dev/null < "$dev/gpu_busy_percent"
+            case "$v" in ''|*[!0-9]*) continue ;; esac
+            add "AMD $name: busy $v%"
+            ;;
+        0x10de)
+            st=""
+            [ -r "$dev/power/runtime_status" ] && read -r st 2>/dev/null < "$dev/power/runtime_status"
+            if [ "$st" = suspended ]; then
+                add "NVIDIA $name: dGPU off"
+                continue
+            fi
+            if [ "$st" = active ] && on_battery; then
+                add "NVIDIA $name: dGPU on"
+                continue
+            fi
+            [ "$st" = active ] && command -v nvidia-smi >/dev/null 2>&1 || continue
+            slot=""
+            if [ -r "$dev/uevent" ]; then
+                while IFS='=' read -r k val; do
+                    [ "$k" = PCI_SLOT_NAME ] && slot="$val"
+                done 2>/dev/null < "$dev/uevent"
+            fi
+            [ -n "$slot" ] || continue
+            out=$(nvidia-smi -i "$slot" --query-gpu=utilization.gpu,temperature.gpu \
+                --format=csv,noheader,nounits 2>/dev/null)
+            IFS=', ' read -r v t <<< "$out"
+            case "$v" in ''|*[!0-9]*) continue ;; esac
+            tc=""
+            case "$t" in ''|*[!0-9]*) ;; *) tc=" ${t}°C" ;; esac
+            add "NVIDIA $name: busy $v%$tc"
+            ;;
+        *) continue ;;
+    esac
+    [ -n "$v" ] && [ "$v" -gt "$max" ] && max="$v"
+done
+if [ -z "$tip" ]; then
+    echo '{"text":"","class":"hidden"}'
+elif [ "$max" -lt 0 ]; then
+    printf '{"text":"󰢮 off","tooltip":"%s","class":"ok"}\n' "$tip"
+else
+    class=ok
+    [ "$max" -ge 90 ] && class=warn
+    printf '{"text":"󰢮 %s%%","tooltip":"%s","class":"%s"}\n' "$max" "$tip" "$class"
+fi
+exit 0

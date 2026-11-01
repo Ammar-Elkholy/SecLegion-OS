@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Started by uwsm via graphical-session.target (wants symlink shipped by seclegion-desktop).
+# The awww wallpaper daemon (owner issue 16). seclegion-displayd paints every output through it at
+# start and each output added later. ExecCondition skips the unit when an awww-daemon already
+# answers (a config that runs its own, as the owner's autostart does): never a second daemon.
+[Unit]
+Description=SecLegion: wallpaper daemon (awww)
+PartOf=graphical-session.target
+After=graphical-session.target
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+ExecCondition=/bin/sh -c '! awww query'
+ExecStart=/usr/bin/awww-daemon
+Restart=on-failure
+RestartSec=2
+Slice=app-graphical.slice
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Table matching supportedchips-synthetic.html, for the check-nvidia-table tests.
+schema = 1
+
+[[section]]
+anchor = "Current"
+family = "turing-plus"
+driver = "nvidia-open"
+ids = ["1F82", "1F9D", "28E0"]
+
+[[section]]
+anchor = "legacy_580.xx"
+family = "maxwell-pascal-volta"
+driver = "nouveau"
+ids = ["1340", "1C03"]
+
+[[section]]
+anchor = "legacy_470.xx"
+family = "kepler"
+driver = "nouveau"
+ids = ["1180"]

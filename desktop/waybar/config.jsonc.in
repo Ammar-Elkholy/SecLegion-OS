@@ -1,0 +1,248 @@
+// SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+// SPDX-License-Identifier: MIT
+// SecLegion OS bar. Colours live in style.css (theme tokens), not here.
+// TEMPLATE: tools/gen-waybar-ws turns this into config.jsonc (workspace pills).
+{
+  "layer": "top",
+  "position": "top",
+  "height": 36,
+  "exclusive": true,
+  "passthrough": false,
+  "spacing": 4,
+
+  "modules-left": ["custom/launcher", @WS_NAMES@, "hyprland/submap"],
+  "modules-center": ["mpris#sl-media"],
+  "modules-right": ["group/sl-stats", "custom/sl-vpn", "custom/sl-ai", "network", "bluetooth", "pulseaudio", "custom/sl-display", "backlight", "power-profiles-daemon", "battery", "custom/notification", "hyprland/language", "tray", "clock"],
+
+  "custom/launcher": {
+    "format": " ",
+    "tooltip-format": "SecLegion OS - applications",
+    "on-click": "rofi -show drun"
+  },
+
+  @WS_BLOCKS@,
+
+  // Event-driven (MPRIS over D-Bus): no polling, hidden via CSS when stopped.
+  "mpris#sl-media": {
+    "format": "♫ {artist} - {title}",
+    "format-paused": "⏸ {artist} - {title}",
+    "format-stopped": "",
+    "ellipsize": 40,
+    "max-length": 40,
+    "tooltip-format": "{player}: {album}",
+    "on-click": "play-pause",
+    "on-click-right": "next",
+    "on-click-middle": "previous"
+  },
+
+  "tray": {
+    "icon-size": 18,
+    "spacing": 8
+  },
+
+  "hyprland/language": {
+    "format": "\uf11c  {}",
+    "format-en": "US",
+    "format-ar": "AR",
+    "on-click": "~/.config/hypr/scripts/toggle-layout.sh"
+  },
+
+  // Shown only while a Hyprland submap is active (Super+Alt+R resize mode); hidden otherwise.
+  "hyprland/submap": {
+    "format": "RESIZE",
+    "tooltip": false
+  },
+
+  // Statistics drawer: cpu (load in its tooltip) is the handle; the rest slide out on hover.
+  // Polls are 5 s or slower; the helpers are short-lived and quiet when hardware is missing.
+  "group/sl-stats": {
+    "orientation": "inherit",
+    "drawer": { "transition-duration": 300, "transition-left-to-right": false },
+    "modules": ["cpu", "temperature", "memory", "disk", "custom/sl-gpu", "custom/sl-sec", "custom/sl-uptime"]
+  },
+
+  "cpu": {
+    "interval": 5,
+    "format": "󰻠 {usage}%",
+    "tooltip-format": "load {load}",
+    "states": { "warning": 80, "critical": 95 },
+    "on-click": "\"$HOME/.local/share/seclegion/host/bin/seclegion-sysmon\""
+  },
+
+  // k10temp (Tctl) through its hwmon directory; waybar resolves the hwmonN below it.
+  "temperature": {
+    "interval": 5,
+    "hwmon-path-abs": "/sys/devices/pci0000:00/0000:00:18.3/hwmon",
+    "input-filename": "temp1_input",
+    "critical-threshold": 90,
+    "format": "󰔏 {temperatureC}°C",
+    "format-critical": "󰸁 {temperatureC}°C"
+  },
+
+  "memory": {
+    "interval": 5,
+    "format": "󰍛 {used:0.1f}G",
+    "tooltip-format": "{used:0.1f} of {total:0.1f} GiB used, swap {swapUsed:0.1f} GiB",
+    "states": { "warning": 85, "critical": 95 }
+  },
+
+  // amdgpu busy percent (sysfs, shell builtins only); hidden when the file is missing.
+  "custom/sl-gpu": {
+    "exec": "\"$HOME/.local/share/seclegion/host/bin/seclegion-gpu\"",
+    "return-type": "json",
+    "interval": 5,
+    "on-click": "\"$HOME/.local/share/seclegion/host/bin/seclegion-sysmon\" --page gpu"
+  },
+
+  "custom/sl-uptime": {
+    "exec": "\"$HOME/.local/share/seclegion/host/bin/seclegion-uptime\"",
+    "return-type": "json",
+    "interval": 60
+  },
+
+  // Free space on / (plan C4.2); click opens Thunar.
+  "disk": {
+    "format": "󰋊 {free}",
+    "path": "/",
+    "interval": 30,
+    "tooltip-format": "{used} used of {total}",
+    "on-click": "thunar",
+    "states": { "warning": 85, "critical": 95 }
+  },
+
+  // Wi-Fi/wired status with live speeds. Interval 5 (the bar-wide floor; the plan said 3).
+  // Speeds are in bits/s, the unit of link rates and speed tests (bytes read 8x lower).
+  // No "interface" key: waybar follows the default route.
+  // Left click opens the Wi-Fi panel (seclegion-wifi: networks, join, forget; a second click closes it),
+  // right click Settings > Network; middle click toggles the Wi-Fi radio.
+  "network": {
+    "interval": 5,
+    "format-wifi": "󰖩 {essid} {signalStrength}% \u21e1{bandwidthUpBits} \u21e3{bandwidthDownBits}",
+    "format-ethernet": "󰈀 {ifname} \u21e1{bandwidthUpBits} \u21e3{bandwidthDownBits}",
+    "format-linked": "󰈀 {ifname} no IP",
+    "format-disconnected": "󰤭 Offline",
+    "format-disabled": "󰤮 Wi-Fi off",
+    "tooltip-format": "{ifname} {ipaddr}/{cidr} gw {gwaddr}",
+    "tooltip-format-wifi": "{ifname} {ipaddr}/{cidr} gw {gwaddr} {frequency}GHz",
+    "tooltip-format-disconnected": "No connection",
+    "tooltip-format-disabled": "Wi-Fi radio is off",
+    "on-click": "\"$HOME/.local/share/seclegion/host/bin/seclegion-wifi\"",
+    "on-click-right": "seclegion-settings --page network",
+    "on-click-middle": "sh -c 'if [ \"$(nmcli radio wifi)\" = enabled ]; then exec nmcli radio wifi off; else exec nmcli radio wifi on; fi'"
+  },
+
+  // VPN lock: hidden unless a NetworkManager vpn/wireguard connection is active.
+  // Nothing signals this module, so it polls (a short-lived helper, every 10 s).
+  "custom/sl-vpn": {
+    "exec": "\"$HOME/.local/share/seclegion/host/bin/seclegion-vpn\"",
+    "return-type": "json",
+    "interval": 10,
+    "on-click": "seclegion-settings --page network"
+  },
+
+  // Listening TCP ports and, when readable without root, the firewall state.
+  // Local AI runtime pill (hidden when AI is off and no provider is configured); click opens AI Center.
+  "custom/sl-ai": {
+    "exec": "\"$HOME/.local/share/seclegion/host/bin/seclegion-ai\"",
+    "return-type": "json",
+    "interval": 30,
+    "on-click": "seclegion-ai-center"
+  },
+
+  "custom/sl-sec": {
+    "exec": "\"$HOME/.local/share/seclegion/host/bin/seclegion-sec\"",
+    "return-type": "json",
+    "interval": 30
+  },
+
+  "pulseaudio": {
+    "format": "{volume}% {icon}",
+    "format-muted": "\uf026  Muted",
+    "format-icons": {
+      "headphone": "\uf025",
+      "hands-free": "\uf025",
+      "headset": "\uf025",
+      "phone": "\uf095",
+      "portable": "\uf10b",
+      "car": "\uf1b9",
+      "default": ["\uf026", "\uf027", "\uf028"]
+    },
+    "scroll-step": 5,
+    "on-click": "pavucontrol",
+    "on-click-right": "seclegion-settings --page sound",
+    "on-click-middle": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+    "on-scroll-up": "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+",
+    "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+  },
+
+  // Display menu (issue 14): laptop only / extend / mirror / external only. Static, no polling.
+  "custom/sl-display": {
+    "format": "\udb80\udf79",
+    "tooltip-format": "Displays: laptop only, extend, mirror, external only (Super+Shift+P)",
+    "on-click": "seclegion-display-menu"
+  },
+
+  "backlight": {
+    "format": "\uf185  {percent}%",
+    "tooltip-format": "Backlight level {percent}%"
+  },
+
+  "battery": {
+    "states": { "warning": 25, "critical": 10 },
+    "format": "{capacity}% {icon} {power:.1f}W",
+    "format-charging": "\uf0e7  {capacity}% {power:.1f}W",
+    "format-plugged": "\uf1e6  {capacity}%",
+    "format-full": "\uf240  {capacity}%",
+    "format-alt": "{icon}  {time}",
+    "format-icons": ["\uf244", "\uf243", "\uf242", "\uf241", "\uf240"],
+    "tooltip-format": "{timeTo}",
+    "on-click-right": "seclegion-settings --page power"
+  },
+
+  // Bluetooth chip (waybar's own module: BlueZ over D-Bus, event-driven, no polling).
+  // An empty format hides it, so it only shows while the adapter is on.
+  "bluetooth": {
+    "format": "\uf293",
+    "format-connected": "\uf294 {num_connections}",
+    "format-off": "",
+    "format-disabled": "",
+    "format-no-controller": "",
+    "tooltip-format": "{controller_alias} ({status})",
+    "tooltip-format-connected": "{controller_alias}\n{device_enumerate}",
+    "tooltip-format-enumerate-connected": "{device_alias}",
+    "on-click": "seclegion-settings --page bluetooth",
+    "on-click-right": "seclegion-settings --page bluetooth"
+  },
+
+  // Power profile: waybar's native module follows power-profiles-daemon over D-Bus (PropertiesChanged), so
+  // Fn+Q (the firmware platform_profile, which ppd mirrors) shows at once, with no polling. Left click
+  // cycles the profile (the module's own behaviour); the class is the profile name (see style.css).
+  "power-profiles-daemon": {
+    "format": "{icon}",
+    "tooltip-format": "Power profile: {profile}\nDriver: {driver}",
+    "format-icons": {
+      "default": "\udb81\udcc5",
+      "performance": "\udb81\udcc5",
+      "balanced": "\udb83\udf85",
+      "power-saver": "\udb80\udf2a"
+    },
+    "on-click-right": "seclegion-settings --page power"
+  },
+
+  // swaync bell: shows the Do Not Disturb state. Left click opens the panel, right click toggles DND.
+  // Polls every 5 s (short-lived swaync-client calls); hidden while swaync is not running.
+  "custom/notification": {
+    "exec": "\"$HOME/.local/share/seclegion/host/bin/seclegion-dnd\"",
+    "return-type": "json",
+    "interval": 5,
+    "on-click": "swaync-client -t -sw",
+    "on-click-right": "swaync-client -d -sw"
+  },
+
+  "clock": {
+    "interval": 30,
+    "format": "\uf017  {:%a %e %b, %H:%M}",
+    "tooltip-format": "<tt>{calendar}</tt>",
+    "on-click": "~/.config/hypr/scripts/toggle-clock-format.sh"
+  }
+}

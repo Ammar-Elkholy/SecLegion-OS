@@ -1,0 +1,1 @@
+{"configerrors": "Config error in file hyprland.lua at line 5: boom\nsecond line", "swaync": 1, "binds": [{"cmd": "kitty", "present": true}, {"cmd": "nosuchprog --x", "present": false}], "failed_units": ["waybar.service"]}

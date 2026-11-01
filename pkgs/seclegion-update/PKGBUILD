@@ -1,0 +1,23 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# seclegion-update: snapshotted pacman -Syu plus numbered migrations (/usr/share/seclegion/migrate).
+pkgname=seclegion-update
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='SecLegion OS updater: one snapper pre/post pair per upgrade, UKI check, run-once migrations'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('MIT')
+depends=('python' 'bash' 'sudo' 'pacman' 'snapper' 'snap-pac')
+source=()
+
+package() {
+    local m
+    install -Dm755 "$startdir/seclegion-update" "$pkgdir/usr/bin/seclegion-update"
+    for m in "$startdir"/migrate/[0-9][0-9][0-9][0-9]-*.sh; do
+        install -Dm755 "$m" "$pkgdir/usr/share/seclegion/migrate/${m##*/}"
+    done
+}

@@ -1,0 +1,4 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Repo files seclegion-claude-fetch needs (tools/pkg-source packs them into seclegion-src.tar.zst).
+tools/seclegion-vendor-fetch

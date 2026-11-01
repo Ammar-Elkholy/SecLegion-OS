@@ -1,0 +1,8 @@
+version = 1
+
+# Fixture data (sysfs/procfs values, expected plans, the synthetic vendor HTML) and notes carry no inline headers.
+[[annotations]]
+path = ["nvidia-html.sha256", "fixtures/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Ammar Elkholy and SecLegion contributors"
+SPDX-License-Identifier = "MIT"

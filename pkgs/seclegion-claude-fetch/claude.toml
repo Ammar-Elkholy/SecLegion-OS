@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# Pinned vendor manifest read by seclegion-claude-fetch and bumped by tools/vendor-bump claude.
+# `released` is the vendor's build date of this version (tools/canary measures the lag from it).
+# The pin follows Anthropic's `stable` channel pointer (downloads.claude.ai/claude-code-releases/stable).
+name = "claude"
+version = "2.1.308"
+released = "2026-10-22"
+url = "https://downloads.claude.ai/claude-code-releases/2.1.308/linux-x64/claude"
+sha256 = "356733f185fa988e6bf3aa9a555269fdd167982a2e2a80d3c8a78037bb92ad58"
+# Where the vendor publishes the hash: platforms.linux-x64.checksum in the release's manifest.json
+# (JSON, not a hash file, so there is no hash_url; tools/vendor-bump cross-checks it).
+hash_source = "https://downloads.claude.ai/claude-code-releases/2.1.308/manifest.json"
+hash_url = ""
+# The manifest has a detached GPG signature; the Anthropic release key is
+# https://downloads.claude.ai/keys/claude-code.asc (fingerprint 31DD DE24 DDFA B679 F42D 7BD2 BAA9 29FF
+# 1A7E CACE). It is not checked on the user's machine; tools/vendor-bump records the URL for the owner.
+signature = "https://downloads.claude.ai/claude-code-releases/2.1.308/manifest.json.sig"

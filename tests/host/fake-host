@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# fake-host NAME ARGV0 ARGS... - PATH stub for every live command seclegion-host
+# uses. Each call is appended to $SL_FAKE/calls.log. State lives in $SL_FAKE:
+#   proc/<pid>/{comm,cmdline}   fake processes (pids >= 5000000, above any real pid_max)
+#   bus-owner                   pid owning org.freedesktop.Notifications
+#   units/<unit>                "active" while a user unit is active
+#   stop-fails                  if present, `systemctl --user stop` fails
+#   daemon-reload-fails         if present, `systemctl --user daemon-reload` fails
+#   manager-down                if present, `systemctl --user daemon-reload|start|restart` fail
+#   configerrors                printed by `hyprctl configerrors`
+#   binds.json                  printed by `hyprctl binds -j` (else []), plus one
+#                               "seclegion-keys:" bind per hl.bind line of a present
+#                               ~/.config/hypr/seclegion-keys.lua, as Hyprland loads it
+#   keys-runtime-error          if present, that file loads none of its binds (an error the pcall hides)
+# Never touches a real process, unit or bus.
+set -euo pipefail
+name="$1" argv0="$2"
+shift 2
+F="${SL_FAKE:?SL_FAKE not set}"
+echo "$name $*" >> "$F/calls.log"
+
+spawn() {   # COMM ARGV... -> pid
+    local pid
+    pid="$(cat "$F/nextpid")"
+    echo $((pid + 1)) > "$F/nextpid"
+    mkdir "$F/proc/$pid"
+    echo "$1" > "$F/proc/$pid/comm"
+    shift
+    printf '%s\0' "$@" > "$F/proc/$pid/cmdline"
+    echo "$pid"
+}
+owner() {
+    local o
+    o="$(cat "$F/bus-owner" 2>/dev/null || true)"
+    if [ -n "$o" ] && [ -d "$F/proc/$o" ]; then echo "$o"; fi
+}
+
+is_idle_unit() {
+    case "$1" in
+        seclegion-idle.service | seclegion-idle-inhibit.service | seclegion-theme-sync.path) return 0 ;;
+        seclegion-displayd.service) return 0 ;;
+    esac
+    return 1
+}   # also the theme-auto path unit and displayd: same enable/disable/start/stop/restart shape
+
+case "$name" in
+    pgrep)
+        [ "$1" = -x ] && [ "$2" = -u ] && [ "$3" = "$(id -u)" ] && [ $# -eq 4 ] \
+            || { echo "fake pgrep: expected -x -u $(id -u) NAME, got: $*" >&2; exit 2; }
+        rc=1
+        for d in "$F"/proc/*/; do
+            [ -d "$d" ] || continue
+            if [ "$(cat "$d/comm")" = "$4" ]; then d="${d%/}"; echo "${d##*/}"; rc=0; fi
+        done
+        exit $rc
+        ;;
+    kill)
+        sig=TERM
+        case "$1" in -0) sig=0; shift ;; -TERM) shift ;; -*) echo "fake kill: unsupported $1" >&2; exit 2 ;; esac
+        rc=0
+        for pid in "$@"; do
+            if [ ! -d "$F/proc/$pid" ]; then rc=1; continue; fi
+            [ "$sig" = 0 ] || rm -rf -- "${F:?}/proc/$pid"
+        done
+        exit $rc
+        ;;
+    swaync | dunst)
+        if [ -n "$(owner)" ]; then echo "$name: org.freedesktop.Notifications is already owned" >&2; exit 1; fi
+        spawn "$name" "$argv0" "$@" > "$F/bus-owner"
+        ;;
+    waybar) spawn waybar "$argv0" "$@" > /dev/null ;;
+    nm-applet) spawn nm-applet "$argv0" "$@" > /dev/null ;;
+    busctl)
+        [ "$*" = "--user status org.freedesktop.Notifications" ] || { echo "fake busctl: $*" >&2; exit 2; }
+        o="$(owner)"
+        [ -n "$o" ] || { echo "Failed to get credentials: No such name" >&2; exit 1; }
+        printf 'PID=%s\nComm=%s\nCommandLine=%s\n' "$o" "$(cat "$F/proc/$o/comm")" "$(tr '\0' ' ' < "$F/proc/$o/cmdline")"
+        ;;
+    systemctl)
+        [ "$1" = --user ] || { echo "fake systemctl: needs --user" >&2; exit 2; }
+        case "$2" in
+            stop)
+                if [ -e "$F/stop-fails" ]; then echo "Failed to stop $3" >&2; exit 1; fi
+                rm -f -- "$F/units/$3"
+                ;;
+            restart)
+                if [ -e "$F/manager-down" ]; then echo "Failed to connect to bus" >&2; exit 1; fi
+                if is_idle_unit "$3"; then echo active > "$F/units/$3"; exit 0; fi
+                [ "$3" = waybar ] || { echo "fake systemctl: restart $3" >&2; exit 2; }
+                for d in "$F"/proc/*/; do
+                    if [ -d "$d" ] && [ "$(cat "$d/comm")" = waybar ]; then rm -rf -- "$d"; fi
+                done
+                "$(dirname "$argv0")/waybar"
+                echo active > "$F/units/waybar"
+                ;;
+            daemon-reload)
+                if [ -e "$F/daemon-reload-fails" ] || [ -e "$F/manager-down" ]; then echo "Failed to connect to bus" >&2; exit 1; fi
+                ;;
+            enable)   # enable [--now] UNIT: the wants symlink the real one creates, and a running unit
+                now=0
+                if [ "$3" = --now ]; then now=1; shift; fi
+                u="$3"
+                { [ "$u" = seclegion-wsevents.service ] || is_idle_unit "$u"; } || { echo "fake systemctl: $*" >&2; exit 2; }
+                [ -f "${SL_HOME:?}/.config/systemd/user/$u" ] || { echo "fake systemctl: unit file $u not installed" >&2; exit 1; }
+                mkdir -p -- "$SL_HOME/.config/systemd/user/default.target.wants"
+                ln -sfn -- "$SL_HOME/.config/systemd/user/$u" "$SL_HOME/.config/systemd/user/default.target.wants/$u"
+                if [ "$now" = 1 ]; then echo active > "$F/units/$u"; fi
+                ;;
+            disable)   # disable --now UNIT (the idle units): drop the wants symlink and stop it
+                [ "$3" = --now ] && is_idle_unit "$4" || { echo "fake systemctl: $*" >&2; exit 2; }
+                rm -f -- "${SL_HOME:?}/.config/systemd/user/default.target.wants/$4" "$F/units/$4"
+                ;;
+            start | try-restart)
+                if [ -e "$F/manager-down" ]; then echo "Failed to connect to bus" >&2; exit 1; fi
+                { [ "$3" = seclegion-wsevents.service ] || { [ "$2" = start ] && is_idle_unit "$3"; }; } \
+                    || { echo "fake systemctl: $*" >&2; exit 2; }
+                if [ "$2" = start ] || [ -f "$F/units/$3" ]; then echo active > "$F/units/$3"; fi
+                ;;
+            is-active)
+                if [ -f "$F/units/$3" ]; then cat "$F/units/$3"; else echo inactive; exit 3; fi
+                ;;
+            *) echo "fake systemctl: $*" >&2; exit 2 ;;
+        esac
+        ;;
+    systemd-run)
+        unit="" timer=0
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --unit=*) unit="${1#--unit=}" ;;
+                --on-active=*) timer=1 ;;
+                --) shift; break ;;
+                -*) ;;
+                *) break ;;
+            esac
+            shift
+        done
+        if [ "$timer" = 1 ]; then echo active > "$F/units/$unit.timer"; exit 0; fi
+        exec "$@"
+        ;;
+    hyprctl)
+        case "$1" in
+            reload | dispatch) ;;
+            configerrors) cat "$F/configerrors" 2>/dev/null || true ;;
+            binds)
+                [ "${2:-}" = -j ] || { echo "fake hyprctl: $*" >&2; exit 2; }
+                python3 - "$F/binds.json" "${SL_HOME:?}/.config/hypr/seclegion-keys.lua" "$F/keys-runtime-error" <<'PY'
+import json, os, sys
+live, keys, broken = sys.argv[1:4]
+out = json.load(open(live)) if os.path.exists(live) else []
+if os.path.exists(keys) and not os.path.exists(broken):
+    out += [{"modmask": 0, "key": "", "keycode": 0, "submap": "", "description": "seclegion-keys: fake"}
+            for line in open(keys) if line.lstrip().startswith("hl.bind(")]
+print(json.dumps(out))
+PY
+                ;;
+            -j) printf '{"option":"%s","str":"fake"}\n' "$3" ;;
+            *) echo "fake hyprctl: $*" >&2; exit 2 ;;
+        esac
+        ;;
+    *) echo "fake-host: unknown command $name" >&2; exit 2 ;;
+esac

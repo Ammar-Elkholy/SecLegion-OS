@@ -1,0 +1,92 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# The Hyprland desktop components, as read-only data under /usr/share/seclegion/<component>/:
+#   hypr (border/window rules module, workspace keybinds, hyprlock screen), waybar, swaync,
+#   idle (hypridle config template, auto-lock helper, user units), osd, fm, display (seclegion-displayd,
+#   seclegion-wallpaper, seclegion-display-menu, also on PATH as /usr/bin/seclegion-display-menu).
+# Also the seclegion-host tool (/usr/bin/seclegion-host, its library /usr/lib/seclegion/host-lib.sh)
+# and seclegion-keys-lint. seclegion-host lives here because it is the tool that puts these
+# components on a running host; its `apply` copies from a repository checkout, so from an
+# installed copy only confirm/rollback/prune make sense (UNVERIFIED: not exercised on a live host).
+# The components are shipped as in the repository: the `__HOME__` placeholders and the *.in
+# templates are filled in by whatever applies them, not at package time.
+#
+# The sibling seclegion-* packages (theme, settings, branding, dotfiles) are not in depends=() for
+# the reason given in pkgs/README.md; the ISO package list installs them together.
+pkgname=seclegion-desktop
+pkgver=0.1.0
+pkgrel=4
+pkgdesc='SecLegion OS Hyprland desktop: border/keys/lock modules, bar, notifications, OSD, idle and file manager config'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('MIT')
+depends=('bash' 'python' 'lua' 'hyprland' 'hyprlock' 'hypridle' 'waybar' 'swaync' 'swayosd' 'awww' 'uwsm' 'hyprpolkitagent' 'libnotify' 'hyprsunset' 'power-profiles-daemon' 'fwupd' 'wl-clipboard' 'rofi' 'grim' 'slurp' 'wf-recorder' 'tesseract' 'tesseract-data-eng' 'tesseract-data-ara' 'zbar' 'kitty' 'less' 'python-gobject' 'gtk4' 'libadwaita')
+source=(seclegion-src.tar.zst)
+sha256sums=('SKIP')  # generated for the build from tracked files (tools/pkg-source)
+
+# _tree <srcdir-relative dir> <dest dir under $pkgdir>: regular files, 0644, no REUSE sidecars.
+_tree() {
+    local f
+    while IFS= read -r -d '' f; do
+        install -Dm644 "$srcdir/$1/$f" "$pkgdir/$2/$f"
+    done < <(cd "$srcdir/$1" && find . -type f ! -name '*.license' ! -path '*/__pycache__/*' -print0)
+}
+
+package() {
+    local share=usr/share/seclegion c
+    _tree desktop/hypr "$share/hypr"
+    for c in waybar swaync idle osd fm display; do
+        _tree "desktop/$c" "$share/$c"
+    done
+
+    # Executables: the waybar helpers (the files with no extension), the idle auto-lock, the OSD shims.
+    local f
+    for f in nm-applet seclegion-dnd seclegion-gpu seclegion-sec seclegion-uptime \
+             seclegion-vpn seclegion-ws seclegion-wsevents seclegion-ai seclegion-sysmon seclegion-wifi; do
+        chmod 755 "$pkgdir/$share/waybar/$f"
+    done
+    chmod 755 "$pkgdir/$share/idle/seclegion-autolock" "$pkgdir/$share/osd/dunstify" "$pkgdir/$share/osd/seclegion-osd"
+    chmod 755 "$pkgdir/$share/display/seclegion-displayd"   # run by seclegion-displayd.service
+    chmod 755 "$pkgdir/$share/display/seclegion-wallpaper"  # run by displayd and the seclegion-theme hook
+    chmod 755 "$pkgdir/$share/display/seclegion-display-menu"   # issue 14: XF86Display, Super+Shift+P, bar
+    install -d "$pkgdir/usr/bin"
+    ln -s "/$share/display/seclegion-display-menu" "$pkgdir/usr/bin/seclegion-display-menu"
+
+    # uwsm: user units for the session daemons, enabled by a wants symlink on graphical-session.target.
+    local u
+    install -d "$pkgdir/usr/lib/systemd/user/graphical-session.target.wants"
+    for u in "$srcdir"/desktop/units/*.service; do
+        install -Dm644 "$u" "$pkgdir/usr/lib/systemd/user/${u##*/}"
+        ln -s "/usr/lib/systemd/user/${u##*/}" "$pkgdir/usr/lib/systemd/user/graphical-session.target.wants/${u##*/}"
+    done
+
+    install -Dm755 "$srcdir/tools/seclegion-host" "$pkgdir/usr/bin/seclegion-host"
+    install -Dm644 "$srcdir/tools/host-lib.sh" "$pkgdir/usr/lib/seclegion/host-lib.sh"
+    install -d "$pkgdir/usr/bin"
+    sed '1s|.*|#!/usr/bin/python3 -I|' "$srcdir/tools/seclegion-keys-lint" > "$pkgdir/usr/bin/seclegion-keys-lint"
+    chmod 755 "$pkgdir/usr/bin/seclegion-keys-lint"
+    install -Dm755 "$srcdir/desktop/keys-help/bin/seclegion-keys" "$pkgdir/usr/bin/seclegion-keys"
+    _tree desktop/keys-help/python usr/lib/seclegion/python
+    local b
+    for b in "$srcdir"/desktop/utils/bin/seclegion-*; do
+        install -Dm755 "$b" "$pkgdir/usr/bin/${b##*/}"
+    done
+    for b in "$srcdir"/desktop/capture/bin/seclegion-*; do
+        install -Dm755 "$b" "$pkgdir/usr/bin/${b##*/}"
+    done
+    install -Dm644 "$srcdir/desktop/utils/applications/seclegion-firmware.desktop" "$pkgdir/usr/share/applications/seclegion-firmware.desktop"
+    # Welcome app (desktop/welcome), its launcher entry, the dual-boot guide it opens and the
+    # seclegion-tools catalog its "Security tools" button lists.
+    install -Dm755 "$srcdir/desktop/welcome/bin/seclegion-welcome" "$pkgdir/usr/bin/seclegion-welcome"
+    _tree desktop/welcome/python usr/lib/seclegion/python
+    install -Dm644 "$srcdir/desktop/welcome/applications/seclegion-welcome.desktop" "$pkgdir/usr/share/applications/seclegion-welcome.desktop"
+    install -Dm644 "$srcdir/docs/dual-boot.md" "$pkgdir/usr/share/doc/seclegion/dual-boot.md"
+    install -Dm755 "$srcdir/tools/seclegion-tools" "$pkgdir/usr/bin/seclegion-tools"
+    for f in "$srcdir"/catalog/*.toml; do
+        install -Dm644 "$f" "$pkgdir/usr/share/seclegion/catalog/${f##*/}"
+    done
+    install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

@@ -1,0 +1,4 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Members of wheel use sudo with their password. Root is locked; there is no passwordless rule.
+%wheel ALL=(ALL:ALL) ALL

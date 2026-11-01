@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Redraws the bar's workspace pills when Hyprland's workspaces or windows change.
+# Installed by `seclegion-host apply waybar` into ~/.config/systemd/user/.
+[Unit]
+Description=SecLegion workspace pills: Hyprland events to waybar
+
+[Service]
+Type=simple
+ExecStart=%h/.local/share/seclegion/host/bin/seclegion-wsevents
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

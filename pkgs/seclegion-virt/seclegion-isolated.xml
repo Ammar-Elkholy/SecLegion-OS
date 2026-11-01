@@ -1,0 +1,14 @@
+<!--
+SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+SPDX-License-Identifier: MIT
+-->
+<network>
+  <name>seclegion-isolated</name>
+  <bridge name="virbr1" stp="on" delay="0"/>
+  <dns enable="no"/>
+  <ip address="10.66.0.1" netmask="255.255.255.0">
+    <dhcp>
+      <range start="10.66.0.2" end="10.66.0.254"/>
+    </dhcp>
+  </ip>
+</network>

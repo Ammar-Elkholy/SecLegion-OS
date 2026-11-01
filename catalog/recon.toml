@@ -1,0 +1,35 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Tier-1 catalog, batch 1: reconnaissance. Schema and rules: catalog/README.md.
+
+[[tool]]
+name = "nmap"
+package = "nmap"
+source = "arch-extra"
+category = "recon"
+purpose = "Host discovery, port scanning, service and OS fingerprinting, NSE scripts."
+privileges = "root"
+privileges_why = "Raw-socket scans (-sS, -O, ARP discovery) need root or cap_net_raw; TCP connect scans (-sT) run unprivileged."
+safe_test = ["nmap", "-n", "-sT", "-Pn", "-p", "1", "127.0.0.1"]
+safe_test_expect = "Nmap done: 1 IP address"
+removal = "sudo pacman -Rns nmap"
+update_policy = "Follows the Arch package; updated with the system (pacman -Syu). No pinning."
+docs = "man nmap; https://nmap.org/book/man.html"
+licence = "LicenseRef-Nmap-Public-Source-License-Version-0.95"
+needs_internet = false
+
+[[tool]]
+name = "masscan"
+package = "masscan"
+source = "arch-extra"
+category = "recon"
+purpose = "Very fast asynchronous TCP port scanner for large address ranges."
+privileges = "root"
+privileges_why = "Sends crafted packets through its own TCP/IP stack on a raw socket; needs root or cap_net_raw."
+safe_test = ["masscan", "--version"]
+safe_test_expect = "Masscan version"
+removal = "sudo pacman -Rns masscan"
+update_policy = "Follows the Arch package; updated with the system (pacman -Syu). No pinning."
+docs = "man masscan; https://github.com/robertdavidgraham/masscan"
+licence = "AGPL-3.0-only"
+needs_internet = false

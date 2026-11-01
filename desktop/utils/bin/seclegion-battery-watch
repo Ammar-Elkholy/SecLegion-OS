@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-battery-watch: notify when the battery is low.
+
+Polls /sys/class/power_supply/BAT* every 60 s. While discharging: a normal notification when
+the charge first falls to 15 % or less, a critical, sticky one (urgency critical, no timeout)
+at 7 % or less; each once per discharge (state is cleared when the battery charges again).
+Machines without a battery exit 0.
+
+    seclegion-battery-watch          loop (the user unit)
+    seclegion-battery-watch --once   one check, then exit
+
+Env (tests): SL_POWER_SUPPLY (default /sys/class/power_supply), SL_STATE_DIR (default
+$XDG_RUNTIME_DIR/seclegion), SL_NOTIFY (default notify-send).
+"""
+import glob
+import os
+import shlex
+import subprocess
+import sys
+import time
+
+LOW, CRIT = 15, 7
+
+
+def read(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def battery(root):
+    for d in sorted(glob.glob(os.path.join(root, "BAT*"))):
+        cap = read(os.path.join(d, "capacity"))
+        if cap.isdigit():
+            return int(cap), read(os.path.join(d, "status"))
+    return None
+
+
+def notify(args):
+    cmd = shlex.split(os.environ.get("SL_NOTIFY", "notify-send"))
+    subprocess.run(cmd + args, check=False)
+
+
+def check(root, state_file):
+    b = battery(root)
+    if b is None:
+        return
+    cap, status = b
+    done = set(read(state_file).split())
+    if status != "Discharging":
+        done = set()
+    else:
+        if cap <= CRIT and "crit" not in done:
+            notify(["-a", "SecLegion", "-u", "critical", "-t", "0", "Battery critical",
+                    f"{cap}% left. Plug in now."])
+            done |= {"low", "crit"}
+        elif cap <= LOW and "low" not in done:
+            notify(["-a", "SecLegion", "-u", "normal", "Battery low", f"{cap}% left."])
+            done.add("low")
+    os.makedirs(os.path.dirname(state_file), exist_ok=True)
+    with open(state_file, "w", encoding="utf-8") as f:
+        f.write(" ".join(sorted(done)))
+
+
+def main(argv):
+    root = os.environ.get("SL_POWER_SUPPLY", "/sys/class/power_supply")
+    sdir = os.environ.get("SL_STATE_DIR") or os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "seclegion")
+    state_file = os.path.join(sdir, "battery-watch.state")
+    if battery(root) is None:
+        return 0
+    while True:
+        check(root, state_file)
+        if argv[:1] == ["--once"]:
+            return 0
+        time.sleep(60)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

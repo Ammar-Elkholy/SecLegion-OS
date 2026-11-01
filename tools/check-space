@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""Refuse a build workdir that is on a filesystem archiso cannot use, or too small.
+
+Spec A13: workdir defaults to /var/tmp/seclegion-build on ext4; refuse
+fuseblk/ntfs, less than 25 GiB free, and anything under /mnt/Dev_Lab (by realpath).
+
+Usage: check-space [--min-gib N] [PATH]
+Exit status: 0 = OK, 1 = refused, 2 = usage error.
+"""
+
+import argparse
+import os
+import sys
+
+DEFAULT_WORKDIR = "/var/tmp/seclegion-build"
+DEFAULT_MIN_GIB = 25
+# fuseblk is what ntfs-3g reports; the others lack unix permissions/symlinks/xattrs.
+REFUSED_FSTYPES = frozenset(
+    {"fuseblk", "ntfs", "ntfs3", "ntfs-3g", "fuse.ntfs-3g", "vfat", "exfat", "msdos"}
+)
+# Refused by location, whatever the filesystem type says: the big data disk.
+FORBIDDEN_ROOTS = ("/mnt/Dev_Lab",)
+GIB = 1024**3
+
+
+def _unescape(field):
+    """mountinfo escapes space, tab, newline, backslash as \\NNN octal."""
+    out, i = [], 0
+    while i < len(field):
+        if field[i] == "\\" and field[i + 1 : i + 4].isdigit():
+            out.append(chr(int(field[i + 1 : i + 4], 8)))
+            i += 4
+        else:
+            out.append(field[i])
+            i += 1
+    return "".join(out)
+
+
+def parse_mountinfo(text):
+    """Return a list of (mount_point, fstype) from /proc/self/mountinfo text."""
+    mounts = []
+    for line in text.splitlines():
+        fields = line.split()
+        if "-" not in fields:
+            continue
+        sep = fields.index("-")
+        if sep < 5 or len(fields) < sep + 2:
+            continue
+        mounts.append((_unescape(fields[4]), fields[sep + 1]))
+    return mounts
+
+
+def fstype_for(path, mountinfo_text):
+    """Filesystem type of the longest mount point that contains path."""
+    path = os.path.realpath(path)
+    best, best_type = "", None
+    for mount_point, fstype in parse_mountinfo(mountinfo_text):
+        prefix = mount_point.rstrip("/")
+        if path == mount_point or path.startswith(prefix + "/") or mount_point == "/":
+            if len(mount_point) >= len(best):
+                best, best_type = mount_point, fstype
+    return best_type
+
+
+def nearest_existing(path):
+    path = os.path.abspath(path)
+    while not os.path.exists(path):
+        parent = os.path.dirname(path)
+        if parent == path:
+            break
+        path = parent
+    return path
+
+
+def forbidden_problems(path):
+    """Refusal reasons for a path that, after resolving symlinks, is under a forbidden root."""
+    real = os.path.realpath(path)
+    return [
+        f"{path} resolves to {real}, under {root}: never build there, use /var/tmp/seclegion-build"
+        for root in FORBIDDEN_ROOTS
+        if real == root or real.startswith(root + "/")
+    ]
+
+
+def check(path, min_gib, mountinfo_text, free_bytes):
+    """Return a list of refusal reasons (empty list = OK). Pure, for unit tests."""
+    problems = []
+    fstype = fstype_for(path, mountinfo_text)
+    if fstype is None:
+        problems.append(f"cannot determine filesystem type of {path}")
+    elif fstype in REFUSED_FSTYPES:
+        problems.append(
+            f"{path} is on {fstype}: archiso needs a Linux filesystem (ext4/xfs/btrfs); "
+            "use /var/tmp/seclegion-build"
+        )
+    if free_bytes < min_gib * GIB:
+        problems.append(
+            f"only {free_bytes / GIB:.1f} GiB free at {path}, need at least {min_gib} GiB"
+        )
+    return problems
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("path", nargs="?", default=os.environ.get("SECLEGION_WORKDIR", DEFAULT_WORKDIR))
+    parser.add_argument("--min-gib", type=int, default=DEFAULT_MIN_GIB)
+    args = parser.parse_args(argv)
+
+    probe = nearest_existing(args.path)
+    with open("/proc/self/mountinfo", encoding="utf-8") as handle:
+        mountinfo = handle.read()
+    stat = os.statvfs(probe)
+    problems = forbidden_problems(args.path) + check(
+        probe, args.min_gib, mountinfo, stat.f_bavail * stat.f_frsize)
+    if problems:
+        for problem in problems:
+            print(f"check-space: REFUSED: {problem}", file=sys.stderr)
+        return 1
+    print(f"check-space: OK: {args.path} ({fstype_for(probe, mountinfo)}, "
+          f">= {args.min_gib} GiB free)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# The GRUB entry boots to this target (systemd.unit=).
+[Unit]
+Description=SecLegion OS (install mode)
+# basic.target only: the slow multi-user services (network, cloud-init) start in parallel, so the
+# target and its marker do not wait for them.
+Requires=basic.target
+After=basic.target
+Wants=multi-user.target
+Wants=seclegion-mode@install.service
+AllowIsolate=yes
+Wants=seclegion-kiosk-polkit.service
+Wants=seclegion-kiosk.service
+Wants=seclegion-selftest.service

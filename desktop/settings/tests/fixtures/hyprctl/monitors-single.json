@@ -1,0 +1,43 @@
+[
+ {
+  "id": 0,
+  "name": "eDP-1",
+  "description": "BOE 0x0BC9",
+  "make": "BOE",
+  "model": "",
+  "serial": "",
+  "width": 2560,
+  "height": 1600,
+  "refreshRate": 165.00101,
+  "x": 0,
+  "y": 0,
+  "activeWorkspace": {
+   "id": 1,
+   "name": "1"
+  },
+  "specialWorkspace": {
+   "id": 0,
+   "name": ""
+  },
+  "reserved": [
+   0,
+   32,
+   0,
+   0
+  ],
+  "scale": 1.6,
+  "transform": 0,
+  "focused": true,
+  "dpmsStatus": true,
+  "vrr": false,
+  "solitary": "0",
+  "activelyTearing": false,
+  "directScanoutTo": "0",
+  "disabled": false,
+  "currentFormat": "XRGB8888",
+  "mirrorOf": "none",
+  "availableModes": [
+   "2560x1600@165.00Hz"
+  ]
+ }
+]

@@ -1,0 +1,33 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# Graphite GTK theme (GPL-3.0), built from the upstream release tag with sassc. Only the dark
+# colour variant of the default (grey) accent is built: Graphite-Dark. Upstream has no variant
+# called "Mono"; the grey accent is the monochrome one. Pinned by sha256 (docs/third-party.md).
+_tag=2026-08-23
+pkgname=seclegion-themes-graphite
+pkgver=${_tag//-/.}
+pkgrel=1
+pkgdesc='Graphite GTK theme, dark variant (GPL-3.0), built from the upstream release tag'
+arch=('any')
+url='https://github.com/vinceliuice/Graphite-gtk-theme'
+license=('GPL-3.0-only')
+makedepends=('sassc')
+source=("graphite-gtk-theme-$_tag.tar.gz::https://github.com/vinceliuice/Graphite-gtk-theme/archive/refs/tags/$_tag.tar.gz")
+sha256sums=('a46a5c4bd9562332221c504a58da0d6f4d729c8a74ab26e002b41516df52acb9')
+
+prepare() {
+    cd "$srcdir/Graphite-gtk-theme-$_tag"
+    # install.sh also copies a gnome-theme-switcher app into /usr/bin (UID 0 under fakeroot): drop that
+    sed -i 's/ && install_app$//' install.sh
+    ! grep -q ' && install_app$' install.sh
+}
+
+package() {
+    cd "$srcdir/Graphite-gtk-theme-$_tag"
+    install -d "$pkgdir/usr/share/themes"
+    ./install.sh --dest "$pkgdir/usr/share/themes" --theme default --color dark --size standard
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

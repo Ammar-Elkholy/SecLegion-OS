@@ -1,0 +1,1775 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# seclegion-host - put one SecLegion desktop component onto the running host,
+# with a backup, a 120 s dead-man rollback and a byte-exact undo.
+#
+#   seclegion-host apply <border|notifications|waybar|lock|keys|gtk|fm|settings|osd|idle|theme-auto|display>
+#   seclegion-host confirm
+#   seclegion-host rollback [--last|<id>|baseline-0]
+#   seclegion-host prune --keep N
+#   seclegion-host --system [--root DIR] (--home DIR | USER)
+#
+# The repo is the source of truth: a component is copied to
+# ~/.local/share/seclegion/host/<component>/ and only the ~/.config/<x> symlink
+# is flipped. Hyprland gets one require("seclegion-host") line plus
+# ~/.config/hypr/seclegion-host.lua; autostart gets one dunst -> swaync edit;
+# ~/.config/hypr/hyprlock.conf becomes a symlink to the installed lock screen
+# (no reload: hyprlock reads it at lock time); ~/.config/hypr/seclegion-keys.lua
+# becomes a symlink to the installed workspace keybinds, which the border's
+# seclegion-host.lua loads (so keys needs border applied first), once
+# tools/seclegion-keys-lint finds no collision with the owner's keybinds.lua
+# and the live `hyprctl binds -j` (read-only). osd symlinks the dunstify shim
+# (swaync replaces a popup for x-canonical-private-synchronous, not dunst's
+# stack tag) and seclegion-osd into ~/.local/bin; no reload. The theme is never copied in by
+# hand: when theme/current is not an engine symlink, `seclegion-theme reset
+# --no-hooks` writes it (an old real directory is moved into the backup).
+#
+# apply: backup -> validate -> install -> reload that component -> arm the
+# dead-man (systemd-run --user --on-active=120 <backup>/rollback.sh) -> verify.
+# Any failure after the first change rolls back immediately.
+#
+# Backups: ~/.local/state/seclegion/host-backups/<UTC>-<component>/ (0700,
+# files 0600): manifest.json, files.tar (only the touched paths, symlinks kept),
+# dotfiles.patch (information only) and a generated, idempotent rollback.sh that
+# needs neither the repo nor Wayland. baseline-0 (all components) is taken once,
+# before the first change, and is never pruned; a component added to the tool
+# later is merged into it before the next apply (extend_baseline).
+#
+# gtk: ~/.config/gtk-3.0/gtk.css and gtk-4.0/ (a real directory replacing the
+# symlink into ~/.themes: nothing is ever written under ~/.themes or ~/.icons),
+# the KDE and qt6ct colour-scheme symlinks, one key in kdeglobals. fm: Thunar as
+# the inode/directory default, its status bar, Dolphin's, the yazi space plugin.
+# Both only edit the keys they own; apps pick the change up on their next start.
+# settings: the Settings app and CLI under host/settings/ (python/ holds the
+# seclegion_settings and seclegion_theme packages, next to the launchers
+# seclegion-set, seclegion-settings, seclegion-root-apply, seclegion-theme),
+# the wrappers ~/.local/bin/seclegion-settings, seclegion-set and seclegion-theme, the rofi theme
+# picker ~/.local/bin/seclegion-theme-pick (it runs the seclegion-theme wrapper beside it), the
+# read-only ~/.local/bin/seclegion-doctor (a marked copy of tools/seclegion-doctor) and
+# ~/.local/share/applications/seclegion-settings.desktop. Nothing is run as root:
+# seclegion-root-apply is installed 0755 in a user-writable directory, so the
+# owner must copy it to a root-owned path before running that copy with sudo.
+# idle (apply idle): seclegion-autolock under host/idle/ with its hypridle.conf template,
+# the user units seclegion-idle-inhibit.service and seclegion-idle.service, the symlink
+# ~/.local/bin/seclegion-autolock and its state file ~/.config/seclegion/autolock. The
+# owner's ~/.config/hypr/hypridle.conf is never read or written. Apply leaves the state
+# as it was (default on a fresh host); rollback stops both units, removes everything above
+# and starts again only what ran before the apply.
+#
+# theme-auto (apply theme-auto): the user units seclegion-theme-sync.path and .service under
+# ~/.config/systemd/user, enabled and started (the path unit), and a private copy of seclegion-theme
+# under host/theme-auto/ that the service runs as `sync`. Nothing starts a theme change until
+# `seclegion-theme auto on`. Rollback disables and removes the units and the copy.
+#
+# display (apply display): seclegion-displayd under host/display/ (clears ghost monitors after an
+# HDMI unplug; paints the background on every output through seclegion-wallpaper, issue 16) and its user unit seclegion-displayd.service, enabled on default.target and started:
+# the live host never reaches graphical-session.target, where the packaged unit hangs. Hyprland is
+# only read by apply (the daemon itself acts on an unplug). Rollback disables, stops and removes
+# the unit and the copy, and starts the unit again only if an earlier apply had it running.
+#
+# waybar also symlinks the nm-applet shim (drops --indicator: no duplicate tray
+# icon, the secret agent stays) into ~/.local/bin and restarts the running
+# nm-applet through it, by pid; a rollback starts the recorded command again.
+#
+# --system: apply the PACKAGED components (seclegion-desktop, -theme, -settings, -branding under
+# DIR/usr/share/seclegion, DIR/usr/lib/seclegion, DIR/usr/bin; DIR defaults to /) to the home of a NEW
+# user, for the installer's post step. Hyprland is the only session: the user's hyprland.lua and
+# hyprlock.conf come from /etc/skel and load the packaged border, keys and lock screen from /usr/share, so
+# only the components that need a per-user copy are applied (notifications waybar gtk fm settings osd idle
+# theme-auto). No Wayland, no Hyprland, no systemctl, no dead-man, no network: user units are enabled by
+# creating the default.target.wants symlinks. It makes baseline-0 and one <UTC>-system backup, so
+# `seclegion-host rollback` undoes it (a rollback of such a backup makes no live call). `--system USER` as root
+# re-runs itself as USER (runuser) so the files belong to the user; as anyone else only your own user or --home.
+# Refused: a home that has host-backups/baseline-0 of a live apply, host-pending or .config/hyprland-dotfiles
+# (an owner's home), and --home equal to the invoking user's own home. A second run on an applied home is a
+# no-op (roll back first to re-apply).
+#
+# Never runs sudo, never touches /etc, the display manager or Hyprland's
+# process; signals only the affected daemons, by pid, for this uid.
+# Tests: SL_HOME (fake home), SL_PROC (fake /proc) and PATH stubs.
+set -Eeuo pipefail
+shopt -s inherit_errexit
+export LC_ALL=C
+enable -n kill   # PATH kill: /usr/bin/kill on the host, a stub in tests
+
+PROG=seclegion-host
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SL_SYSTEM_BACKUP="" SYS_ROOT=/ SYS_HOME="" SYS_USER=""
+sys_args() {   # --system [--root DIR] (--home DIR | USER): sets SL_SYSTEM_BACKUP SYS_ROOT SYS_HOME; may re-exec as USER
+    local pw uid real
+    sys_fail() { printf '%s: ERROR: %s\n' "$PROG" "$*" >&2; exit 2; }
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --root) [ $# -ge 2 ] || sys_fail "--root needs a directory"; SYS_ROOT="$2"; shift 2 ;;
+            --home) [ $# -ge 2 ] || sys_fail "--home needs a directory"; SYS_HOME="$2"; shift 2 ;;
+            -*) sys_fail "unknown option $1" ;;
+            *) [ -z "$SYS_USER" ] || sys_fail "one USER only"; SYS_USER="$1"; shift ;;
+        esac
+    done
+    if [ -z "$SYS_HOME$SYS_USER" ] || { [ -n "$SYS_HOME" ] && [ -n "$SYS_USER" ]; }; then sys_fail "usage: $PROG --system [--root DIR] (--home DIR | USER)"; fi
+    SYS_ROOT="$(realpath -m -- "$SYS_ROOT")"
+    uid="$(id -u)"
+    if [ -n "$SYS_USER" ]; then
+        pw="$(getent passwd "$SYS_USER")" || sys_fail "no such user: $SYS_USER"
+        SYS_HOME="$(cut -d: -f6 <<< "$pw")"
+        if [ "$uid" = 0 ]; then
+            [ "$(cut -d: -f3 <<< "$pw")" != 0 ] || sys_fail "refusing root: that is not a new user's home"
+            # root's session variables must not follow: XDG_RUNTIME_DIR=/run/user/0 made the theme lock
+            # unwritable for the user (install post step), and a new home is never applied to a live session.
+            exec runuser -u "$SYS_USER" -- env -u XDG_RUNTIME_DIR -u DBUS_SESSION_BUS_ADDRESS -u WAYLAND_DISPLAY \
+                -u HYPRLAND_INSTANCE_SIGNATURE "$(realpath -- "${BASH_SOURCE[0]}")" --system --root "$SYS_ROOT" "$SYS_USER"
+        fi
+        [ "$(cut -d: -f3 <<< "$pw")" = "$uid" ] || sys_fail "run as root, or as $SYS_USER itself, for user $SYS_USER"
+    else
+        pw="$(getent passwd "$uid")" || pw=""
+        real="$(cut -d: -f6 <<< "$pw")"
+        if [ -n "$real" ] && [ "$(realpath -m -- "$SYS_HOME")" = "$(realpath -m -- "$real")" ]; then
+            sys_fail "--home $SYS_HOME is the invoking user's own home; use a new user's home"
+        fi
+        if [ -n "${HOME:-}" ] && [ "$(realpath -m -- "$SYS_HOME")" = "$(realpath -m -- "$HOME")" ] \
+            && [ -n "$(ls -A -- "$SYS_HOME" 2>/dev/null)" ]; then
+            sys_fail "--home $SYS_HOME is the invoking user's \$HOME and is not empty"
+        fi
+    fi
+    case "$SYS_HOME" in /?*) ;; *) sys_fail "the home must be an absolute path: $SYS_HOME" ;; esac
+    SL_SYSTEM_BACKUP=1
+}
+if [ "${1:-}" = --system ]; then shift; sys_args "$@"; fi
+HOME_DIR="${SYS_HOME:-${SL_HOME:-$HOME}}"
+PROC="${SL_PROC:-/proc}"
+CFG="$HOME_DIR/.config"
+SHARE="$HOME_DIR/.local/share/seclegion"
+INST="$SHARE/host"
+STATE="$HOME_DIR/.local/state/seclegion"
+BACKUPS="$STATE/host-backups"
+PENDING="$STATE/host-pending"
+THEME_DIR="$STATE/theme/current"
+LOCK_CONF="$CFG/hypr/hyprlock.conf"
+HYPR_MAIN="$CFG/hypr/hyprland.lua"
+HYPR_AUTO="$CFG/hypr/modules/autostart.lua"
+HYPR_KEYS="$CFG/hypr/modules/keybinds.lua"
+KEYS_LINK="$CFG/hypr/seclegion-keys.lua"
+KEYS_REQ_RE='^[^-]*pcall\(require, "seclegion-keys"\)'
+DEADMAN=seclegion-host-deadman
+WSEV_UNIT=seclegion-wsevents.service
+NMA_REAL="${SL_NMAPPLET_REAL:-/usr/bin/nm-applet}"   # what the shim and a rollback run; SL_NMAPPLET_REAL: tests only
+COMPONENTS=(border notifications waybar lock keys gtk fm settings osd)
+COMPONENTS+=(idle)   # T13: no surprise lock
+COMPONENTS+=(theme-auto)   # T11 J3: re-theme on a wallpaper change
+COMPONENTS+=(display)   # issue 15: workspaces stranded on a ghost HDMI monitor
+DSP_UNIT=seclegion-displayd.service
+TA_PATH_UNIT=seclegion-theme-sync.path
+TA_UNIT=seclegion-theme-sync.service
+OSD_BINS=(dunstify seclegion-osd)
+IDLE_UNIT=seclegion-idle.service
+IDLE_INHIBIT_UNIT=seclegion-idle-inhibit.service
+ID_RE='^[0-9]{8}T[0-9]{6}Z-[a-z-]+$'
+DUNST_RE='^[[:space:]]*hl\.exec_cmd\("dunst"\)[[:space:]]*$'
+SWAYNC_RE='^[[:space:]]*hl\.exec_cmd\("swaync"\)[[:space:]]*$'
+
+# In a checkout the library is tools/host-lib.sh; the seclegion-desktop package installs it as
+# /usr/lib/seclegion/host-lib.sh (and this script as /usr/bin/seclegion-host).
+HOST_LIB="$REPO/tools/host-lib.sh"
+[ -r "$HOST_LIB" ] || HOST_LIB="$REPO/lib/seclegion/host-lib.sh"
+# shellcheck source=tools/host-lib.sh
+. "$HOST_LIB"
+
+session_env
+
+phase=none BK="" STAGE=""
+OWNER_COMM="" OWNER_ARGV=() WAYBAR_STATE="" NMA_RUN="" NMA_ARGS=() NMA_RESTARTED=""
+
+on_fail() {
+    local rc=$? line="${1:-?}"
+    [ "$BASHPID" = "$$" ] || exit 1   # in a subshell: the parent's trap handles it
+    trap - ERR INT TERM HUP
+    set +e
+    [ -z "$STAGE" ] || rm -rf -- "$STAGE"
+    case "$phase" in
+        backup)
+            err "failed before any change (line $line, rc $rc); removing the partial backup $BK"
+            rm -rf -- "$BK"
+            ;;
+        changed)
+            err "FAILED at line $line (rc $rc); rolling back ${BK##*/} now"
+            bash "$BK/rollback.sh" || err "ROLLBACK FAILED: run it by hand from a TTY: bash $BK/rollback.sh"
+            ;;
+        *) err "failed at line $line (rc $rc)" ;;
+    esac
+    exit 1
+}
+trap 'on_fail $LINENO' ERR
+# A closed terminal or Ctrl-C mid-apply must roll back too, not leave a half-applied host.
+trap 'on_fail $LINENO' INT TERM HUP
+
+die() {
+    err "$*"
+    if [ "$phase" = backup ] || [ "$phase" = changed ]; then on_fail "${BASH_LINENO[0]}"; fi
+    exit 1
+}
+
+usage() {
+    sed -n '3,10s/^# \{0,1\}//p' "${BASH_SOURCE[0]}" >&2
+    exit 2
+}
+
+is_component() {
+    local c
+    for c in "${COMPONENTS[@]}"; do [ "$c" = "$1" ] && return 0; done
+    return 1
+}
+
+# HOME-relative paths a component touches; "shared" is only ever in baseline-0
+comp_paths() {
+    case "$1" in
+        border) printf '%s\n' .config/hypr/hyprland.lua .config/hypr/seclegion-host.lua .local/share/seclegion/host/border ;;
+        notifications) printf '%s\n' .config/hypr/modules/autostart.lua .config/swaync .local/share/seclegion/host/notifications ;;
+        waybar)
+            printf '%s\n' .config/waybar .local/share/seclegion/host/waybar .local/share/seclegion/host/bin \
+                .config/systemd/user/seclegion-wsevents.service \
+                .config/systemd/user/default.target.wants/seclegion-wsevents.service \
+                .local/bin/nm-applet
+            ;;
+        lock) printf '%s\n' .config/hypr/hyprlock.conf .local/share/seclegion/host/lock ;;
+        keys) printf '%s\n' .config/hypr/seclegion-keys.lua .local/share/seclegion/host/keys ;;
+        idle)
+            printf '%s\n' .local/share/seclegion/host/idle .local/bin/seclegion-autolock \
+                .config/systemd/user/"$IDLE_INHIBIT_UNIT" .config/systemd/user/"$IDLE_UNIT" \
+                .config/systemd/user/default.target.wants/"$IDLE_INHIBIT_UNIT" \
+                .config/systemd/user/default.target.wants/"$IDLE_UNIT" \
+                .config/seclegion/autolock .config/seclegion
+            ;;
+        theme-auto)
+            printf '%s\n' .local/share/seclegion/host/theme-auto \
+                .config/systemd/user/"$TA_PATH_UNIT" .config/systemd/user/"$TA_UNIT" \
+                .config/systemd/user/default.target.wants/"$TA_PATH_UNIT"
+            ;;
+        display)
+            printf '%s\n' .local/share/seclegion/host/display .config/systemd/user/"$DSP_UNIT" \
+                .config/systemd/user/default.target.wants/"$DSP_UNIT" .local/bin/seclegion-display-menu
+            ;;
+        # children before the directories this apply may create: a rollback empties
+        # and removes the directory only when it was absent and is empty again
+        gtk)
+            printf '%s\n' .config/gtk-3.0/gtk.css .config/gtk-3.0 .config/gtk-4.0 \
+                .local/share/color-schemes/SecLegion.colors .local/share/color-schemes \
+                .config/kdeglobals \
+                .config/qt6ct/colors/SecLegion.conf .config/qt6ct/colors .config/qt6ct
+            ;;
+        fm)
+            printf '%s\n' .config/mimeapps.list .config/dolphinrc \
+                .config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml .config/xfce4/xfconf/xfce-perchannel-xml \
+                .config/xfce4/xfconf .config/xfce4 \
+                .config/yazi/plugins/seclegion-space.yazi/main.lua .config/yazi/plugins/seclegion-space.yazi \
+                .config/yazi/plugins .config/yazi/init.lua .config/yazi \
+                .local/share/seclegion/host/fm
+            ;;
+        settings)
+            printf '%s\n' .local/share/seclegion/host/settings .local/bin/seclegion-settings .local/bin/seclegion-set \
+                .local/bin/seclegion-theme .local/bin/seclegion-theme-pick .local/bin/seclegion-doctor .local/share/applications/seclegion-settings.desktop
+            ;;
+        osd) printf '%s\n' .local/share/seclegion/host/osd .local/bin/dunstify .local/bin/seclegion-osd ;;
+        shared) printf '%s\n' .local/share/seclegion/seclegion-logo.png ;;
+    esac
+}
+comp_daemons() {
+    [ -z "$SL_SYSTEM_BACKUP" ] || return 0   # --system: no running daemon is recorded or touched
+    case "$1" in
+        notifications) printf '%s\n' dunst swaync ;;
+        waybar) printf '%s\n' waybar ;;
+    esac
+}
+comp_source() {
+    case "$1" in
+        border) echo desktop/hypr/seclegion-host.lua ;;
+        notifications) echo desktop/swaync ;;
+        waybar) echo desktop/waybar ;;
+        lock) echo desktop/hypr/hyprlock.conf ;;
+        keys) echo desktop/hypr/seclegion-keys.lua ;;
+        idle) echo desktop/idle ;;
+        theme-auto) echo desktop/theme/systemd ;;
+        display) echo desktop/display ;;
+        gtk) echo desktop/theme ;;
+        fm) echo desktop/fm ;;
+        settings) echo desktop/settings ;;
+        osd) echo desktop/osd ;;
+    esac
+}
+
+list_ids() {
+    local d
+    for d in "$BACKUPS"/*/; do
+        d="${d%/}" d="${d##*/}"
+        if [[ "$d" =~ $ID_RE ]]; then printf '%s\n' "$d"; fi
+    done
+    return 0
+}
+
+# <UTC>-<component>, strictly after every existing id: unique and chronological
+new_id() {
+    local id last
+    last="$(list_ids | tail -n1)"
+    while :; do
+        id="$(date -u +%Y%m%dT%H%M%SZ)-$1"
+        if [ -z "$last" ] || [[ "$id" > "$last" ]]; then
+            printf '%s\n' "$id"
+            return 0
+        fi
+        sleep 0.2
+    done
+}
+
+q_array() {
+    local a
+    for a in "$@"; do printf '%q ' "$a"; done
+}
+
+count_lines() { grep -cE "$1" "$2" || true; }
+
+# ---- backup -----------------------------------------------------------------
+dotfiles_patch() {
+    local dot="$CFG/hyprland-dotfiles" out
+    echo "# Information only: rollback restores from files.tar, never from this patch."
+    if [ ! -e "$dot/.git" ]; then
+        echo "# $dot is not a git work tree"
+        return 0
+    fi
+    echo "# git -C $dot diff"
+    git --no-optional-locks -C "$dot" diff --no-ext-diff || echo "# (git diff failed)"
+    echo "# untracked files (git status):"
+    if out="$(git --no-optional-locks -C "$dot" status --porcelain --untracked-files=all)"; then
+        printf '%s\n' "$out" | sed -n 's/^?? /# untracked: /p'
+    else
+        echo "# (git status failed)"
+    fi
+}
+
+# rollback.sh for backup $1 in directory $2, from the caller's comps rels kinds sums
+# arrays and OWNER_COMM OWNER_ARGV WAYBAR_STATE WSEV_STATE NMA_RUN NMA_ARGS IDLE_STATE IDLE_INHIBIT_STATE TA_STATE
+# DSP_STATE
+write_rollback() {
+    local id="$1" BK="$2"
+    {
+        printf '#!/usr/bin/env bash\n'
+        printf '# Generated by seclegion-host for backup %s. Idempotent; needs no repo and no Wayland.\n' "$id"
+        printf '# Run from any TTY: bash %q\n' "$BK/rollback.sh"
+        printf 'set -Eeuo pipefail\nshopt -s inherit_errexit\nexport LC_ALL=C\nPROG=rollback.sh\n'
+        printf 'ID=%q\nBK=%q\nHOME_DIR=%q\nSTATE=%q\nDEADMAN=%q\n' "$id" "$BK" "$HOME_DIR" "$STATE" "$DEADMAN"
+        # shellcheck disable=SC2016
+        printf 'PROC="${SL_PROC:-/proc}"\n'
+        printf 'COMPS=(%s)\nRELS=(%s)\nKINDS=(%s)\nSUMS=(%s)\n' "$(q_array "${comps[@]}")" \
+            "$(q_array "${rels[@]}")" "$(q_array "${kinds[@]}")" "$(q_array "${sums[@]}")"
+        printf 'OWNER_COMM=%q\nOWNER_ARGV=(%s)\nWAYBAR_STATE=%q\nWSEV_STATE=%q\nWSEV_UNIT=%q\n' "$OWNER_COMM" "$(q_array "${OWNER_ARGV[@]}")" \
+            "$WAYBAR_STATE" "$WSEV_STATE" "$WSEV_UNIT"
+        printf 'IDLE_UNIT=%q\nIDLE_INHIBIT_UNIT=%q\nIDLE_STATE=%q\nIDLE_INHIBIT_STATE=%q\n' "$IDLE_UNIT" "$IDLE_INHIBIT_UNIT" \
+            "$IDLE_STATE" "$IDLE_INHIBIT_STATE"
+        printf 'TA_PATH_UNIT=%q\nTA_UNIT=%q\nTA_STATE=%q\n' "$TA_PATH_UNIT" "$TA_UNIT" "$TA_STATE"
+        printf 'DSP_UNIT=%q\nDSP_STATE=%q\n' "$DSP_UNIT" "$DSP_STATE"
+        printf 'NMA_REAL=%q\nNMA_RUN=%q\nNMA_ARGS=(%s)\n' "$NMA_REAL" "$NMA_RUN" "$(q_array "${NMA_ARGS[@]}")"
+        printf 'SL_SYSTEM_BACKUP=%s\n' "$SL_SYSTEM_BACKUP"   # always set, so an inherited env value never applies
+        cat "$HOST_LIB"
+        # shellcheck disable=SC2016
+        printf '\nrollback_main "$@"\n'
+    }
+}
+
+# nm-applet as it runs now (NMA_RUN 1 and its arguments, or 0): the waybar apply swaps it for the shim's
+record_nm_applet() {
+    local pid
+    NMA_RUN=0 NMA_ARGS=()
+    pid="$(pids_of nm-applet | head -n1)"
+    if [ -n "$pid" ]; then
+        NMA_RUN=1
+        mapfile -t NMA_ARGS < <(proc_argv "$pid" | tail -n +2)
+    fi
+}
+
+make_backup() {
+    local id="$1" c d rel s pid opt v
+    shift
+    local comps=("$@") rels=() kinds=() sums=() present=() records=""
+    BK="$BACKUPS/$id"
+    phase=backup
+    umask 077
+    mkdir -p -- "$BACKUPS"
+    mkdir -m 700 -- "$BK"
+    for c in "${comps[@]}"; do mapfile -t -O "${#rels[@]}" rels < <(comp_paths "$c"); done
+    for rel in "${rels[@]}"; do
+        s="$(current_sum "$rel")"
+        kinds+=("${s%% *}")
+        sums+=("${s#* }")
+        [ "${s%% *}" = absent ] || present+=("$rel")
+        records+="path	$rel	${s%% *}	${s#* }"$'\n'
+    done
+    tar_paths "$BK/files.tar" "${present[@]}"
+    dotfiles_patch > "$BK/dotfiles.patch"
+
+    for c in "${comps[@]}"; do
+        for d in $(comp_daemons "$c"); do
+            records+="expect	$d"$'\n'
+            for pid in $(pids_of "$d"); do
+                records+="daemon	$d	$pid	$(proc_argv "$pid" | tr '\n' '\t')"$'\n'
+            done
+        done
+    done
+    OWNER_COMM="" OWNER_ARGV=() WAYBAR_STATE="" WSEV_STATE="" NMA_RUN="" NMA_ARGS=() IDLE_STATE="" IDLE_INHIBIT_STATE="" TA_STATE=""
+    DSP_STATE=""
+    if [ -z "$SL_SYSTEM_BACKUP" ] && [[ " ${comps[*]} " == *" notifications "* ]]; then
+        pid="$(owner_pid)"
+        if [ -n "$pid" ]; then
+            OWNER_COMM="$(proc_comm "$pid")"
+            mapfile -t OWNER_ARGV < <(proc_argv "$pid")
+            records+="owner	$pid	$OWNER_COMM	$(proc_argv "$pid" | tr '\n' '\t')"$'\n'
+        fi
+    fi
+    if [ -z "$SL_SYSTEM_BACKUP" ] && [[ " ${comps[*]} " == *" waybar "* ]]; then
+        WAYBAR_STATE="$(systemctl --user is-active waybar 2>/dev/null)" || true
+        records+="waybar	$WAYBAR_STATE"$'\n'
+        WSEV_STATE="$(systemctl --user is-active "$WSEV_UNIT" 2>/dev/null)" || true
+        records+="wsevents	$WSEV_STATE"$'\n'
+        record_nm_applet
+        records+="nm-applet	$NMA_RUN"$'\n'
+    fi
+    if [ -z "$SL_SYSTEM_BACKUP" ] && [[ " ${comps[*]} " == *" idle "* ]]; then
+        IDLE_STATE="$(systemctl --user is-active "$IDLE_UNIT" 2>/dev/null)" || true
+        IDLE_INHIBIT_STATE="$(systemctl --user is-active "$IDLE_INHIBIT_UNIT" 2>/dev/null)" || true
+        records+="idle	$IDLE_STATE	$IDLE_INHIBIT_STATE"$'\n'
+    fi
+    if [ -z "$SL_SYSTEM_BACKUP" ] && [[ " ${comps[*]} " == *" theme-auto "* ]]; then
+        TA_STATE="$(systemctl --user is-active "$TA_PATH_UNIT" 2>/dev/null)" || true
+        records+="theme-auto	$TA_STATE"$'\n'
+    fi
+    if [ -z "$SL_SYSTEM_BACKUP" ] && [[ " ${comps[*]} " == *" display "* ]]; then
+        DSP_STATE="$(systemctl --user is-active "$DSP_UNIT" 2>/dev/null)" || true
+        records+="display	$DSP_STATE"$'\n'
+    fi
+    if has_hyprland; then
+        for opt in general:col.active_border general:col.inactive_border general:border_size; do
+            v="$(hyprctl -j getoption "$opt" 2>/dev/null | tr -d '\n')" || v=""
+            records+="hyprctl	$opt	$v"$'\n'
+        done
+    fi
+
+    python3 - "$BK/manifest.json" "$id" "$HOME_DIR" "$records" "${comps[@]}" <<'PY'
+import datetime, json, sys
+out, ident, home, records, comps = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5:]
+m = {"id": ident, "components": comps,
+     "created_utc": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+     "home": home, "paths": [], "daemons": {}, "notifications_owner": None,
+     "hyprctl": {}, "files_tar": "files.tar", "dotfiles_patch": "dotfiles.patch",
+     "rollback": "rollback.sh"}
+for line in records.splitlines():
+    f = line.split("\t")
+    if f[0] == "path":
+        e = {"path": f"{home}/{f[1]}", "kind": f[2]}
+        if f[2] == "file":
+            e["sha256"] = f[3]
+        elif f[2] == "symlink":
+            e["symlink_target"] = f[3]
+        m["paths"].append(e)
+    elif f[0] == "expect":
+        m["daemons"].setdefault(f[1], [])
+    elif f[0] == "daemon":
+        m["daemons"][f[1]].append({"pid": int(f[2]), "cmdline": [a for a in f[3:] if a]})
+    elif f[0] == "owner":
+        m["notifications_owner"] = {"pid": int(f[1]), "comm": f[2], "cmdline": [a for a in f[3:] if a]}
+    elif f[0] == "waybar":
+        m["waybar_service"] = f[1]
+    elif f[0] == "wsevents":
+        m["wsevents_service"] = f[1]
+    elif f[0] == "idle":
+        m["idle_service"] = f[1]
+        m["idle_inhibit_service"] = f[2]
+    elif f[0] == "theme-auto":
+        m["theme_auto_path_unit"] = f[1]
+    elif f[0] == "display":
+        m["displayd_service"] = f[1]
+    elif f[0] == "nm-applet":
+        m["nm_applet_running"] = f[1] == "1"
+    elif f[0] == "hyprctl":
+        try:
+            m["hyprctl"][f[1]] = json.loads(f[2])
+        except ValueError:
+            m["hyprctl"][f[1]] = f[2]
+with open(out, "w") as fh:
+    json.dump(m, fh, indent=2)
+    fh.write("\n")
+PY
+
+    write_rollback "$id" "$BK" > "$BK/rollback.sh"
+    bash -n "$BK/rollback.sh"
+    chmod 600 "$BK"/*
+    umask 022
+    log "backup: $BK"
+}
+
+# baseline-0 is taken once, so a component (or path) added to the tool later is
+# not in it, and `rollback baseline-0` would leave that component installed.
+# Before every apply, each path of every component that baseline-0 lacks is
+# merged into it with its state now (still untouched: no apply of it has run
+# with this tool), and rollback.sh is regenerated with the merged arrays, so
+# baseline-0 stays one byte-exact backup. The new files.tar (a superset) goes
+# in first and rollback.sh last: an interrupted merge leaves a working baseline.
+extend_baseline() {
+    local b0="$BACKUPS/baseline-0" c rel s new=() newcomps=() present=() records=""
+    local COMPS=() RELS=() KINDS=() SUMS=() OWNER_COMM="" OWNER_ARGV=() WAYBAR_STATE="" WSEV_STATE="" NMA_RUN="" NMA_ARGS=() IDLE_STATE="" IDLE_INHIBIT_STATE="" TA_STATE=""
+    local DSP_STATE=""
+    eval "$(grep -E '^(COMPS|RELS|KINDS|SUMS|OWNER_COMM|OWNER_ARGV|WAYBAR_STATE|WSEV_STATE|NMA_RUN|NMA_ARGS|IDLE_STATE|IDLE_INHIBIT_STATE|TA_STATE|DSP_STATE)=' "$b0/rollback.sh")"
+    local comps=("${COMPS[@]}") rels=("${RELS[@]}") kinds=("${KINDS[@]}") sums=("${SUMS[@]}")
+    for c in "${COMPONENTS[@]}" shared; do
+        [[ " ${comps[*]} " == *" $c "* ]] || newcomps+=("$c")
+        while IFS= read -r rel; do
+            [[ " ${rels[*]} " == *" $rel "* ]] || new+=("$rel")
+        done < <(comp_paths "$c")
+    done
+    [ ${#new[@]} -gt 0 ] || [ ${#newcomps[@]} -gt 0 ] || return 0
+    umask 077
+    STAGE="$b0/.extend"
+    rm -rf -- "$STAGE"
+    mkdir -- "$STAGE"
+    cp -- "$b0/files.tar" "$STAGE/files.tar"
+    for rel in "${new[@]}"; do
+        s="$(current_sum "$rel")"
+        rels+=("$rel") kinds+=("${s%% *}") sums+=("${s#* }")
+        [ "${s%% *}" = absent ] || present+=("$rel")
+        records+="$rel	${s%% *}	${s#* }"$'\n'
+    done
+    comps+=("${newcomps[@]}")
+    # a baseline from before the nm-applet shim has no record of it: take it now, while the shim is not ours yet
+    if [ -z "$NMA_RUN" ] && [[ " ${new[*]} " == *" .local/bin/nm-applet "* ]] \
+        && [ "$(current_sum .local/bin/nm-applet | cut -d' ' -f1)" = absent ]; then
+        record_nm_applet
+    fi
+    [ ${#present[@]} -eq 0 ] || tar -rf "$STAGE/files.tar" -C "$HOME_DIR" "${present[@]}"
+    python3 - "$b0/manifest.json" "$STAGE/manifest.json" "$HOME_DIR" "$records" "${newcomps[@]}" <<'PY2'
+import datetime, json, sys
+src, out, home, records, newcomps = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5:]
+m = json.load(open(src))
+m["components"] += newcomps
+added = []
+for line in records.splitlines():
+    rel, kind, s = line.split("\t")
+    e = {"path": f"{home}/{rel}", "kind": kind}
+    if kind == "file":
+        e["sha256"] = s
+    elif kind == "symlink":
+        e["symlink_target"] = s
+    m["paths"].append(e)
+    added.append(e["path"])
+m.setdefault("extended", []).append({
+    "utc": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "components": newcomps, "paths": added})
+with open(out, "w") as fh:
+    json.dump(m, fh, indent=2)
+    fh.write("\n")
+PY2
+    write_rollback baseline-0 "$b0" > "$STAGE/rollback.sh"
+    bash -n "$STAGE/rollback.sh"
+    chmod 600 "$STAGE"/*
+    mv -f -- "$STAGE/files.tar" "$b0/files.tar"
+    mv -f -- "$STAGE/manifest.json" "$b0/manifest.json"
+    mv -f -- "$STAGE/rollback.sh" "$b0/rollback.sh"
+    rm -rf -- "$STAGE"
+    STAGE=""
+    umask 022
+    log "baseline-0: now also covers ${newcomps[*]:+${newcomps[*]}: }${new[*]}"
+}
+
+# ---- apply ------------------------------------------------------------------
+plain_file() { { [ -f "$1" ] && [ ! -L "$1" ]; } || die "$1 must exist as a regular file (not a symlink)"; }
+link_or_absent() { [ -L "$1" ] || [ ! -e "$1" ] || die "$1 is a real file or directory, not a symlink; refusing to replace it"; }
+
+plain_or_absent() { { [ ! -e "$1" ] && [ ! -L "$1" ]; } || { [ -f "$1" ] && [ ! -L "$1" ]; } || die "$1 must be a regular file (not a symlink) or absent"; }
+
+# Nothing is ever written under ~/.themes or ~/.icons, whatever a symlink says. The
+# destination's parent is resolved; its last component is the thing replaced, so
+# a symlink that is itself being replaced (gtk-4.0) is not followed.
+guard_dest() {
+    local p t root
+    p="$(realpath -m -- "$(dirname -- "$1")")/$(basename -- "$1")"
+    for t in .themes .icons; do
+        root="$(realpath -m -- "$HOME_DIR/$t")"
+        case "$p/" in
+            "$root"/* | "$HOME_DIR/$t"/*) die "refusing to write $1: it resolves into ~/$t ($p)" ;;
+        esac
+    done
+}
+
+# Paths that end up inside a CSS url("...") must need no escaping.
+css_safe() { [[ "$1" =~ ^[A-Za-z0-9._/@+-]+$ ]] || die "$1 contains characters that need URL escaping; refusing"; }
+
+theme_has() {   # the engine outputs this component links to
+    local f
+    for f in "$@"; do [ -s "$THEME_DIR/$f" ] || return 1; done
+}
+GTK_THEME_FILES=(gtk3.css gtk4.css kde.colors qt6ct.conf)
+MARK_GTK3='seclegion-host:managed gtk3'
+MARK_SETTINGS='seclegion-host:managed settings'
+
+MARK_IDLE='seclegion-host:managed idle'
+
+# idle touches nothing the owner has: our own units, our own symlink, our own state file
+preflight_idle() {
+    local f
+    for f in "$CFG/systemd/user/$IDLE_INHIBIT_UNIT" "$CFG/systemd/user/$IDLE_UNIT"; do
+        if [ -e "$f" ] || [ -L "$f" ]; then
+            { [ -f "$f" ] && [ ! -L "$f" ] && grep -qF "$MARK_IDLE" "$f"; } \
+                || die "$f exists and is not ours (no '$MARK_IDLE' marker); refusing to replace it"
+        fi
+    done
+    link_or_absent "$HOME_DIR/.local/bin/seclegion-autolock"
+    plain_or_absent "$CFG/seclegion/autolock"
+}
+
+# theme-auto touches only its own units and its own copy
+preflight_theme_auto() {
+    local f
+    for f in "$CFG/systemd/user/$TA_PATH_UNIT" "$CFG/systemd/user/$TA_UNIT"; do
+        if [ -e "$f" ] || [ -L "$f" ]; then
+            { [ -f "$f" ] && [ ! -L "$f" ] && grep -qF 'seclegion-host:managed theme-auto' "$f"; } \
+                || die "$f exists and is not ours (no 'seclegion-host:managed theme-auto' marker); refusing to replace it"
+        fi
+    done
+    for f in desktop/theme/seclegion_theme desktop/theme/tokens.toml tools/seclegion-theme; do
+        [ -e "$REPO/$f" ] || die "missing $f in the repo"
+    done
+}
+
+# display touches only its own unit and its own copy of the daemon
+MARK_DISPLAY='seclegion-host:managed display'
+preflight_display() {
+    local f="$CFG/systemd/user/$DSP_UNIT"
+    if [ -e "$f" ] || [ -L "$f" ]; then
+        { [ -f "$f" ] && [ ! -L "$f" ] && grep -qF "$MARK_DISPLAY" "$f"; } \
+            || die "$f exists and is not ours (no '$MARK_DISPLAY' marker); refusing to replace it"
+    fi
+}
+
+preflight() {
+    local comp="$1" f nd ns
+    for f in luac python3 tar sha256sum; do command -v "$f" >/dev/null || die "$f is not installed"; done
+    for f in "$(comp_source "$comp")" tools/seclegion-theme desktop/branding/seclegion-logo.png; do
+        [ -e "$REPO/$f" ] || die "missing $f in the repo"
+    done
+    has_wayland || die "no Wayland session reachable; run apply inside the owner's session"
+    case "$comp" in
+        border)
+            has_hyprland || die "Hyprland is not reachable (HYPRLAND_INSTANCE_SIGNATURE)"
+            plain_file "$HYPR_MAIN"
+            [ "$(count_lines '^require\("hyprland-border"\)$' "$HYPR_MAIN")" = 1 ] \
+                || die "anchor require(\"hyprland-border\") must appear exactly once in $HYPR_MAIN"
+            { [ ! -L "$CFG/hypr/seclegion-host.lua" ] && [ ! -d "$CFG/hypr/seclegion-host.lua" ]; } \
+                || die "$CFG/hypr/seclegion-host.lua must be a regular file or absent"
+            ;;
+        notifications)
+            plain_file "$HYPR_AUTO"
+            nd="$(count_lines "$DUNST_RE" "$HYPR_AUTO")" ns="$(count_lines "$SWAYNC_RE" "$HYPR_AUTO")"
+            [ $((nd + ns)) -ge 1 ] || die "no hl.exec_cmd(\"dunst\") or (\"swaync\") line in $HYPR_AUTO"
+            link_or_absent "$CFG/swaync"
+            ;;
+        waybar)
+            link_or_absent "$CFG/waybar"
+            link_or_absent "$HOME_DIR/.local/bin/nm-applet"   # a real file here is the owner's: never clobber it
+            ;;
+        idle) preflight_idle ;;
+        theme-auto) preflight_theme_auto ;;
+        display) preflight_display ;;
+        gtk|fm|settings) preflight_files "$comp" ;;
+        lock)
+            [ -L "$LOCK_CONF" ] || [ ! -e "$LOCK_CONF" ] || [ -f "$LOCK_CONF" ] \
+                || die "$LOCK_CONF must be a regular file, a symlink or absent"
+            ;;
+        keys)
+            # keys depends on border: the border's seclegion-host.lua is what loads seclegion-keys.lua
+            has_hyprland || die "Hyprland is not reachable (HYPRLAND_INSTANCE_SIGNATURE)"
+            [ -e "$REPO/tools/seclegion-keys-lint" ] || die "missing tools/seclegion-keys-lint in the repo"
+            plain_file "$HYPR_KEYS"
+            { [ -f "$CFG/hypr/seclegion-host.lua" ] && grep -qE "$KEYS_REQ_RE" "$CFG/hypr/seclegion-host.lua" \
+                && grep -qx 'require("seclegion-host")' "$HYPR_MAIN"; } \
+                || die "keys needs the border component: $CFG/hypr/seclegion-host.lua with its pcall(require, \"seclegion-keys\") line, loaded from $HYPR_MAIN. Apply border first: $PROG apply border"
+            link_or_absent "$KEYS_LINK"
+            ;;
+        osd)
+            # a real file here (a hand-made wrapper, or the binary itself) is the owner's: never clobber it
+            for f in "${OSD_BINS[@]}"; do link_or_absent "$HOME_DIR/.local/bin/$f"; done
+            ;;
+    esac
+}
+
+# The keys must not take an owner key: lint against the owner's keybinds.lua
+# and, when Hyprland answers, the live binds (read-only `hyprctl binds -j`).
+keys_check() {
+    local args=() out
+    if hyprctl binds -j > "$BK/binds.json" 2>/dev/null; then
+        chmod 600 "$BK/binds.json"
+        args=(--binds-json "$BK/binds.json")
+    else
+        rm -f -- "$BK/binds.json"
+        log "keys: hyprctl binds -j failed; checking against $HYPR_KEYS only"
+    fi
+    out="$(python3 "$REPO/tools/seclegion-keys-lint" "$HYPR_KEYS" "$1" "${args[@]}" 2>&1)" \
+        || die "seclegion-keys-lint refused the keys: $out"
+    log "keys: $(tail -n1 <<< "$out")"
+}
+
+# Static checks of the lock screen config; hyprlock itself is never run (it would lock the screen).
+#   keys:   every section and key is one hyprlock 0.9.x knows, input-field has font_color
+#   source: the one `source` file exists and defines every $sl_ variable the config uses
+lock_check() {
+    python3 - "$1" "$2" "$HOME_DIR" <<'PY'
+import os, re, sys
+conf, mode, home = sys.argv[1:4]
+KEYS = {
+    "background": "monitor path color blur_size blur_passes noise contrast brightness vibrancy vibrancy_darkness reload_time reload_cmd crossfade_time zindex",
+    "label": "monitor text color font_size font_family position halign valign rotate shadow_passes shadow_size shadow_color shadow_boost text_align zindex",
+    "input-field": "monitor size outline_thickness rounding dots_size dots_spacing dots_center dots_rounding dots_text_format fade_on_empty fade_timeout font_color font_family font_size inner_color outer_color check_color fail_color fail_text capslock_color numlock_color bothlock_color invert_numlock swap_font_color hide_input hide_input_base_color placeholder_text position halign valign zindex",
+}
+problems, section, sources, used, seen = [], None, [], set(), {}
+for n, raw in enumerate(open(conf), 1):
+    line = raw.strip()
+    if not line or line.startswith("#"):
+        continue
+    if line.endswith("{"):
+        section = line[:-1].strip()
+        seen[section] = set()
+        if section not in KEYS:
+            problems.append(f"line {n}: unknown section {section!r}")
+    elif line == "}":
+        section = None
+    elif "=" in line:
+        key, val = (x.strip() for x in line.split("=", 1))
+        if section is None and key == "source":
+            sources.append(val)
+        elif section is None:
+            problems.append(f"line {n}: key {key!r} outside a section")
+        elif section in KEYS:
+            seen[section].add(key)
+            if key not in KEYS[section].split():
+                problems.append(f"line {n}: {key!r} is not a hyprlock {section} key (hyprlock ignores it silently)")
+        used.update(re.findall(r"\$(sl_[a-z0-9_]+)", val))
+if "font_color" not in seen.get("input-field", ()):
+    problems.append("input-field has no font_color: the dots would draw in hyprlock's dark default")
+if len(sources) != 1:
+    problems.append(f"want exactly one source line, found {len(sources)}")
+elif mode == "source":
+    path = re.sub(r"^~(?=/)", home, sources[0])
+    if not os.path.isfile(path):
+        problems.append(f"sourced file {path} does not exist")
+    else:
+        defined = set(re.findall(r"^\$(sl_[a-z0-9_]+)\s*=", open(path).read(), re.M))
+        problems += [f"${v} is not defined in {path}" for v in sorted(used - defined)]
+if problems:
+    sys.exit("lock config: " + "; ".join(problems))
+PY
+}
+
+# ---- gtk / fm ---------------------------------------------------------------
+# Targets of a managed gtk-4.0 directory: the symlink's old target is recorded in
+# its .seclegion-managed marker, so a re-apply keeps the original.
+gtk4_old_target() {
+    local g4="$CFG/gtk-4.0"
+    if [ -L "$g4" ]; then readlink -- "$g4"
+    elif [ -f "$g4/.seclegion-managed" ]; then sed -n 's/^old_target=//p' "$g4/.seclegion-managed"
+    fi
+}
+
+preflight_files() {
+    local comp="$1" rel f g4="$CFG/gtk-4.0" old
+    while IFS= read -r rel; do guard_dest "$HOME_DIR/$rel"; done < <(comp_paths "$comp")
+    case "$comp" in
+        gtk)
+            css_safe "$HOME_DIR"
+            if [ -L "$THEME_DIR" ] && theme_ok && ! theme_has "${GTK_THEME_FILES[@]}"; then
+                die "$THEME_DIR lacks ${GTK_THEME_FILES[*]}: run 'seclegion-theme apply' (or 'reset') with the current engine first"
+            fi
+            f="$CFG/gtk-3.0/gtk.css"
+            if [ -e "$f" ] || [ -L "$f" ]; then
+                { [ -f "$f" ] && [ ! -L "$f" ] && grep -qF "$MARK_GTK3" "$f"; } \
+                    || die "$f exists and is not ours (no '$MARK_GTK3' marker); refusing to replace it"
+            fi
+            if [ -L "$g4" ] || [ ! -e "$g4" ]; then :
+            elif [ -d "$g4" ] && [ -f "$g4/.seclegion-managed" ]; then :
+            else die "$g4 is neither a symlink nor a directory seclegion-host made; refusing to replace it"
+            fi
+            old="$(gtk4_old_target)"
+            if [ -n "$old" ]; then
+                css_safe "$old"
+                [[ "$old" == /* ]] || old="$CFG/$old"
+                [ -d "$old" ] || log "warning: the old gtk-4.0 target $old is not a directory; gtk-4.0 gets our overrides only"
+            fi
+            for f in "$HOME_DIR/.local/share/color-schemes/SecLegion.colors" "$CFG/qt6ct/colors/SecLegion.conf"; do
+                [ -L "$f" ] || [ ! -e "$f" ] || die "$f is a real file; refusing to replace it with a symlink"
+            done
+            # report only: apply relinks it, and verify_gtk dies if it still does not resolve afterwards
+            f="$CFG/qt6ct/colors/SecLegion.conf"
+            if [ -L "$f" ] && [ ! -e "$f" ]; then
+                log "warning: qt6ct colour link $f is dangling (-> $(readlink -- "$f")); apply relinks it to $THEME_DIR/qt6ct.conf"
+            fi
+            plain_or_absent "$CFG/kdeglobals"
+            ;;
+        settings)
+            css_safe "$HOME_DIR"
+            for f in tools/seclegion-set tools/seclegion-settings tools/seclegion-root-apply tools/seclegion-theme \
+                tools/seclegion-theme-pick tools/seclegion-doctor desktop/settings/seclegion_settings desktop/settings/seclegion-settings.desktop desktop/theme/seclegion_theme; do
+                [ -e "$REPO/$f" ] || die "missing $f in the repo"
+            done
+            for f in "$HOME_DIR/.local/bin/seclegion-settings" "$HOME_DIR/.local/bin/seclegion-set" \
+                "$HOME_DIR/.local/bin/seclegion-theme" "$HOME_DIR/.local/bin/seclegion-theme-pick" "$HOME_DIR/.local/bin/seclegion-doctor" \
+                "$HOME_DIR/.local/share/applications/seclegion-settings.desktop"; do
+                if [ -e "$f" ] || [ -L "$f" ]; then
+                    { [ -f "$f" ] && [ ! -L "$f" ] && grep -qF "$MARK_SETTINGS" "$f"; } \
+                        || die "$f exists and is not ours (no '$MARK_SETTINGS' marker); refusing to replace it"
+                fi
+            done
+            ;;
+        fm)
+            [ ! -L "$CFG/yazi" ] || die "$CFG/yazi is a symlink (a dotfiles repo?); refusing to write through it"
+            for f in "$CFG/yazi/plugins" "$CFG/yazi/plugins/seclegion-space.yazi" "$CFG/yazi/plugins/seclegion-space.yazi/main.lua"; do
+                [ ! -L "$f" ] || die "$f is a symlink; refusing to write through it"
+            done
+            for f in "$CFG/mimeapps.list" "$CFG/dolphinrc" "$CFG/yazi/init.lua" "$CFG/xfce4/xfconf/xfce-perchannel-xml/thunar.xml"; do
+                plain_or_absent "$f"
+            done
+            f="$CFG/xfce4/xfconf/xfce-perchannel-xml/thunar.xml"
+            if [ -f "$f" ]; then
+                python3 -c 'import sys, xml.etree.ElementTree as E; r = E.parse(sys.argv[1]).getroot(); assert r.tag == "channel"' "$f" \
+                    || die "$f is not a valid xfconf channel file"
+            fi
+            ;;
+    esac
+}
+
+# ini_set FILE SECTION KEY VALUE...: set KEY (one or several KEY=VALUE pairs of
+# the one SECTION) in an INI file, touching nothing else: an existing key keeps
+# its line position, a missing key goes at the end of its section, a missing
+# section at the end of the file. The file is rewritten in place (inode, mode kept).
+ini_set() {
+    python3 - "$@" <<'PY'
+import re, sys
+path, section, pairs = sys.argv[1], sys.argv[2], [a.split("=", 1) for a in sys.argv[3:]]
+try:
+    text = open(path, encoding="utf-8").read()
+except FileNotFoundError:
+    text = ""
+lines = text.splitlines(keepends=True)
+if lines and not lines[-1].endswith("\n"):
+    lines[-1] += "\n"
+for key, val in pairs:
+    head = f"[{section}]"
+    start = next((i for i, l in enumerate(lines) if l.strip() == head), None)
+    if start is None:
+        if lines and lines[-1].strip():
+            lines.append("\n")
+        lines += [head + "\n", f"{key}={val}\n"]
+        continue
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].lstrip().startswith("[")), len(lines))
+    hit = next((i for i in range(start + 1, end) if re.match(rf"\s*{re.escape(key)}\s*=", lines[i])), None)
+    if hit is not None:
+        lines[hit] = f"{key}={val}\n"
+    else:
+        at = end
+        while at > start + 1 and not lines[at - 1].strip():
+            at -= 1
+        lines.insert(at, f"{key}={val}\n")
+new = "".join(lines)
+if new != text:
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(new)
+PY
+}
+
+# the [section] key=value pairs of an INI fragment, as "section<TAB>key=value"
+ini_pairs() {
+    python3 - "$1" <<'PY'
+import sys
+sec = None
+for l in open(sys.argv[1], encoding="utf-8"):
+    l = l.strip()
+    if not l or l.startswith("#"):
+        continue
+    if l.startswith("[") and l.endswith("]"):
+        sec = l[1:-1]
+    elif sec and "=" in l:
+        print(f"{sec}\t{l}")
+PY
+}
+
+install_gtk() {
+    local g4="$CFG/gtk-4.0" tmp="$CFG/.gtk-4.0.sl-new" old oldabs="" e css3="$CFG/gtk-3.0/gtk.css" cur="$THEME_DIR"
+    theme_has "${GTK_THEME_FILES[@]}" || die "$cur lacks ${GTK_THEME_FILES[*]} after seclegion-theme reset"
+    for e in "$g4" "$css3" "$HOME_DIR/.local/share/color-schemes/SecLegion.colors" "$CFG/qt6ct/colors/SecLegion.conf" "$CFG/kdeglobals"; do guard_dest "$e"; done
+    # GTK 3
+    mkdir -p -- "$CFG/gtk-3.0"
+    guard_dest "$css3"
+    # REUSE-IgnoreStart
+    printf '/* SPDX-License-Identifier: MIT */\n/* %s: written by seclegion-host apply gtk; rollback removes it. */\n@import url("file://%s/gtk3.css");\n' \
+        "$MARK_GTK3" "$cur" > "$css3"
+    # REUSE-IgnoreEnd
+    # GTK 4 / libadwaita: a real directory in place of the symlink into ~/.themes
+    old="$(gtk4_old_target)"
+    if [ -n "$old" ]; then
+        oldabs="$old"
+        [[ "$old" == /* ]] || oldabs="$CFG/$old"
+    fi
+    rm -rf -- "$tmp"
+    mkdir -- "$tmp"
+    printf '# seclegion-host: this directory replaced a symlink; rollback removes it and restores the link.\nold_target=%s\n' "$old" > "$tmp/.seclegion-managed"
+    if [ -n "$oldabs" ] && [ -d "$oldabs" ]; then
+        shopt -s nullglob dotglob
+        for e in "$oldabs"/*; do
+            e="${e##*/}"
+            case "$e" in gtk.css | gtk-dark.css | .seclegion-managed) continue ;; esac
+            ln -s -- "$oldabs/$e" "$tmp/$e"   # a link to the old target's subpath: nothing is copied from or into ~/.themes
+        done
+        shopt -u nullglob dotglob
+    fi
+    for e in gtk.css gtk-dark.css; do
+        # gtk-dark.css is generated too: GTK 4 reads it in place of gtk.css under a dark preference
+        if [ "$e" = gtk-dark.css ] && { [ -z "$oldabs" ] || [ ! -f "$oldabs/gtk-dark.css" ]; }; then continue; fi
+        {
+            # REUSE-IgnoreStart
+            printf '/* SPDX-License-Identifier: MIT */\n/* seclegion-host:managed gtk4: the old theme, then the SecLegion tokens. */\n'
+            # REUSE-IgnoreEnd
+            if [ -n "$oldabs" ] && [ -f "$oldabs/$e" ]; then printf '@import url("file://%s/%s");\n' "$oldabs" "$e"; fi
+            printf '@import url("file://%s/gtk4.css");\n' "$cur"
+        } > "$tmp/$e"
+    done
+    if [ -L "$g4" ]; then rm -f -- "$g4"; elif [ -e "$g4" ]; then rm -rf -- "$g4"; fi
+    mv -T -- "$tmp" "$g4"
+    # Qt / KDE: colour-scheme symlinks into the live theme; qt6ct's own qt6ct.conf is never touched
+    mkdir -p -- "$HOME_DIR/.local/share/color-schemes" "$CFG/qt6ct/colors"
+    ln -sfn -- "$cur/kde.colors" "$HOME_DIR/.local/share/color-schemes/SecLegion.colors"
+    ln -sfn -- "$cur/qt6ct.conf" "$CFG/qt6ct/colors/SecLegion.conf"
+    ini_set "$CFG/kdeglobals" General ColorScheme=SecLegion
+    log "gtk: GTK 3/4, KDE and qt6ct colour scheme linked into $cur; running apps pick it up on their next start"
+    log "qt6ct opt-in (yours to do; your own qt6ct.conf is untouched and the kvantum style stays): Appearance > Palette > Custom, then pick SecLegion"
+}
+
+install_settings() {
+    local d="$INST/settings" f
+    for f in seclegion-settings seclegion-set seclegion-theme; do install -D -m 755 -- "$d/.sl-home/bin/$f" "$HOME_DIR/.local/bin/$f"; done
+    install -D -m 755 -- "$d/.sl-home/sh/seclegion-theme-pick" "$HOME_DIR/.local/bin/seclegion-theme-pick"
+    install -D -m 755 -- "$d/.sl-home/sh/seclegion-doctor" "$HOME_DIR/.local/bin/seclegion-doctor"
+    install -D -m 644 -- "$d/.sl-home/applications/seclegion-settings.desktop" "$HOME_DIR/.local/share/applications/seclegion-settings.desktop"
+    rm -rf -- "${d:?}/.sl-home"
+    log "settings: seclegion-root-apply is installed 0755 under $d; copy it to a root-owned path before running that copy with sudo"
+}
+
+install_idle() {
+    local u
+    for u in "$IDLE_INHIBIT_UNIT" "$IDLE_UNIT"; do
+        install -D -m 644 -- "$INST/idle/.sl-units/$u" "$CFG/systemd/user/$u"
+    done
+    rm -rf -- "${INST:?}/idle/.sl-units"
+    mkdir -p -- "$HOME_DIR/.local/bin"
+    ln -sfn -- "$INST/idle/seclegion-autolock" "$HOME_DIR/.local/bin/seclegion-autolock"
+}
+
+install_theme_auto() {
+    local u
+    for u in "$TA_PATH_UNIT" "$TA_UNIT"; do
+        install -D -m 644 -- "$INST/theme-auto/.sl-units/$u" "$CFG/systemd/user/$u"
+    done
+    rm -rf -- "${INST:?}/theme-auto/.sl-units"
+}
+
+install_display() {
+    install -D -m 644 -- "$INST/display/.sl-units/$DSP_UNIT" "$CFG/systemd/user/$DSP_UNIT"
+    rm -rf -- "${INST:?}/display/.sl-units"
+    # the XF86Display / Super+Shift+P binds and the bar button run it from PATH (issue 14)
+    mkdir -p -- "$HOME_DIR/.local/bin"
+    ln -sfn -- "$INST/display/seclegion-display-menu" "$HOME_DIR/.local/bin/seclegion-display-menu"
+}
+
+install_fm() {
+    local d="$INST/fm" f sec kv x="$CFG/xfce4/xfconf/xfce-perchannel-xml/thunar.xml" yz="$CFG/yazi"
+    # default file manager: one key, one section
+    ini_set "$CFG/mimeapps.list" "Default Applications" inode/directory=thunar.desktop
+    # Thunar status bar (free space)
+    if [ ! -e "$x" ]; then
+        install -D -m 644 -- "$d/thunar.xml" "$x"
+    else
+        python3 - "$x" <<'PY'
+import re, sys
+p = sys.argv[1]
+t = open(p, encoding="utf-8").read()
+prop = '<property name="last-statusbar-visible" type="bool" value="true"/>'
+pat = re.compile(r'<property\s+name="last-statusbar-visible"[^>]*/>')
+if pat.search(t):
+    new = pat.sub(prop, t, 1)
+else:
+    m = re.search(r"^([ \t]*)<property\b", t, re.M)
+    indent = m.group(1) if m else "  "
+    i = t.rindex("</channel>")
+    head = t[:i]
+    ws = head[len(head.rstrip(" \t")):]
+    head = head.rstrip(" \t")
+    if not head.endswith("\n"):
+        head += "\n"
+    new = head + indent + prop + "\n" + ws + t[i:]
+if new != t:
+    open(p, "w", encoding="utf-8").write(new)
+PY
+        python3 -c 'import sys, xml.etree.ElementTree as E; E.parse(sys.argv[1])' "$x"
+    fi
+    log "thunar: last-statusbar-visible=true; a running Thunar or xfconfd may overwrite $x when it exits"
+    # Dolphin: only the keys in the fragment
+    while IFS=$'\t' read -r sec kv; do ini_set "$CFG/dolphinrc" "$sec" "$kv"; done < <(ini_pairs "$d/dolphinrc.part")
+    # yazi: the plugin file, and the enable line in init.lua once
+    install -D -m 644 -- "$d/yazi/plugins/seclegion-space.yazi/main.lua" "$yz/plugins/seclegion-space.yazi/main.lua"
+    if ! grep -qF 'require("seclegion-space")' "$yz/init.lua" 2>/dev/null; then
+        [ -f "$yz/init.lua" ] && [ -n "$(tail -c1 "$yz/init.lua")" ] && printf '\n' >> "$yz/init.lua"
+        { printf -- '-- seclegion-host: free space in the status bar (delete these two lines to disable)\n'
+          grep -v '^[[:space:]]*--' "$d/yazi/init.lua.part"; } >> "$yz/init.lua"
+    fi
+    luac -p "$yz/init.lua"
+    log "fm: Thunar is the inode/directory default; open apps keep their old state until restarted"
+}
+
+# A usable theme is the engine's own layout: theme/current is a symlink to
+# theme/<hash>/ holding every contract file. The host tool never writes into
+# current/ itself; it asks the engine (seclegion-theme reset --no-hooks).
+theme_ok() {
+    local f
+    [ -L "$THEME_DIR" ] || return 1
+    for f in hyprlock-colors.conf colors.css colors.json; do [ -s "$THEME_DIR/$f" ] || return 1; done
+}
+
+# Make theme/current a valid engine symlink, whatever is there now. A real
+# directory left by the old copy-based seeding is moved into the backup (never
+# deleted). What was there, and what the engine created, is recorded in
+# <backup>/theme-undo and manifest.json so the rollback restores it exactly.
+ensure_theme() {
+    local root="$STATE/theme" undo="$BK/theme-undo" legacy=theme-current-legacy pre names n out
+    theme_ok && return 0
+    pre="$(ls -A -- "$root" 2>/dev/null || true)"
+    {
+        if [ -L "$THEME_DIR" ]; then printf 'before=symlink\ntarget=%s\n' "$(readlink -- "$THEME_DIR")"
+        elif [ -e "$THEME_DIR" ]; then printf 'before=moved\nlegacy=%s\n' "$legacy"
+        else printf 'before=absent\n'; fi
+        if [ ! -d "$root" ]; then printf 'root_created=1\n'; fi
+    } > "$undo"
+    chmod 600 "$undo"
+    if [ ! -L "$THEME_DIR" ] && [ -e "$THEME_DIR" ]; then
+        mv -T -- "$THEME_DIR" "$BK/$legacy"
+        log "theme: moved the old $THEME_DIR into the backup"
+    fi
+    out="$(XDG_STATE_HOME="$HOME_DIR/.local/state" HOME="$HOME_DIR" "$REPO/tools/seclegion-theme" reset --no-hooks 2>&1)" \
+        || { n=$?; out="seclegion-theme reset failed (rc $n): $out"; }
+    names="$(ls -A -- "$root" 2>/dev/null || true)"
+    while IFS= read -r n; do
+        if [[ "$n" =~ ^[0-9a-f]{16}$ ]] && ! grep -qxF -- "$n" <<< "$pre"; then printf 'created=%s\n' "$n" >> "$undo"; fi
+    done <<< "$names"
+    python3 - "$BK/manifest.json" "$undo" <<'PY'
+import json, sys
+mf, undo = sys.argv[1:3]
+t = {"created": []}
+for line in open(undo):
+    k, _, v = line.rstrip("\n").partition("=")
+    if k == "created":
+        t["created"].append(v)
+    else:
+        t[k] = v
+m = json.load(open(mf))
+m["theme"] = t
+with open(mf, "w") as fh:
+    json.dump(m, fh, indent=2)
+    fh.write("\n")
+PY
+    case "$out" in "seclegion-theme reset failed"*) die "$out" ;; esac
+    theme_ok || die "$THEME_DIR is not a symlink to a complete theme (hyprlock-colors.conf, colors.css, colors.json) after seclegion-theme reset"
+    log "theme: seclegion-theme reset --no-hooks wrote $(readlink -- "$THEME_DIR")"
+}
+
+# The settings component is assembled from four places: the two Python packages,
+# the launchers, and (under .sl-home, moved out at install time) the two wrappers
+# and the desktop entry. The wrappers bake the installed python/ directory.
+stage_settings() {
+    local py="$INST/settings/python" f w
+    css_safe "$py"
+    mkdir -p -- "$STAGE/python" "$STAGE/.sl-home/bin" "$STAGE/.sl-home/sh" "$STAGE/.sl-home/applications"
+    cp -r -- "$REPO/desktop/settings/seclegion_settings" "$REPO/desktop/theme/seclegion_theme" "$REPO/desktop/theme/tokens.toml" "$STAGE/python/"
+    find "$STAGE/python" -name __pycache__ -type d -prune -exec rm -rf -- {} +
+    for f in seclegion-set seclegion-settings seclegion-root-apply seclegion-theme; do cp -- "$REPO/tools/$f" "$STAGE/$f"; done
+    for w in "seclegion-set:seclegion_settings.backend.cli" "seclegion-settings:seclegion_settings.ui.app" "seclegion-theme:seclegion_theme.cli"; do
+        # REUSE-IgnoreStart
+        printf '#!/usr/bin/python3 -I\n# SPDX-License-Identifier: MIT\n# %s: written by seclegion-host apply settings; rollback removes it.\nimport sys\n\nsys.path.insert(0, "%s")\n\nfrom %s import main  # noqa: E402\n\nsys.exit(main())\n' \
+            "$MARK_SETTINGS" "$py" "${w#*:}" > "$STAGE/.sl-home/bin/${w%%:*}"
+        # REUSE-IgnoreEnd
+    done
+    # the picker is a bash script: our marker goes in after its shebang and SPDX line
+    sed "3a # $MARK_SETTINGS: written by seclegion-host apply settings; rollback removes it." \
+        "$REPO/tools/seclegion-theme-pick" > "$STAGE/.sl-home/sh/seclegion-theme-pick"
+    # the doctor is stdlib Python with no imports of ours: a marked copy (marker after shebang and SPDX line)
+    sed "3a # $MARK_SETTINGS: written by seclegion-host apply settings; rollback removes it." \
+        "$REPO/tools/seclegion-doctor" > "$STAGE/.sl-home/sh/seclegion-doctor"
+    # REUSE-IgnoreStart
+    { printf '# SPDX-License-Identifier: MIT\n# %s: written by seclegion-host apply settings; rollback removes it.\n' "$MARK_SETTINGS"
+      grep -v '^# SPDX-' "$REPO/desktop/settings/seclegion-settings.desktop" \
+          | sed "s|^Exec=.*|Exec=$HOME_DIR/.local/bin/seclegion-settings|"; } > "$STAGE/.sl-home/applications/seclegion-settings.desktop"
+    # REUSE-IgnoreEnd
+}
+
+stage() {   # copy the repo component and validate it, outside any live path
+    local comp="$1" esc f
+    STAGE="$INST/.stage-$comp"
+    rm -rf -- "$STAGE"
+    mkdir -p -- "$STAGE"
+    if [ "$comp" = gtk ]; then
+        :   # nothing is copied: the files are generated into place from the live theme
+    elif [ "$comp" = settings ]; then
+        stage_settings
+    elif [ "$comp" = border ] || [ "$comp" = lock ] || [ "$comp" = keys ]; then
+        cp -- "$REPO/$(comp_source "$comp")" "$STAGE/"
+    else
+        cp -r -- "$REPO/$(comp_source "$comp")/." "$STAGE/"
+    fi
+    # NTFS modes mean nothing; installed copies are plain 755/644
+    find "$STAGE" -type d -exec chmod 755 {} +
+    find "$STAGE" -type f -exec chmod 644 {} +
+    esc="$(printf '%s' "$HOME_DIR" | sed 's/[&|\\]/\\&/g')"
+    find "$STAGE" -type f \( -name '*.css' -o -name '*.json' -o -name '*.jsonc' -o -name '*.lua' \) \
+        -exec sed -i "s|__HOME__|$esc|g" {} +
+    if [ "$comp" = waybar ]; then
+        # helpers and the user unit are not waybar config: they go to host/bin and ~/.config/systemd/user
+        mkdir -p -- "$STAGE/.sl-bin"
+        mv -- "$STAGE/seclegion-ws" "$STAGE/seclegion-wsevents" "$STAGE/$WSEV_UNIT" "$STAGE/nm-applet" "$STAGE/.sl-bin/"
+        # short-lived bar modules (custom/sl-*): the config runs them from host/bin
+        for f in seclegion-vpn seclegion-sec seclegion-gpu seclegion-uptime seclegion-dnd seclegion-ai seclegion-sysmon seclegion-wifi; do
+            mv -- "$STAGE/$f" "$STAGE/.sl-bin/"
+            chmod 755 "$STAGE/.sl-bin/$f"
+            case "$(head -n1 -- "$STAGE/.sl-bin/$f")" in  # syntax-check each module in its own language
+                *python3*) python3 -c 'import ast, sys; ast.parse(open(sys.argv[1]).read())' "$STAGE/.sl-bin/$f" ;;
+                *) bash -n "$STAGE/.sl-bin/$f" ;;
+            esac
+        done
+        # the System Monitor's and the Wi-Fi panel's python trees ride along when the repo has them
+        # (not in --system's virtual repo)
+        for f in sysmon/seclegion_sysmon wifi/seclegion_wifi; do
+            [ -d "$REPO/desktop/$f" ] || continue
+            mkdir -p -- "$STAGE/.sl-bin/python"
+            cp -r -- "$REPO/desktop/$f" "$STAGE/.sl-bin/python/"
+        done
+        if [ -d "$STAGE/.sl-bin/python" ]; then
+            find "$STAGE/.sl-bin/python" -name __pycache__ -prune -exec rm -rf {} +
+            find "$STAGE/.sl-bin/python" -type d -exec chmod 755 {} +
+            find "$STAGE/.sl-bin/python" -type f -exec chmod 644 {} +
+        fi
+        rm -f -- "$STAGE"/*.in
+        chmod 755 "$STAGE/.sl-bin/seclegion-ws" "$STAGE/.sl-bin/seclegion-wsevents" "$STAGE/.sl-bin/nm-applet"
+        bash -n "$STAGE/.sl-bin/nm-applet"
+        python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' \
+            "$STAGE/.sl-bin/seclegion-ws" "$STAGE/.sl-bin/seclegion-wsevents"
+    fi
+    if [ "$comp" = idle ]; then
+        mkdir -p -- "$STAGE/.sl-units"
+        mv -- "$STAGE/$IDLE_INHIBIT_UNIT" "$STAGE/$IDLE_UNIT" "$STAGE/.sl-units/"
+        chmod 755 "$STAGE/seclegion-autolock"
+        bash -n "$STAGE/seclegion-autolock"
+        grep -q '^ExecStart=/usr/bin/systemd-inhibit --what=idle ' "$STAGE/.sl-units/$IDLE_INHIBIT_UNIT" \
+            || die "$IDLE_INHIBIT_UNIT has no idle inhibitor ExecStart"
+        grep -q '^ExecStart=.* -c %h/.local/share/seclegion/host/idle/hypridle.conf$' "$STAGE/.sl-units/$IDLE_UNIT" \
+            || die "$IDLE_UNIT does not run hypridle on the installed conf"
+        grep -q '@TIMEOUT@' "$STAGE/hypridle.conf.in" || die "hypridle.conf.in has no @TIMEOUT@"
+    fi
+    if [ "$comp" = theme-auto ]; then
+        mkdir -p -- "$STAGE/.sl-units" "$STAGE/python"
+        mv -- "$STAGE/$TA_PATH_UNIT" "$STAGE/$TA_UNIT" "$STAGE/.sl-units/"
+        cp -r -- "$REPO/desktop/theme/seclegion_theme" "$REPO/desktop/theme/tokens.toml" "$STAGE/python/"
+        find "$STAGE/python" -name __pycache__ -type d -prune -exec rm -rf -- {} +
+        cp -- "$REPO/tools/seclegion-theme" "$STAGE/seclegion-theme"
+        chmod 755 "$STAGE/seclegion-theme"
+        find "$STAGE/python" -type d -exec chmod 755 {} +
+        find "$STAGE/python" -type f -exec chmod 644 {} +
+        python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' "$STAGE/seclegion-theme"
+        grep -q '^PathChanged=%h/.cache/current_wallpaper$' "$STAGE/.sl-units/$TA_PATH_UNIT" \
+            || die "$TA_PATH_UNIT does not watch current_wallpaper"
+        grep -q '^ExecStart=.* %h/.local/share/seclegion/host/theme-auto/seclegion-theme sync$' "$STAGE/.sl-units/$TA_UNIT" \
+            || die "$TA_UNIT does not run the installed seclegion-theme sync"
+    fi
+    if [ "$comp" = display ]; then
+        mkdir -p -- "$STAGE/.sl-units"
+        mv -- "$STAGE/$DSP_UNIT" "$STAGE/.sl-units/"
+        chmod 755 "$STAGE/seclegion-displayd" "$STAGE/seclegion-wallpaper" "$STAGE/seclegion-display-menu"
+        python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' \
+            "$STAGE/seclegion-displayd" "$STAGE/seclegion-wallpaper" "$STAGE/seclegion-display-menu"
+        grep -qF "$MARK_DISPLAY" "$STAGE/.sl-units/$DSP_UNIT" || die "$DSP_UNIT lacks the '$MARK_DISPLAY' marker"
+        grep -qx 'ExecStart=%h/.local/share/seclegion/host/display/seclegion-displayd' "$STAGE/.sl-units/$DSP_UNIT" \
+            || die "$DSP_UNIT does not run the installed seclegion-displayd"
+    fi
+    case "$comp" in
+        settings)
+            # the launchers and wrappers are executables; the root helper is 0755 and nothing else is writable by others
+            chmod 755 "$STAGE/seclegion-set" "$STAGE/seclegion-settings" "$STAGE/seclegion-root-apply" "$STAGE/seclegion-theme" \
+                "$STAGE/.sl-home/bin/seclegion-set" "$STAGE/.sl-home/bin/seclegion-settings" "$STAGE/.sl-home/bin/seclegion-theme" \
+                "$STAGE/.sl-home/sh/seclegion-theme-pick"
+            bash -n "$STAGE/.sl-home/sh/seclegion-theme-pick"
+            grep -qF "$MARK_SETTINGS" "$STAGE/.sl-home/sh/seclegion-theme-pick" || die "the picker lacks our marker"
+            python3 -c 'import ast, sys; [ast.parse(open(f).read(), f) for f in sys.argv[1:]]' \
+                "$STAGE"/seclegion-* "$STAGE"/.sl-home/bin/*
+            grep -q '^Exec=/' "$STAGE/.sl-home/applications/seclegion-settings.desktop" || die "desktop entry has no Exec line"
+            grep -qx 'Categories=Settings;System;' "$STAGE/.sl-home/applications/seclegion-settings.desktop" \
+                || die "desktop entry lacks Categories=Settings;System;"
+            ;;
+        border) luac -p "$STAGE/seclegion-host.lua" ;;
+        keys)
+            luac -p "$STAGE/seclegion-keys.lua"
+            keys_check "$STAGE/seclegion-keys.lua"
+            ;;
+        lock) lock_check "$STAGE/hyprlock.conf" keys ;;
+        osd)
+            for f in "${OSD_BINS[@]}"; do
+                chmod 755 "$STAGE/$f"   # run through the ~/.local/bin symlinks
+                bash -n "$STAGE/$f"
+            done
+            ;;
+        notifications) python3 -c 'import json, sys; json.load(open(sys.argv[1]))' "$STAGE/config.json" ;;
+        fm)
+            luac -p "$STAGE/yazi/plugins/seclegion-space.yazi/main.lua"
+            python3 -c 'import sys, xml.etree.ElementTree as E; E.parse(sys.argv[1])' "$STAGE/thunar.xml"
+            grep -qF 'require("seclegion-space")' "$STAGE/yazi/init.lua.part" || die "init.lua.part has no seclegion-space line"
+            [ -n "$(ini_pairs "$STAGE/dolphinrc.part")" ] || die "dolphinrc.part has no key"
+            ;;
+        waybar)
+            python3 - "$STAGE/config.jsonc" <<'PY'
+import json, sys
+json.loads("\n".join(l for l in open(sys.argv[1]) if not l.lstrip().startswith("//")))
+PY
+            ;;
+    esac
+}
+
+# The one autostart edit, idempotent: keep the first swaync exec line and drop
+# every other swaync and dunst line; with no swaync line, the first dunst line
+# becomes swaync. Collapses the duplicate swaync lines the old tool left behind.
+autostart_swaync() {
+    local tmp="$BK/autostart.lua.new"
+    S="$SWAYNC_RE" D="$DUNST_RE" HAVE="$(count_lines "$SWAYNC_RE" "$HYPR_AUTO")" awk '
+        $0 ~ ENVIRON["S"] { if (seen++) next; print; next }
+        $0 ~ ENVIRON["D"] {
+            if (ENVIRON["HAVE"] > 0 || seen++) next
+            sub(/hl\.exec_cmd\("dunst"\)/, "hl.exec_cmd(\"swaync\")"); print; next
+        }
+        { print }' "$HYPR_AUTO" > "$tmp"
+    if ! cmp -s -- "$tmp" "$HYPR_AUTO"; then
+        cat -- "$tmp" > "$HYPR_AUTO"   # in place: keeps the file's inode and mode
+        log "autostart: one hl.exec_cmd(\"swaync\") line, no dunst"
+    fi
+    rm -f -- "$tmp"
+}
+
+install_comp() {
+    local comp="$1" f
+    case "$comp" in fm | settings | idle | theme-auto | display) ;; *) ensure_theme ;; esac   # these read no theme file
+    rm -rf -- "${INST:?}/$comp"
+    if [ "$comp" = gtk ]; then rm -rf -- "$STAGE"; else mv -T -- "$STAGE" "$INST/$comp"; fi
+    STAGE=""
+    case "$comp" in
+        border)
+            install -m 644 -- "$INST/border/seclegion-host.lua" "$CFG/hypr/seclegion-host.lua"
+            grep -qx 'require("seclegion-host")' "$HYPR_MAIN" \
+                || sed -i '/^require("hyprland-border")$/a require("seclegion-host")' "$HYPR_MAIN"
+            luac -p "$HYPR_MAIN" "$CFG/hypr/seclegion-host.lua"
+            ;;
+        notifications)
+            ln -sfn -- "$INST/notifications" "$CFG/swaync"
+            if [ -z "$SL_SYSTEM_BACKUP" ]; then   # --system: the skel hyprland.lua starts swaync itself
+                autostart_swaync
+                { [ "$(count_lines "$SWAYNC_RE" "$HYPR_AUTO")" = 1 ] && [ "$(count_lines "$DUNST_RE" "$HYPR_AUTO")" = 0 ]; } \
+                    || die "autostart edit did not leave exactly one swaync and no dunst exec line"
+                luac -p "$HYPR_AUTO"
+            fi
+            ;;
+        waybar)
+            rm -rf -- "${INST:?}/bin"
+            mv -T -- "$INST/waybar/.sl-bin" "$INST/bin"
+            install -D -m 644 -- "$INST/bin/$WSEV_UNIT" "$CFG/systemd/user/$WSEV_UNIT"
+            rm -f -- "$INST/bin/$WSEV_UNIT"
+            mkdir -p -- "$HOME_DIR/.local/bin"
+            ln -sfn -- "$INST/bin/nm-applet" "$HOME_DIR/.local/bin/nm-applet"
+            ln -sfn -- "$INST/waybar" "$CFG/waybar"
+            ;;
+        gtk) install_gtk ;;
+        fm) install_fm ;;
+        settings) install_settings ;;
+        idle) install_idle ;;
+        theme-auto) install_theme_auto ;;
+        display) install_display ;;
+        lock)
+            lock_check "$INST/lock/hyprlock.conf" source
+            ln -sfn -- "$INST/lock/hyprlock.conf" "$LOCK_CONF"
+            ;;
+        keys) ln -sfn -- "$INST/keys/seclegion-keys.lua" "$KEYS_LINK" ;;
+        osd)
+            mkdir -p -- "$HOME_DIR/.local/bin"
+            for f in "${OSD_BINS[@]}"; do ln -sfn -- "$INST/osd/$f" "$HOME_DIR/.local/bin/$f"; done
+            ;;
+    esac
+    if ! cmp -s -- "$REPO/desktop/branding/seclegion-logo.png" "$SHARE/seclegion-logo.png"; then
+        install -m 644 -- "$REPO/desktop/branding/seclegion-logo.png" "$SHARE/seclegion-logo.png"
+    fi
+    log "installed $comp"
+}
+
+# Stop the running nm-applet by pid and start it again through the shim (the same arguments;
+# the shim drops --indicator). Not running: nothing to do, the shim applies at its next start.
+restart_nm_applet() {
+    local p pid
+    pid="$(pids_of nm-applet | head -n1)"
+    [ -n "$pid" ] || { log "nm-applet is not running; the shim applies at its next start"; return 0; }
+    mapfile -t NMA_ARGS < <(proc_argv "$pid" | tail -n +2)
+    for p in $(pids_of nm-applet); do stop_pid "$p"; done
+    start_argv "$HOME_DIR/.local/bin/nm-applet" ${NMA_ARGS[@]+"${NMA_ARGS[@]}"}
+    NMA_RESTARTED=1
+}
+
+reload_comp() {
+    local p
+    case "$1" in
+        border | keys) hyprctl reload >/dev/null ;;
+        notifications)
+            for p in $(owner_pid) $(pids_of dunst) $(pids_of swaync); do stop_pid "$p"; done
+            start_argv swaync
+            ;;
+        waybar)
+            systemctl --user daemon-reload
+            systemctl --user enable --now "$WSEV_UNIT"
+            systemctl --user try-restart "$WSEV_UNIT"   # pick up a changed helper
+            systemctl --user restart waybar
+            restart_nm_applet
+            ;;
+        gtk | fm | settings) ;;   # no daemon: apps read these files on their next start
+        idle)
+            # new unit files; then re-apply the state in force (a fresh host: default, which
+            # stops nothing that runs), so a changed conf or unit takes effect
+            systemctl --user daemon-reload
+            "$HOME_DIR/.local/bin/seclegion-autolock" set "$("$HOME_DIR/.local/bin/seclegion-autolock" status 2>/dev/null)" >/dev/null
+            ;;
+        theme-auto)
+            systemctl --user daemon-reload
+            systemctl --user enable --now "$TA_PATH_UNIT"
+            ;;
+        display)
+            # restart: a re-apply must run the new copy of the daemon
+            systemctl --user daemon-reload
+            systemctl --user enable "$DSP_UNIT"
+            systemctl --user restart "$DSP_UNIT"
+            ;;
+        lock) ;;   # read by hyprlock at lock time: nothing to reload, and never lock the screen to test
+        osd) ;;    # plain symlinks, read at each exec: nothing to reload
+    esac
+}
+
+arm_deadman() {
+    systemd-run --user --quiet --unit="$DEADMAN" --on-active=120 --timer-property=AccuracySec=1s \
+        --collect "$BASH" "$BK/rollback.sh"
+    printf '%s\n' "$1" > "$PENDING"
+    log "dead-man armed: automatic rollback in 120 s unless '$PROG confirm'"
+}
+
+verify_gtk() {
+    local f g4="$CFG/gtk-4.0" cur="$THEME_DIR" want
+    [ -f "$CFG/gtk-3.0/gtk.css" ] && grep -qF "$MARK_GTK3" "$CFG/gtk-3.0/gtk.css" \
+        && grep -qxF "@import url(\"file://$cur/gtk3.css\");" "$CFG/gtk-3.0/gtk.css" || die "gtk-3.0/gtk.css is not ours or lacks the import"
+    [ -d "$g4" ] && [ ! -L "$g4" ] && [ -f "$g4/.seclegion-managed" ] || die "$g4 is not the managed directory"
+    grep -qxF "@import url(\"file://$cur/gtk4.css\");" "$g4/gtk.css" || die "gtk-4.0/gtk.css lacks the SecLegion import"
+    for f in gtk3.css gtk4.css; do [ -s "$cur/$f" ] || die "$cur/$f is missing"; done
+    for f in "$HOME_DIR/.local/share/color-schemes/SecLegion.colors:kde.colors" "$CFG/qt6ct/colors/SecLegion.conf:qt6ct.conf"; do
+        want="${f#*:}" f="${f%:*}"
+        [ -L "$f" ] && [ "$(readlink -f -- "$f")" = "$(readlink -f -- "$cur/$want")" ] && [ -s "$f" ] || die "$f does not resolve to $want"
+    done
+    grep -qx 'ColorScheme=SecLegion' "$CFG/kdeglobals" || die "kdeglobals has no ColorScheme=SecLegion"
+    log "gtk-ok"
+}
+
+verify_fm() {
+    local yz="$CFG/yazi"
+    grep -qx 'inode/directory=thunar.desktop' "$CFG/mimeapps.list" || die "mimeapps.list has no inode/directory=thunar.desktop"
+    grep -q 'name="last-statusbar-visible" type="bool" value="true"' "$CFG/xfce4/xfconf/xfce-perchannel-xml/thunar.xml" \
+        || die "thunar.xml has no last-statusbar-visible=true"
+    grep -qx 'ShowStatusBar=FullWidth' "$CFG/dolphinrc" || die "dolphinrc has no ShowStatusBar=FullWidth"
+    cmp -s -- "$INST/fm/yazi/plugins/seclegion-space.yazi/main.lua" "$yz/plugins/seclegion-space.yazi/main.lua" || die "yazi plugin differs from the repo copy"
+    [ "$(count_lines 'require\("seclegion-space"\)' "$yz/init.lua")" = 1 ] || die "yazi init.lua must enable the plugin exactly once"
+    log "fm-ok"
+}
+
+verify_settings() {
+    local d="$INST/settings" f
+    for f in seclegion-set seclegion-settings seclegion-root-apply seclegion-theme; do
+        [ -x "$d/$f" ] || die "$d/$f is missing or not executable"
+    done
+    [ "$(stat -c %a -- "$d/seclegion-root-apply")" = 755 ] || die "$d/seclegion-root-apply is not mode 0755"
+    for f in seclegion_settings seclegion_theme; do [ -d "$d/python/$f" ] || die "$d/python/$f is missing"; done
+    for f in seclegion-settings seclegion-set seclegion-theme seclegion-theme-pick; do
+        [ -x "$HOME_DIR/.local/bin/$f" ] && grep -qF "$MARK_SETTINGS" "$HOME_DIR/.local/bin/$f" || die "$HOME_DIR/.local/bin/$f is missing or not ours"
+    done
+    grep -qx 'Categories=Settings;System;' "$HOME_DIR/.local/share/applications/seclegion-settings.desktop" \
+        || die "seclegion-settings.desktop is missing or lacks its Categories"
+    # -B: running the installed copy must not leave __pycache__ behind
+    python3 -I -B "$HOME_DIR/.local/bin/seclegion-set" --help >/dev/null || die "the installed seclegion-set wrapper does not run"
+    python3 -I -B "$d/seclegion-theme" --help >/dev/null || die "the installed seclegion-theme launcher does not run"
+    python3 -I -B "$HOME_DIR/.local/bin/seclegion-theme" --help >/dev/null || die "the installed seclegion-theme wrapper does not run"
+    log "settings-ok"
+}
+
+verify_idle() {
+    local d="$INST/idle" f v conf="$INST/idle/hypridle.conf" want
+    for f in "$CFG/systemd/user/$IDLE_INHIBIT_UNIT" "$CFG/systemd/user/$IDLE_UNIT"; do
+        [ -f "$f" ] && grep -qF "$MARK_IDLE" "$f" || die "$f is missing or not ours"
+    done
+    [ -x "$d/seclegion-autolock" ] && [ -f "$d/hypridle.conf.in" ] || die "$d lacks seclegion-autolock or hypridle.conf.in"
+    [ -L "$HOME_DIR/.local/bin/seclegion-autolock" ] \
+        && [ "$(readlink -f -- "$HOME_DIR/.local/bin/seclegion-autolock")" = "$(readlink -f -- "$d/seclegion-autolock")" ] \
+        || die "$HOME_DIR/.local/bin/seclegion-autolock does not resolve to the installed copy"
+    v="$("$HOME_DIR/.local/bin/seclegion-autolock" status 2>/dev/null)" || die "seclegion-autolock status failed"
+    # the units must match the state: default none, never the inhibitor, a delay both
+    case "$v" in
+        default) unit_active "$IDLE_INHIBIT_UNIT" && die "autolock is default but $IDLE_INHIBIT_UNIT is running"
+                 unit_active "$IDLE_UNIT" && die "autolock is default but $IDLE_UNIT is running" ;;
+        never) unit_active "$IDLE_INHIBIT_UNIT" || die "autolock is never but $IDLE_INHIBIT_UNIT is not running" ;;
+        15m | 30m | 60m)
+            unit_active "$IDLE_INHIBIT_UNIT" && unit_active "$IDLE_UNIT" || die "autolock is $v but its units are not both running"
+            case "$v" in 15m) want=900 ;; 30m) want=1800 ;; *) want=3600 ;; esac
+            grep -qx "    timeout = $want" "$conf" || die "$conf has no timeout = $want" ;;
+        *) die "seclegion-autolock status printed '$v'" ;;
+    esac
+    log "idle-ok ($v)"
+}
+
+verify_theme_auto() {
+    local d="$INST/theme-auto" f
+    for f in "$CFG/systemd/user/$TA_PATH_UNIT" "$CFG/systemd/user/$TA_UNIT"; do
+        [ -f "$f" ] && grep -qF 'seclegion-host:managed theme-auto' "$f" || die "$f is missing or not ours"
+    done
+    [ -L "$CFG/systemd/user/default.target.wants/$TA_PATH_UNIT" ] || die "$TA_PATH_UNIT is not enabled"
+    unit_active "$TA_PATH_UNIT" || die "$TA_PATH_UNIT is not active"
+    python3 -I -B "$d/seclegion-theme" --help >/dev/null || die "the installed seclegion-theme launcher does not run"
+    log "theme-auto-ok (auto theme stays as it was; turn it on with: seclegion-theme auto on)"
+}
+
+verify_display() {
+    local f="$CFG/systemd/user/$DSP_UNIT" s
+    [ -f "$f" ] && grep -qF "$MARK_DISPLAY" "$f" || die "$f is missing or not ours"
+    [ -L "$CFG/systemd/user/default.target.wants/$DSP_UNIT" ] || die "$DSP_UNIT is not enabled"
+    [ -x "$INST/display/seclegion-displayd" ] || die "$INST/display/seclegion-displayd is not executable"
+    [ -x "$HOME_DIR/.local/bin/seclegion-display-menu" ] || die "~/.local/bin/seclegion-display-menu is missing"
+    # the daemon exits at once without HYPRLAND_INSTANCE_SIGNATURE in the user manager: give it a
+    # second, then require active (not activating: that is the restart loop)
+    sleep 1
+    s="$(systemctl --user is-active "$DSP_UNIT" 2>/dev/null)" || true
+    [ "$s" = active ] || die "$DSP_UNIT is $s, not active (journalctl --user -u $DSP_UNIT)"
+    log "display-ok"
+}
+
+verify_comp() {
+    local e i
+    case "$1" in
+        border)
+            e="$(hyprctl configerrors 2>&1)" || true
+            [ -z "${e//[[:space:]]/}" ] || die "hyprctl configerrors: $e"
+            ;;
+        keys)
+            e="$(hyprctl configerrors 2>&1)" || true
+            [ -z "${e//[[:space:]]/}" ] || die "hyprctl configerrors: $e"
+            [ "$(readlink -f -- "$KEYS_LINK")" = "$(readlink -f -- "$INST/keys/seclegion-keys.lua")" ] \
+                || die "$KEYS_LINK does not resolve to the installed keys"
+            # the pcall in seclegion-host.lua hides a runtime error (configerrors stays
+            # empty), so every hl.bind of the file (indented ones inside a submap too) must
+            # be live, by its description
+            e="$(grep -c '^[[:space:]]*hl\.bind(' "$INST/keys/seclegion-keys.lua")" || true
+            i="$(hyprctl binds -j | python3 -c 'import json, sys; print(sum(str(b.get("description", "")).startswith("seclegion-keys:") for b in json.load(sys.stdin)))')"
+            [ "$i" = "$e" ] || die "$i of the $e seclegion-keys binds are live: seclegion-keys.lua did not load (see the Hyprland log)"
+            log "keys: $i binds live"
+            ;;
+        notifications)
+            wait_owner swaync || die "swaync did not become the org.freedesktop.Notifications owner"
+            [ -z "$(pids_of dunst)" ] || die "dunst is still running"
+            ;;
+        waybar)
+            for i in $(seq 1 30); do unit_active waybar && break; sleep 0.1; done
+            unit_active waybar || die "waybar.service is not active"
+            [ -n "$(pids_of waybar)" ] || die "no waybar process"
+            unit_active "$WSEV_UNIT" || die "$WSEV_UNIT is not active"
+            [ -L "$HOME_DIR/.local/bin/nm-applet" ] && [ "$(readlink -f -- "$HOME_DIR/.local/bin/nm-applet")" = "$(readlink -f -- "$INST/bin/nm-applet")" ] \
+                || die "$HOME_DIR/.local/bin/nm-applet does not resolve to the installed shim"
+            if [ -n "$NMA_RESTARTED" ]; then
+                for i in $(seq 1 30); do [ -n "$(pids_of nm-applet)" ] && break; sleep 0.1; done
+                i="$(pids_of nm-applet | head -n1)"
+                [ -n "$i" ] || die "nm-applet did not come back through the shim"
+                ! proc_argv "$i" | grep -qx -- --indicator || die "nm-applet (pid $i) still runs with --indicator"
+                log "nm-applet-secret-agent-ok"
+            fi
+            ;;
+        gtk) verify_gtk ;;
+        fm) verify_fm ;;
+        settings) verify_settings ;;
+        idle) verify_idle ;;
+        theme-auto) verify_theme_auto ;;
+        display) verify_display ;;
+        lock)
+            [ -L "$LOCK_CONF" ] && [ "$(readlink -f -- "$LOCK_CONF")" = "$(readlink -f -- "$INST/lock/hyprlock.conf")" ] \
+                || die "$LOCK_CONF does not resolve to the installed lock screen"
+            grep -qE '^[[:space:]]*font_color[[:space:]]*=' "$LOCK_CONF" || die "no font_color line in $LOCK_CONF"
+            lock_check "$LOCK_CONF" source
+            log "lock-source-ok"
+            ;;
+        osd)
+            for i in "${OSD_BINS[@]}"; do
+                [ -L "$HOME_DIR/.local/bin/$i" ] && [ "$(readlink -f -- "$HOME_DIR/.local/bin/$i")" = "$(readlink -f -- "$INST/osd/$i")" ] \
+                    || die "$HOME_DIR/.local/bin/$i does not resolve to the installed $i"
+                [ -x "$HOME_DIR/.local/bin/$i" ] || die "$HOME_DIR/.local/bin/$i is not executable"
+            done
+            # the shim must hand the real binary the swaync hint (SL_DUNSTIFY_REAL: echo stands in for dunstify)
+            e="$(SL_DUNSTIFY_REAL="$(type -P echo)" "$HOME_DIR/.local/bin/dunstify" -h string:x-dunst-stack-tag:verify)"
+            [ "$e" = "-h string:x-canonical-private-synchronous:verify" ] || die "the dunstify shim printed '$e'"
+            grep -q 'hl\.env("PATH"' "$CFG/hypr/seclegion-host.lua" 2>/dev/null \
+                || log "osd: WARNING: the border component with the PATH line is not applied; Hyprland binds will not find ~/.local/bin/dunstify. Run: $PROG apply border"
+            log "osd-shim-ok"
+            ;;
+    esac
+}
+
+cmd_apply() {
+    local comp="${1:-}" id
+    is_component "$comp" || usage
+    if [ -e "$PENDING" ]; then
+        die "$(cat "$PENDING") is not confirmed yet: confirm or roll back the previous change first ($PROG confirm | $PROG rollback --last)"
+    fi
+    if unit_active "$DEADMAN.timer" || unit_active "$DEADMAN.service"; then
+        die "$DEADMAN is still armed or running: confirm or roll back the previous change first"
+    fi
+    preflight "$comp"
+    if [ ! -f "$BACKUPS/baseline-0/rollback.sh" ]; then
+        [ ! -e "$BACKUPS/baseline-0" ] || die "$BACKUPS/baseline-0 is incomplete; inspect it and remove it by hand"
+        make_backup baseline-0 "${COMPONENTS[@]}" shared
+        phase=none
+    fi
+    extend_baseline
+    id="$(new_id "$comp")"
+    make_backup "$id" "$comp"
+    stage "$comp"
+    phase=changed
+    install_comp "$comp"
+    reload_comp "$comp"
+    arm_deadman "$id"
+    verify_comp "$comp"
+    phase=done
+    log "applied $id. Check the desktop, then run: $PROG confirm   (automatic rollback in 120 s)"
+}
+
+# ---- confirm / rollback / prune ---------------------------------------------
+cmd_confirm() {
+    local id
+    [ -f "$PENDING" ] || die "nothing to confirm (no unconfirmed apply)"
+    id="$(cat "$PENDING")"
+    [ ! -e "$BACKUPS/$id/ROLLBACK_STARTED" ] \
+        || die "a rollback of $id has already started; NOT confirmed. Finish it: bash $BACKUPS/$id/rollback.sh"
+    if unit_active "$DEADMAN.service"; then
+        die "the dead-man rollback of $id is already running; NOT confirmed"
+    fi
+    systemctl --user stop "$DEADMAN.timer" || err "stopping $DEADMAN.timer failed (rc $?)"
+    if unit_active "$DEADMAN.timer" || unit_active "$DEADMAN.service"; then
+        die "$DEADMAN is still active after stopping it; $id is NOT confirmed and may still roll back"
+    fi
+    date -u +%FT%TZ > "$BACKUPS/$id/CONFIRMED"
+    chmod 600 "$BACKUPS/$id/CONFIRMED"
+    rm -f -- "$PENDING"
+    log "confirmed $id; dead-man disarmed"
+}
+
+cmd_rollback() {
+    local arg="${1:---last}" id p
+    case "$arg" in
+        --last)
+            id="$(list_ids | tail -n1)"
+            [ -n "$id" ] || die "no apply backups in $BACKUPS (baseline-0 is rolled back by name)"
+            ;;
+        *) id="$arg" ;;
+    esac
+    { [[ "$id" =~ $ID_RE ]] || [ "$id" = baseline-0 ]; } || die "not a backup id: $id"
+    [ -f "$BACKUPS/$id/rollback.sh" ] || die "no backup $id in $BACKUPS"
+    if [ -f "$PENDING" ]; then
+        p="$(cat "$PENDING")"
+        { [ "$id" = "$p" ] || [ "$id" = baseline-0 ]; } \
+            || die "$p is not confirmed yet: confirm or roll back the previous change first"
+    fi
+    if unit_active "$DEADMAN.service"; then die "the dead-man rollback is running right now; let it finish"; fi
+    exec bash "$BACKUPS/$id/rollback.sh"
+}
+
+cmd_prune() {
+    local ids i keep p=""
+    { [ "${1:-}" = --keep ] && [[ "${2:-}" =~ ^[0-9]+$ ]]; } || usage
+    keep="$2"
+    mapfile -t ids < <(list_ids)
+    [ ! -f "$PENDING" ] || p="$(cat "$PENDING")"
+    for ((i = 0; i < ${#ids[@]} - keep; i++)); do
+        [ "${ids[$i]}" != "$p" ] || continue
+        rm -rf -- "${BACKUPS:?}/${ids[$i]}"
+        log "pruned ${ids[$i]}"
+    done
+    log "kept baseline-0 and the newest $keep backup(s)"
+}
+
+# ---- --system: the packaged components onto a new user's home ---------------------
+SYS_COMPONENTS=(notifications waybar gtk fm settings osd idle theme-auto)
+VREPO=""
+
+# A virtual repo (desktop/ and tools/ as the stage_* functions expect) copied from the packaged trees.
+sys_build_repo() {
+    local r="${SYS_ROOT%/}" v="$VREPO" f c
+    local sh="$r/usr/share/seclegion" py="$r/usr/lib/seclegion/python" need=()
+    for f in waybar/{config.jsonc,style.css,nm-applet,seclegion-ws,seclegion-wsevents,seclegion-wsevents.service,seclegion-vpn,seclegion-sec,seclegion-gpu,seclegion-uptime,seclegion-dnd,seclegion-ai,seclegion-sysmon,seclegion-wifi} \
+        swaync/{config.json,style.css} idle/{hypridle.conf.in,seclegion-autolock,seclegion-idle.service,seclegion-idle-inhibit.service} \
+        osd/{dunstify,seclegion-osd} fm/{dolphinrc.part,thunar.xml,yazi/init.lua.part,yazi/plugins/seclegion-space.yazi/main.lua} \
+        theme/{tokens.toml,systemd/seclegion-theme-sync.path,systemd/seclegion-theme-sync.service} branding/seclegion-logo.png; do
+        need+=("$sh/$f")
+    done
+    need+=("$py/seclegion_theme" "$py/seclegion_settings" "$r/usr/share/applications/seclegion-settings.desktop")
+    for f in seclegion-set seclegion-settings seclegion-root-apply seclegion-theme seclegion-theme-pick seclegion-doctor; do need+=("$r/usr/bin/$f"); done
+    for f in "${need[@]}"; do [ -e "$f" ] || die "missing packaged file $f (are seclegion-desktop, -theme, -settings and -branding installed under $SYS_ROOT?)"; done
+    mkdir -p -- "$v/desktop/theme" "$v/desktop/settings" "$v/desktop/branding" "$v/tools"
+    for c in waybar swaync idle osd fm; do cp -r -- "$sh/$c" "$v/desktop/$c"; done
+    cp -r -- "$py/seclegion_theme" "$sh/theme/tokens.toml" "$sh/theme/systemd" "$v/desktop/theme/"
+    cp -r -- "$py/seclegion_settings" "$r/usr/share/applications/seclegion-settings.desktop" "$v/desktop/settings/"
+    cp -- "$sh/branding/seclegion-logo.png" "$v/desktop/branding/"
+    for f in seclegion-set seclegion-settings seclegion-root-apply seclegion-theme seclegion-theme-pick seclegion-doctor; do cp -- "$r/usr/bin/$f" "$v/tools/"; done
+}
+
+sys_preflight() {
+    local f c
+    for f in luac python3 tar sha256sum; do command -v "$f" >/dev/null || die "$f is not installed"; done
+    for c in "${SYS_COMPONENTS[@]}"; do
+        case "$c" in
+            notifications) link_or_absent "$CFG/swaync" ;;
+            waybar) link_or_absent "$CFG/waybar"; link_or_absent "$HOME_DIR/.local/bin/nm-applet" ;;
+            idle) preflight_idle ;;
+            theme-auto) preflight_theme_auto ;;
+            gtk | fm | settings) preflight_files "$c" ;;
+            osd) for f in "${OSD_BINS[@]}"; do link_or_absent "$HOME_DIR/.local/bin/$f"; done ;;
+        esac
+    done
+}
+
+sys_enable() {   # what `systemctl --user enable` does for a WantedBy=default.target unit
+    mkdir -p -- "$CFG/systemd/user/default.target.wants"
+    ln -sfn -- "../$1" "$CFG/systemd/user/default.target.wants/$1"
+}
+
+sys_link_is() {   # LINK TARGET: LINK is a symlink resolving to the same file as TARGET
+    [ -L "$1" ] && [ "$(readlink -f -- "$1")" = "$(readlink -f -- "$2")" ] && [ -e "$1" ]
+}
+
+# File-only checks: nothing live exists at install time. gtk, fm and settings have file-only verifies already.
+verify_system() {
+    local c f
+    for c in "${SYS_COMPONENTS[@]}"; do
+        case "$c" in
+            gtk | fm | settings) verify_comp "$c" ;;
+            notifications)
+                { sys_link_is "$CFG/swaync" "$INST/notifications" && [ -s "$CFG/swaync/config.json" ]; } \
+                    || die "$CFG/swaync does not resolve to the installed swaync config"
+                ;;
+            waybar)
+                { sys_link_is "$CFG/waybar" "$INST/waybar" && [ -s "$CFG/waybar/config.jsonc" ]; } \
+                    || die "$CFG/waybar does not resolve to the installed waybar config"
+                sys_link_is "$HOME_DIR/.local/bin/nm-applet" "$INST/bin/nm-applet" || die "the nm-applet shim is not installed"
+                { [ -f "$CFG/systemd/user/$WSEV_UNIT" ] && sys_link_is "$CFG/systemd/user/default.target.wants/$WSEV_UNIT" "$CFG/systemd/user/$WSEV_UNIT"; } \
+                    || die "$WSEV_UNIT is not installed and enabled"
+                ;;
+            osd)
+                for f in "${OSD_BINS[@]}"; do
+                    { sys_link_is "$HOME_DIR/.local/bin/$f" "$INST/osd/$f" && [ -x "$HOME_DIR/.local/bin/$f" ]; } \
+                        || die "$HOME_DIR/.local/bin/$f does not resolve to the installed $f"
+                done
+                ;;
+            idle)
+                for f in "$IDLE_INHIBIT_UNIT" "$IDLE_UNIT"; do
+                    { [ -f "$CFG/systemd/user/$f" ] && grep -qF "$MARK_IDLE" "$CFG/systemd/user/$f"; } || die "$f is missing or not ours"
+                done
+                { sys_link_is "$HOME_DIR/.local/bin/seclegion-autolock" "$INST/idle/seclegion-autolock" && [ -x "$INST/idle/seclegion-autolock" ]; } \
+                    || die "seclegion-autolock does not resolve to the installed copy"
+                ;;
+            theme-auto)
+                for f in "$TA_PATH_UNIT" "$TA_UNIT"; do
+                    { [ -f "$CFG/systemd/user/$f" ] && grep -qF 'seclegion-host:managed theme-auto' "$CFG/systemd/user/$f"; } || die "$f is missing or not ours"
+                done
+                sys_link_is "$CFG/systemd/user/default.target.wants/$TA_PATH_UNIT" "$CFG/systemd/user/$TA_PATH_UNIT" || die "$TA_PATH_UNIT is not enabled"
+                python3 -I -B "$INST/theme-auto/seclegion-theme" --help >/dev/null || die "the installed seclegion-theme launcher does not run"
+                ;;
+        esac
+    done
+    theme_ok || die "$THEME_DIR is not a symlink to a complete theme"
+    log "system-ok"
+}
+
+sys_refuse_live_home() {
+    local b0="$BACKUPS/baseline-0"
+    if [ -e "$b0" ] && ! grep -qx 'SL_SYSTEM_BACKUP=1' "$b0/rollback.sh" 2>/dev/null; then
+        die "$HOME_DIR has $b0 from a live apply: this is not a new user's home; refusing"
+    fi
+    [ ! -e "$PENDING" ] || die "$PENDING exists: this is not a new user's home; refusing"
+    { [ ! -e "$CFG/hyprland-dotfiles" ] && [ ! -L "$CFG/hyprland-dotfiles" ]; } \
+        || die "$CFG/hyprland-dotfiles exists: this is the owner's home, not a new user's; refusing"
+}
+
+sys_applied() {   # an unrolled-back --system apply is in force
+    local last
+    { [ -f "$BACKUPS/baseline-0/rollback.sh" ] && grep -qx 'SL_SYSTEM_BACKUP=1' "$BACKUPS/baseline-0/rollback.sh" \
+        && [ ! -e "$BACKUPS/baseline-0/ROLLED_BACK" ]; } || return 1
+    last="$(list_ids | grep -- '-system$' | tail -n1 || true)"
+    [ -n "$last" ] && [ ! -e "$BACKUPS/$last/ROLLED_BACK" ]
+}
+
+cmd_system() {
+    local id c
+    unset HYPRLAND_INSTANCE_SIGNATURE WAYLAND_DISPLAY   # never reach a session from here
+    [ -d "$HOME_DIR" ] || die "$HOME_DIR does not exist"
+    sys_refuse_live_home
+    if sys_applied; then
+        log "already applied to $HOME_DIR (no-op; run '$PROG rollback baseline-0' first to apply again)"
+        return 0
+    fi
+    VREPO="$(mktemp -d)"
+    trap 'rm -rf -- "$VREPO"' EXIT
+    REPO="$VREPO"
+    sys_build_repo
+    sys_preflight
+    mkdir -p -- "$CFG" "$HOME_DIR/.local/bin"   # a fresh home has neither
+    if [ ! -f "$BACKUPS/baseline-0/rollback.sh" ]; then
+        [ ! -e "$BACKUPS/baseline-0" ] || die "$BACKUPS/baseline-0 is incomplete; inspect it and remove it by hand"
+        make_backup baseline-0 "${COMPONENTS[@]}" shared
+        phase=none
+    fi
+    extend_baseline
+    id="$(new_id system)"
+    make_backup "$id" "${SYS_COMPONENTS[@]}"
+    phase=changed
+    for c in "${SYS_COMPONENTS[@]}"; do
+        stage "$c"
+        install_comp "$c"
+        case "$c" in
+            waybar) sys_enable "$WSEV_UNIT" ;;
+            theme-auto) sys_enable "$TA_PATH_UNIT" ;;
+        esac
+    done
+    verify_system
+    phase=done
+    rm -f -- "$BACKUPS/baseline-0/ROLLED_BACK"
+    [ -e "$CFG/hypr/hyprland.lua" ] || log "warning: $CFG/hypr/hyprland.lua is missing; copy /etc/skel/.config/hypr from seclegion-dotfiles"
+    log "applied $id to $HOME_DIR. Undo: $PROG rollback --last   (or baseline-0)"
+}
+
+if [ -n "$SL_SYSTEM_BACKUP" ]; then
+    cmd_system
+    exit 0
+fi
+
+case "${1:-}" in
+    apply) shift; cmd_apply "$@" ;;
+    confirm) cmd_confirm ;;
+    rollback) shift; cmd_rollback "$@" ;;
+    prune) shift; cmd_prune "$@" ;;
+    *) usage ;;
+esac

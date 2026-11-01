@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""release notes|check-iso (RL1a: notes and guards only; the signed reproducible build comes later).
+
+  release notes --evidence DIR --out FILE [--third-party FILE] [--today YYYY-MM-DD]
+      Release notes: vendor versions with their age in days (pin date in docs/third-party.md vs today),
+      "No AI models are shipped in the ISO.", and the HW-MANUAL evidence rows. Exit 1 (and no file) while
+      any HW-MANUAL row is neither attested (status PASS) nor `"attestation": "not-attested-by-design"`
+      with a non-empty `"note"`; the notes of by-design rows are printed verbatim.
+  release check-iso --iso FILE --fingerprint FILE [--dev-fingerprint FILE ...]
+      Refuse a release whose signing key is a build's throwaway DEV key (fingerprint match, or the DEV uid
+      in the ISO's /usr/share/pacman/keyrings/seclegion.gpg when bsdtar/7z can read it)."""
+
+import argparse
+import datetime
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+import evidence  # noqa: E402
+import thirdparty  # noqa: E402
+
+REPO = os.path.dirname(HERE)
+NO_AI_LINE = "No AI models are shipped in the ISO."
+BY_DESIGN = "not-attested-by-design"
+DEV_UID = b"SecLegion DEV (throwaway"
+KEYRING_PATH = "usr/share/pacman/keyrings/seclegion.gpg"
+
+
+def hw_manual_rows(evidence_dir):
+    """Latest result per test_id with class HW-MANUAL -> [(test_id, record)]."""
+    latest = {}
+    for _run_dir, rec, _sha in evidence.load_results(evidence_dir):
+        if rec.get("class") != "HW-MANUAL":
+            continue
+        tid = rec.get("test_id", "?")
+        if tid not in latest or rec.get("timestamp", "") >= latest[tid].get("timestamp", ""):
+            latest[tid] = rec
+    return sorted(latest.items())
+
+
+def classify(rec):
+    """'attested' | 'by-design' | 'unattested'"""
+    if rec.get("status") == "PASS":
+        return "attested"
+    if rec.get("attestation") == BY_DESIGN and str(rec.get("note", "")).strip():
+        return "by-design"
+    return "unattested"
+
+
+def vendor_ages(text, today):
+    out = []
+    for r in thirdparty.vendor_rows(text):
+        age = ""
+        if thirdparty.DATE_RE.match(r["pinned"]):
+            age = (today - datetime.date.fromisoformat(r["pinned"])).days
+        out.append((r["component"], r["version"], r["pinned"], age))
+    return out
+
+
+def build_notes(evidence_dir, third_party_text, today):
+    """-> (notes text, [unattested test ids])"""
+    rows = hw_manual_rows(evidence_dir)
+    bad = [t for t, rec in rows if classify(rec) == "unattested"]
+    lines = ["# SecLegion OS release notes", "", NO_AI_LINE, "", "## Vendor components", "",
+             "| Component | Version | Pinned | Age (days) |", "|---|---|---|---|"]
+    for comp, ver, pinned, age in vendor_ages(third_party_text, today):
+        lines.append(f"| {comp} | {ver} | {pinned} | {age} |")
+    lines += ["", "## Hardware evidence (HW-MANUAL)", ""]
+    if not rows:
+        lines.append("No HW-MANUAL evidence rows are recorded.")
+    for tid, rec in rows:
+        kind = classify(rec)
+        if kind == "attested":
+            lines.append(f"- {tid}: attested ({rec.get('timestamp', '')})")
+        elif kind == "by-design":
+            lines.append(f"- {tid}: not attested by design. {rec['note'].strip()}")
+        else:
+            lines.append(f"- {tid}: NOT ATTESTED ({rec.get('status')})")
+    return "\n".join(lines) + "\n", bad
+
+
+def cmd_notes(a):
+    tp = a.third_party or os.path.join(REPO, "docs", "third-party.md")
+    with open(tp, encoding="utf-8") as f:
+        text = f.read()
+    today = datetime.date.fromisoformat(a.today) if a.today else datetime.date.today()
+    notes, bad = build_notes(a.evidence, text, today)
+    for tid, rec in hw_manual_rows(a.evidence):
+        if classify(rec) == "by-design":
+            print(f"{tid} (not attested by design): {rec['note'].strip()}")
+    if bad:
+        print(f"refused: HW-MANUAL rows neither attested nor not-attested-by-design with a note: {', '.join(bad)}",
+              file=sys.stderr)
+        return 1
+    with open(a.out, "w", encoding="utf-8") as f:
+        f.write(notes)
+    print(f"wrote {a.out}")
+    return 0
+
+
+def norm_fp(s):
+    return re.sub(r"[^0-9A-Fa-f]", "", s).upper()
+
+
+def read_fp(path):
+    with open(path, encoding="utf-8") as f:
+        return norm_fp(f.read())
+
+
+def keyring_from_iso(iso):
+    """Bytes of the keyring file inside the ISO, or None when no tool or no such file."""
+    cmds = []
+    if shutil.which("bsdtar"):
+        cmds += [["bsdtar", "-xOf", iso, p] for p in (KEYRING_PATH, "./" + KEYRING_PATH)]
+    if shutil.which("7z"):
+        cmds.append(["7z", "e", "-so", iso, KEYRING_PATH])
+    for cmd in cmds:
+        r = subprocess.run(cmd, capture_output=True)  # noqa: S603
+        if r.returncode == 0 and r.stdout:
+            return r.stdout
+    return None
+
+
+def cmd_check_iso(a):
+    if not os.path.isfile(a.iso):
+        print(f"refused: no such ISO {a.iso}", file=sys.stderr)
+        return 1
+    fp = read_fp(a.fingerprint)
+    if not fp:
+        print(f"refused: {a.fingerprint} holds no fingerprint", file=sys.stderr)
+        return 1
+    for dev in a.dev_fingerprint or []:
+        if read_fp(dev) == fp:
+            print(f"refused: the signing key is the DEV key of a build ({dev}); a release needs its own key",
+                  file=sys.stderr)
+            return 1
+    ring = keyring_from_iso(a.iso)
+    if ring is None:
+        print("note: ISO keyring not readable with bsdtar/7z (or absent); embedded-keyring check skipped")
+    elif DEV_UID in ring:
+        print("refused: the ISO's seclegion keyring contains the DEV uid 'SecLegion DEV (throwaway'", file=sys.stderr)
+        return 1
+    print("ok: signing key is not a DEV key")
+    return 0
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(prog="release")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    n = sub.add_parser("notes")
+    n.add_argument("--evidence", required=True)
+    n.add_argument("--out", required=True)
+    n.add_argument("--third-party")
+    n.add_argument("--today", help="YYYY-MM-DD (tests)")
+    c = sub.add_parser("check-iso")
+    c.add_argument("--iso", required=True)
+    c.add_argument("--fingerprint", required=True)
+    c.add_argument("--dev-fingerprint", action="append")
+    a = ap.parse_args(argv)
+    return cmd_notes(a) if a.cmd == "notes" else cmd_check_iso(a)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Findings of `namcap` on the built packages that are accepted (make lint-pkgs / tools/lint-pkgs).
+# One extended regex per line, matched against a whole namcap output line, e.g.
+#   ^seclegion-branding .*: W: Unknown license 'LicenseRef-SecLegion-Branding'
+# Each entry needs a reason on the line above it. No entry yet: namcap was not available when
+# the packages were added, so no finding has been seen or judged.

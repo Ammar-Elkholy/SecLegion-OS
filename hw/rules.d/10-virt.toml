@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Guest agents and renderer workarounds inside virtual machines.
+
+[[rule]]
+id = "virt-qemu"
+[rule.when]
+virt = "qemu"
+[rule.add]
+packages = ["qemu-guest-agent", "spice-vdagent"]
+
+[[rule]]
+id = "virt-vmware"
+[rule.when]
+virt = "vmware"
+[rule.add]
+packages = ["open-vm-tools"]
+
+[[rule]]
+id = "virt-virtualbox"
+[rule.when]
+virt = "virtualbox"
+[rule.add]
+packages = ["virtualbox-guest-utils"]
+
+[[rule]]
+id = "virt-hyperv"
+[rule.when]
+virt = "hyperv"
+[rule.add]
+packages = ["hyperv"]
+
+[[rule]]
+id = "virt-compositor-env"
+description = "Virtual GPUs have no trustworthy hardware cursor plane; allow the software renderer"
+[rule.when]
+virtual = true
+[rule.add.env]
+WLR_NO_HARDWARE_CURSORS = "1"
+WLR_RENDERER_ALLOW_SOFTWARE = "1"
+
+[[rule]]
+id = "virt-gpu"
+description = "Paravirtual display adapters (virtio-gpu, QXL, Bochs/std VGA, VMware SVGA, VirtualBox)"
+claims_gpu = true
+[rule.when]
+virtual = true
+pci_class = "03"
+pci_vendor = ["1af4", "1b36", "1234", "15ad", "80ee"]
+[rule.add]
+packages = ["mesa", "vulkan-swrast"]

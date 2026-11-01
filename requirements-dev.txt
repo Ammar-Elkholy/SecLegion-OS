@@ -1,0 +1,4 @@
+pytest
+ruff
+reuse
+shellcheck-py

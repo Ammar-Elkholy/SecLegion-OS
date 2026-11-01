@@ -1,0 +1,55 @@
+{
+  "boot_entries": [],
+  "env": {
+    "GBM_BACKEND": "nvidia-drm",
+    "LIBVA_DRIVER_NAME": "nvidia",
+    "__GLX_VENDOR_LIBRARY_NAME": "nvidia"
+  },
+  "facts": {
+    "cpu_vendor": "AuthenticAMD",
+    "displays": [],
+    "gpus": [
+      {
+        "addr": "0000:09:00.0",
+        "boot_vga": true,
+        "class": "030000",
+        "nvidia_family": "turing-plus",
+        "pci_id": "10de:2503"
+      }
+    ],
+    "hybrid": false,
+    "kernel": "lts",
+    "laptop": false,
+    "touchpad": false,
+    "virt": "none"
+  },
+  "kernel_params": [
+    "nvidia-drm.modeset=1",
+    "nvidia.NVreg_PreserveVideoMemoryAllocations=1"
+  ],
+  "messages": [],
+  "packages": [
+    "linux-firmware",
+    "sof-firmware",
+    "alsa-ucm-conf",
+    "intel-ucode",
+    "amd-ucode",
+    "nvidia-open-lts",
+    "nvidia-utils",
+    "libva-nvidia-driver"
+  ],
+  "rules_applied": [
+    "always-firmware",
+    "nvidia-open-lts",
+    "nvidia-open-dedicated-env"
+  ],
+  "schema": 1,
+  "services": [
+    "nvidia-suspend.service",
+    "nvidia-resume.service",
+    "nvidia-hibernate.service"
+  ],
+  "settings": {},
+  "udev_rules": [],
+  "warnings": []
+}

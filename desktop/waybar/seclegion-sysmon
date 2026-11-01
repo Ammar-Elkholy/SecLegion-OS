@@ -1,0 +1,11 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Bar click target for the System Monitor. seclegion-host stages this into host/bin; when it also
+# staged host/bin/python/seclegion_sysmon (a live laptop before the package is installed) that copy runs,
+# otherwise the packaged /usr/bin/seclegion-sysmon does.
+here=$(dirname "$(readlink -f "$0")")
+if [ -d "$here/python/seclegion_sysmon" ]; then
+    PYTHONPATH="$here/python${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m seclegion_sysmon "$@"
+fi
+exec /usr/bin/seclegion-sysmon "$@"

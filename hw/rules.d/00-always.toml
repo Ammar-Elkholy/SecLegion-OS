@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Applies to every machine. Schema and match keys: pkgs/seclegion-hwdetect/python/seclegion_hw/engine.py.
+
+[[rule]]
+id = "always-firmware"
+description = "Full firmware, SOF audio, UCM profiles and both CPU microcodes on every install"
+[rule.add]
+packages = ["linux-firmware", "sof-firmware", "alsa-ucm-conf", "intel-ucode", "amd-ucode"]
+
+[[rule]]
+id = "touchpad-tap-to-click"
+description = "Tap-to-click wherever a touchpad exists"
+[rule.when]
+touchpad = true
+[rule.add.settings]
+"input.touchpad.tap_to_click" = true

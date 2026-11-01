@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Waybar custom/sl-sec: how many TCP ports are listening (distinct local ports in
+# state 0A of /proc/net/tcp and tcp6) and, when `nft list ruleset` can be read
+# without root, whether a firewall hook chain is loaded. The firewall part is left
+# out when nft is missing or not permitted. Short-lived; no resident process.
+# SL_PROC_NET, SL_NFT: tests only.
+proc="${SL_PROC_NET:-/proc/net}"
+nft="${SL_NFT:-nft}"
+ports=0
+files=()
+for f in "$proc/tcp" "$proc/tcp6"; do [ -r "$f" ] && files+=("$f"); done
+if [ "${#files[@]}" -gt 0 ]; then
+    ports="$(awk 'FNR > 1 && $4 == "0A" { n = split($2, a, ":"); seen[a[n]] = 1 } END { c = 0; for (p in seen) c++; print c }' "${files[@]}" 2>/dev/null)"
+    ports="${ports:-0}"
+fi
+text="󰒃 $ports"
+tip="Listening TCP ports: $ports"
+class="ok"
+rules="$("$nft" list ruleset 2>/dev/null)" || rules=""
+if [ -n "$rules" ]; then
+    if printf '%s\n' "$rules" | grep -q 'hook '; then
+        text+=" fw"; tip+="\\nFirewall: active"
+    else
+        text+=" no-fw"; tip+="\\nFirewall: no hook chains"; class="warn"
+    fi
+fi
+printf '{"text":"%s","tooltip":"%s","class":"%s"}\n' "$text" "$tip" "$class"

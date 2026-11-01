@@ -1,0 +1,23 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# /etc/os-release becomes a symlink to /usr/lib/seclegion/os-release (tmpfiles L+); /usr/lib/os-release
+# stays Arch's (technical attribution). The hook re-applies the link after a filesystem upgrade.
+pkgname=seclegion-release
+pkgver=0.1.0
+pkgrel=2
+pkgdesc='SecLegion OS identity: /etc/os-release override and the pacman hook that keeps it'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('MIT')
+depends=('systemd' 'filesystem')
+source=()
+
+package() {
+    install -Dm644 "$startdir/os-release" "$pkgdir/usr/lib/seclegion/os-release"
+    install -Dm644 "$startdir/00-seclegion-release.conf" "$pkgdir/usr/lib/tmpfiles.d/00-seclegion-release.conf"
+    install -Dm644 "$startdir/90-seclegion-os-release.hook" \
+        "$pkgdir/usr/share/libalpm/hooks/90-seclegion-os-release.hook"
+}

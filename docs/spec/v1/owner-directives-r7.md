@@ -1,0 +1,9 @@
+# Owner directives — round 7 (2026-10-14) — binding, override earlier placements
+
+1. **Plan approved.** Execution starts. Team mode: one Opus 5.5 lead reviewer ("Sec") reviews the plan and every deliverable; Sonnet 5.5 builders ("Legion-*") implement.
+2. **Two audiences, both first-class:** senior professionals (Linux/DevOps/security, decades of experience) and beginner students (2–3 months). Defaults must be safe and self-explanatory for beginners; nothing may hide or block full control for experts (pacman, configs, terminal, Hyprland config stay fully accessible).
+3. **Dynamic theming moves INTO 1.0 (was 1.3).** Like Omarchy: changing the wallpaper re-themes the whole desktop live — Hyprland borders, waybar, rofi, kitty, swaync, swayosd, hyprlock, GTK/Qt where applicable, fastfetch/starship accents. Keep SecLegion identity (dark base, teal/cyan-green family in auto mode) and readability (contrast clamp, protected error/warning/success colours). Must be lightweight (Arch-level): no resident daemon for theming; one short-lived pipeline run per change.
+4. **Bar is dynamic and polished**, recoloured with the theme, and the **SecLegion logo icon is shown top-left beside the workspace numbers**, in the owner's style (it is currently blank because the logo file is missing).
+5. **Live-host-first rule:** anything dynamic (applies without reboot/relogin) is implemented and applied on the owner's running system first so the owner sees it, then carried into the ISO. Anything that needs a reboot, relogin, bootloader, initramfs, display-manager or system-service change is done **only in the ISO/VM**, never on the owner's system. Every host change is backed up first and has a one-command rollback.
+6. Root/sudo is not available to agents. Host package installs are run by the owner. ISO builds run in a privileged Docker container (owner is in the `docker` group; `/dev/kvm` is available for QEMU tests).
+7. Agents are visible in the app's agents panel.

@@ -1,0 +1,60 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# The rules and the NVIDIA table live in the repository's hw/ (and the licence at its root), outside
+# this directory, which is all the container build copies. source.list names them; tools/pkg-source
+# (run by tools/build-pkgs) packs them into seclegion-src.tar.zst, unpacked into $srcdir with their
+# repo-relative names. check() fails the build when hw/nvidia-table.toml disagrees with the
+# supportedchips.html shipped by nvidia-utils.
+pkgname=seclegion-hwdetect
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='SecLegion OS hardware detection: TOML rules to packages, kernel parameters and a redacted report'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('MIT')
+depends=('python')
+makedepends=('nvidia-utils')
+options=('!strip')
+source=(seclegion-src.tar.zst)
+sha256sums=('SKIP')  # generated for the build from tracked files
+
+
+check() {
+    local _hw="$srcdir/hw" html=/usr/share/doc/nvidia/html/supportedchips.html
+    # The Arch container image sets NoExtract for usr/share/doc/*, so the installed nvidia-utils may
+    # lack the file: read it from the very package pacman installed (its cached archive) instead.
+    if [[ ! -f $html ]]; then
+        local ver pkg
+        ver=$(pacman -Q nvidia-utils | awk '{print $2}')
+        pkg=$(find /var/cache/pacman/pkg -maxdepth 1 -name "nvidia-utils-$ver-*.pkg.tar.zst" | head -n 1)
+        [[ -n $pkg ]] || { echo "check: no cached nvidia-utils $ver package" >&2; return 1; }
+        bsdtar -xOf "$pkg" "${html#/}" > "$srcdir/supportedchips.html"
+        html=$srcdir/supportedchips.html
+    fi
+    python -I "$_hw/tools/check-nvidia-table" \
+        --table "$_hw/nvidia-table.toml" --sha256-file "$_hw/nvidia-html.sha256" "$html"
+}
+
+package() {
+    local _hw="$srcdir/hw"
+    install -d "$pkgdir/usr/lib/seclegion/python/seclegion_hw"
+    install -m644 "$startdir"/python/seclegion_hw/*.py "$pkgdir/usr/lib/seclegion/python/seclegion_hw/"
+    install -d "$pkgdir/usr/lib/seclegion/python/seclegion_barcheck"
+    install -m644 "$startdir"/python/seclegion_barcheck/*.py \
+        "$pkgdir/usr/lib/seclegion/python/seclegion_barcheck/"
+    install -Dm755 "$startdir/bin/seclegion-hwdetect" "$pkgdir/usr/bin/seclegion-hwdetect"
+    install -Dm755 "$startdir/bin/seclegion-hwreport" "$pkgdir/usr/bin/seclegion-hwreport"
+    install -Dm755 "$startdir/bin/seclegion-barcheck" "$pkgdir/usr/bin/seclegion-barcheck"
+
+    local hw="$pkgdir/usr/share/seclegion/hw"
+    install -Dm644 "$_hw/nvidia-table.toml" "$hw/nvidia-table.toml"
+    install -d "$hw/rules.d"
+    install -m644 "$_hw"/rules.d/*.toml "$hw/rules.d/"
+    # An extra rule file next to rules.d (gaming.toml, added by a later job once it is in source.list).
+    [[ -f "$_hw/gaming.toml" ]] && install -m644 "$_hw/gaming.toml" "$hw/gaming.toml"
+
+    install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

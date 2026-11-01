@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Triggered only by seclegion-kiosk.service (OnFailure=). Shows the error screen and the log path.
+[Unit]
+Description=SecLegion installer kiosk error screen
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/share/seclegion/kiosk/error

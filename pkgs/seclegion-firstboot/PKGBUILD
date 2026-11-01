@@ -1,0 +1,20 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# First-boot setup: snapper baseline, Hyprland keyboard layout, vendor fetchers when online.
+pkgname=seclegion-firstboot
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='SecLegion OS first boot setup: baseline snapshot, keyboard layout, vendor fetchers if online'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('MIT')
+depends=('python' 'snapper' 'networkmanager')
+source=()
+
+package() {
+    install -Dm755 "$startdir/seclegion-firstboot" "$pkgdir/usr/bin/seclegion-firstboot"
+    install -Dm644 "$startdir/seclegion-firstboot.service" "$pkgdir/usr/lib/systemd/system/seclegion-firstboot.service"
+}

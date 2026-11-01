@@ -1,0 +1,64 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Registry of the remaining utilities (G59: each is reachable from a shortcut, the launcher,
+# the bar or a session unit). tests/desktop/test_w4_utils.py checks every entry.
+# reach = "bind" (hl.bind in desktop/hypr/seclegion-keys.lua running the script),
+#         "launcher" (a .desktop file under desktop/utils/applications), "bar" (a waybar module
+#         running it), "unit" (a user unit in desktop/units started with the session).
+
+[[util]]
+name = "night-light"
+script = "seclegion-night-light"
+reach = "bind"
+bind = "SUPER + CONTROL + N"
+
+[[util]]
+name = "emoji"
+script = "seclegion-emoji"
+reach = "bind"
+bind = "SUPER + CONTROL + E"
+
+[[util]]
+name = "stay-awake"
+script = "seclegion-stay-awake"
+reach = "bind"
+bind = "SUPER + CONTROL + I"
+
+[[util]]
+name = "reduced-motion"
+script = "seclegion-reduced-motion"
+reach = "bind"
+bind = "SUPER + CONTROL + M"
+
+[[util]]
+name = "power-profile"
+script = "seclegion-power-profile"
+reach = "bind"
+bind = "SUPER + CONTROL + P"
+
+[[util]]
+name = "firmware"
+script = "seclegion-firmware"
+reach = "launcher"
+desktop = "seclegion-firmware.desktop"
+
+[[util]]
+name = "battery-alerts"
+script = "seclegion-battery-watch"
+reach = "unit"
+unit = "seclegion-battery-watch.service"
+
+[[util]]
+name = "welcome"
+dir = "desktop/welcome"
+script = "seclegion-welcome"
+reach = "launcher"
+desktop = "seclegion-welcome.desktop"
+
+[[util]]
+name = "ai-center"
+dir = "ai/center"
+pkg = "seclegion-ai"
+script = "seclegion-ai-center"
+reach = "launcher"
+desktop = "seclegion-ai-center.desktop"

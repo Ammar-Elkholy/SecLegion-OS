@@ -1,0 +1,42 @@
+#!/usr/bin/python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-installer-gui [--kiosk] [--kiosk-error] [--log FILE] [--facts FILE]
+
+Starts the GTK installer. --kiosk (the install-mode cage session, user seclegion-installer) runs
+seclegion-install through pkexec instead of directly. --kiosk-error shows only the "installer could not
+start" page (used by the kiosk error unit). Facts come from installd's facts.gather unless --facts
+(tests) is given."""
+import argparse
+import json
+import os
+import sys
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+for sub in (os.path.join(HERE, "gtk"), os.path.join(HERE, "..", "installd")):
+    sys.path.insert(0, os.path.normpath(sub))
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(prog="seclegion-installer-gui")
+    ap.add_argument("--kiosk", action="store_true")
+    ap.add_argument("--kiosk-error", action="store_true")
+    ap.add_argument("--log")
+    ap.add_argument("--facts", help="facts JSON instead of gathering (tests)")
+    a = ap.parse_args(argv)
+    if a.facts:
+        with open(a.facts) as f:
+            facts = json.load(f)
+    elif a.kiosk_error:
+        facts = {}
+    else:
+        import facts as facts_mod
+
+        facts = facts_mod.gather(install_mode=None, dev_build=None)
+    import app
+
+    return app.main(facts, kiosk_error=a.kiosk_error, log_path=a.log, kiosk=a.kiosk)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

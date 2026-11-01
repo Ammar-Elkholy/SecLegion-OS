@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: 0BSD
+#
+# As archlinux-keyring does: add the keys only if the pacman keyring is initialised. On the
+# live ISO and on a pacstrap target it is not yet; pacman-init.service (live) or the
+# installer's pacman-key --init --populate does it later from /usr/share/pacman/keyrings.
+
+post_install() {
+    if usr/bin/pacman-key --list-keys >/dev/null 2>&1; then
+        usr/bin/pacman-key --populate seclegion
+    fi
+}
+
+post_upgrade() {
+    post_install
+}

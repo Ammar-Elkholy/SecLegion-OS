@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# Build the signed [seclegion] package repository (plan r14 R1). Host-side entry point: lists the
+# pkgs/ directories and calls tools/docker-build.sh repo, which builds them in the container with
+# a per-build DEV key that never leaves it (rule R3). The signed repository (db, files, packages,
+# .sig) and the key FINGERPRINT are copied to ./out/repo.
+#
+# A pkgs/<name>/source.list is turned into pkgs/<name>/seclegion-src.tar.zst by tools/pkg-source first.
+#
+# Usage: tools/build-pkgs [pkgs/<name>...]    (default: every pkgs/*/ holding a PKGBUILD)
+set -euo pipefail
+
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+workdir=${SECLEGION_WORKDIR:-/var/tmp/seclegion-build}
+
+dirs=("$@")
+if [[ ${#dirs[@]} -eq 0 ]]; then
+    for d in "$repo_root"/pkgs/*/; do
+        [[ -f $d/PKGBUILD ]] && dirs+=("pkgs/$(basename -- "$d")")
+    done
+fi
+[[ ${#dirs[@]} -gt 0 ]] || { echo "build-pkgs: no package directories" >&2; exit 1; }
+
+# A package that needs files outside its own directory lists them in source.list; pack them first
+# (the container build copies only pkgs/<name>/, so the PKGBUILD cannot read ../../).
+for d in "${dirs[@]}"; do
+    [[ -f $repo_root/$d/source.list ]] && "$repo_root/tools/pkg-source" "$d"
+done
+
+"$repo_root/tools/docker-build.sh" repo "${dirs[@]}"
+
+rm -rf "${repo_root:?}/out/repo"
+mkdir -p "$repo_root/out"
+cp -a -- "$workdir/out/repo" "$repo_root/out/repo"
+echo "build-pkgs: repo in $repo_root/out/repo/seclegion, key $(cat "$repo_root/out/repo/dev-key.fingerprint")"

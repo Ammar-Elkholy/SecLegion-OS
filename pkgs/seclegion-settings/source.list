@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Repo files seclegion-settings needs (tools/pkg-source packs them into seclegion-src.tar.zst).
+desktop/settings/seclegion_settings
+desktop/settings/seclegion-settings.desktop
+desktop/settings/62-seclegion-ideapad.rules
+desktop/settings/org.seclegion.settings.policy
+tools/seclegion-set
+tools/seclegion-settings
+tools/seclegion-root-apply
+tools/seclegion-doctor
+LICENSE

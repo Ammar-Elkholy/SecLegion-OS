@@ -1,0 +1,207 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-doctor - read-only health check of the SecLegion desktop session.
+
+    seclegion-doctor [--json] [--fixture FILE]
+
+Checks, in this order:
+  config      `hyprctl configerrors` is empty
+  swaync      at most one swaync runs for this user
+  binds       every program a keybind starts (exec_cmd in the owner's keybinds.lua and in
+              seclegion-keys.lua) is on the compositor's PATH
+  units       no systemd user unit is in the failed state
+
+It only reads: `hyprctl configerrors` (a query, never a dispatch/keyword/reload),
+`systemctl --user --failed`, /proc and the two keybind files. It writes no file and
+prints no environment, token or file contents beyond the error lines Hyprland reports.
+
+--json prints {"findings":[...]} with one finding per line, each
+{"id","level","message"}; level is ok, warn or error. --fixture FILE replaces the live
+facts with the JSON in FILE (keys: configerrors, swaync, binds, failed_units; a missing
+key means "not checked"), so the analysis can be tested without a session.
+Exit status: 0 no error finding, 1 at least one error, 2 usage or unreadable fixture.
+"""
+
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+HOME = os.path.expanduser("~")
+# The compositor's PATH: the system dirs, with the host overlay's ~/.local/bin first.
+BIND_PATH = os.pathsep.join([os.path.join(HOME, ".local/bin"), "/usr/local/bin", "/usr/bin"])
+BIND_FILES = (
+    os.path.join(HOME, ".config/hypr/modules/keybinds.lua"),
+    os.path.join(HOME, ".config/hypr/seclegion-keys.lua"),
+)
+MAX_LINE = 300
+
+
+def run(argv):
+    """Stdout of a read-only command, or None when it cannot run."""
+    try:
+        p = subprocess.run(argv, capture_output=True, text=True, timeout=10, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return p.stdout if p.returncode == 0 else None
+
+
+def count_swaync():
+    n, me = 0, os.getuid()
+    try:
+        pids = [p for p in os.listdir("/proc") if p.isdigit()]
+    except OSError:
+        return None
+    for pid in pids:
+        try:
+            with open(f"/proc/{pid}/comm", encoding="utf-8") as fh:
+                comm = fh.read().strip()
+            if comm == "swaync" and os.stat(f"/proc/{pid}").st_uid == me:
+                n += 1
+        except OSError:
+            continue
+    return n
+
+
+def first_word_present(command):
+    """True/False for the program a shell command line starts; None if it cannot be told."""
+    words = command.split()
+    if not words or any(c in words[0] for c in "$`("):
+        return None
+    w = words[0]
+    if w.startswith(("~", "/")):
+        path = os.path.expanduser(w)
+        return os.path.isfile(path) and os.access(path, os.X_OK)
+    return shutil.which(w, path=BIND_PATH) is not None
+
+
+def command_present(command):
+    """`a || b` is present when any alternative is; other shell syntax: first program only."""
+    res = [first_word_present(re.split(r"&&|;|\|(?!\|)", alt)[0].strip()) for alt in command.split("||")]
+    if any(r is True for r in res):
+        return True
+    return None if any(r is None for r in res) else False
+
+
+def bind_commands(text):
+    """Commands of the literal / simple-variable exec_cmd(...) calls in a Lua keybinds file."""
+    names = dict(re.findall(r'^\s*local\s+(\w+)\s*=\s*"([^"]*)"', text, re.M))
+    out = []
+    for arg in re.findall(r"exec_cmd\(\s*(.+?)\s*\)\s*(?:,|\)|$)", text, re.M):
+        m = re.match(r'"([^"]*)"|(\w+)', arg)
+        if not m:
+            continue
+        cmd = m.group(1) if m.group(1) is not None else names.get(m.group(2))
+        if cmd and cmd not in out:
+            out.append(cmd)
+    return out
+
+
+def collect_binds():
+    seen, binds, readable = set(), [], False
+    for path in BIND_FILES:
+        try:
+            with open(path, encoding="utf-8") as fh:
+                text = fh.read()
+        except OSError:
+            continue
+        readable = True
+        for cmd in bind_commands(text):
+            if cmd not in seen:
+                seen.add(cmd)
+                present = command_present(cmd)
+                if present is not None:
+                    binds.append({"cmd": cmd, "present": present})
+    return binds if readable else None
+
+
+def collect():
+    errs = run(["hyprctl", "configerrors"])
+    units = run(["systemctl", "--user", "--failed", "--no-legend", "--plain"])
+    return {
+        "configerrors": None if errs is None else errs.strip(),
+        "swaync": count_swaync(),
+        "binds": collect_binds(),
+        "failed_units": None if units is None else [ln.split()[0] for ln in units.splitlines() if ln.split()],
+    }
+
+
+def finding(id_, level, message):
+    return {"id": id_, "level": level, "message": message}
+
+
+def analyse(facts):
+    out = []
+    errs = facts.get("configerrors")
+    if errs is None:
+        out.append(finding("config", "warn", "config errors not checked (no Hyprland session answered `hyprctl configerrors`)"))
+    elif errs:
+        for line in [ln.strip()[:MAX_LINE] for ln in errs.splitlines() if ln.strip()][:5]:
+            out.append(finding("config", "error", "Hyprland config error: " + line))
+    else:
+        out.append(finding("config", "ok", "Hyprland reports no config errors"))
+    n = facts.get("swaync")
+    if n is None:
+        out.append(finding("swaync", "warn", "swaync processes not counted"))
+    elif n > 1:
+        out.append(finding("swaync", "error", f"{n} swaync processes are running; keep one (a second one steals notifications)"))
+    else:
+        out.append(finding("swaync", "ok", f"{n} swaync process"))
+    binds = facts.get("binds")
+    if binds is None:
+        out.append(finding("binds", "warn", "no keybinds file could be read"))
+    else:
+        missing = [b["cmd"] for b in binds if not b.get("present", True)]
+        for cmd in missing:
+            out.append(finding("binds", "warn", "a keybind starts `" + cmd[:MAX_LINE] + "`, which is not on the compositor's PATH"))
+        if not missing:
+            out.append(finding("binds", "ok", f"all {len(binds)} bind commands resolve"))
+    units = facts.get("failed_units")
+    if units is None:
+        out.append(finding("units", "warn", "failed user units not listed (no systemd user manager answered)"))
+    elif units:
+        for u in units:
+            out.append(finding("units", "warn", "failed user unit: " + u[:MAX_LINE]))
+    else:
+        out.append(finding("units", "ok", "no failed user units"))
+    return out
+
+
+def main(argv):
+    as_json, fixture = False, None
+    args = list(argv)
+    while args:
+        a = args.pop(0)
+        if a == "--json":
+            as_json = True
+        elif a == "--fixture" and args:
+            fixture = args.pop(0)
+        else:
+            print("usage: seclegion-doctor [--json] [--fixture FILE]", file=sys.stderr)
+            return 2
+    if fixture is not None:
+        try:
+            with open(fixture, encoding="utf-8") as fh:
+                facts = json.load(fh)
+            if not isinstance(facts, dict):
+                raise ValueError("not a JSON object")
+        except (OSError, ValueError) as e:
+            print(f"seclegion-doctor: cannot read fixture {fixture}: {e}", file=sys.stderr)
+            return 2
+    else:
+        facts = collect()
+    findings = analyse(facts)
+    if as_json:
+        body = ",\n".join(json.dumps(x, separators=(",", ":")) for x in findings)
+        print('{"findings":[\n' + body + "\n]}")
+    else:
+        for x in findings:
+            print(f"{x['level'].upper():5} {x['id']:7} {x['message']}")
+    return 1 if any(x["level"] == "error" for x in findings) else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

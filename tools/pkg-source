@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# Pack the repository files a package needs into pkgs/<name>/seclegion-src.tar.zst.
+#
+# The container build copies only pkgs/<name>/ to a scratch directory, so a PKGBUILD cannot read
+# ../../desktop or ../../LICENSE. pkgs/<name>/source.list names the repo-relative paths it needs
+# (one per line, '#' comments and blank lines allowed; a directory means every tracked file under it);
+# this tool tars the TRACKED files (git ls-files) of those paths with their repo-relative names, and the
+# PKGBUILD lists the tarball as `source=(seclegion-src.tar.zst)` with `sha256sums=('SKIP')` (the file
+# is generated for the build; it is gitignored). makepkg unpacks it into $srcdir.
+#
+# Deterministic: sorted names, owner 0, normalised modes, mtime from SOURCE_DATE_EPOCH or the commit
+# time of HEAD, a single zstd thread. A path that matches no tracked file is an error (nonzero exit).
+#
+# Usage: tools/pkg-source pkgs/<name>
+# PKG_SOURCE_ROOT overrides the repository root (tests only).
+set -euo pipefail
+
+die() { echo "pkg-source: $*" >&2; exit 1; }
+
+[[ $# -eq 1 ]] || die "usage: $0 pkgs/<name>"
+root=${PKG_SOURCE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
+dir=${1#"$root"/}
+dir=${dir%/}
+[[ $dir =~ ^pkgs/[A-Za-z0-9._-]+$ ]] || die "bad package directory '$1' (want pkgs/<name>)"
+list=$root/$dir/source.list
+[[ -f $list ]] || die "no $dir/source.list"
+
+files=()
+while IFS= read -r line || [[ -n $line ]]; do
+    line=${line%%#*}
+    line=${line#"${line%%[![:space:]]*}"}
+    line=${line%"${line##*[![:space:]]}"}
+    [[ -n $line ]] || continue
+    [[ $line != /* && $line != *..* && $line != *\\* ]] || die "$dir/source.list: bad path '$line'"
+    found=0
+    while IFS= read -r -d '' f; do
+        files+=("$f")
+        found=1
+    done < <(git -C "$root" ls-files -z -- "$line")
+    [[ $found == 1 ]] || die "$dir/source.list: '$line' matches no file tracked by git"
+done < "$list"
+[[ ${#files[@]} -gt 0 ]] || die "$dir/source.list lists no path"
+
+epoch=${SOURCE_DATE_EPOCH:-}
+[[ -n $epoch ]] || epoch=$(git -C "$root" log -1 --format=%ct) || die "cannot read the HEAD commit time"
+[[ $epoch =~ ^[0-9]+$ ]] || die "bad SOURCE_DATE_EPOCH '$epoch'"
+
+out=$root/$dir/seclegion-src.tar.zst
+tmp=$(mktemp "$out.XXXXXX")
+trap 'rm -f -- "$tmp"' EXIT
+printf '%s\0' "${files[@]}" | LC_ALL=C sort -zu \
+    | tar -cf - -C "$root" --no-recursion --sort=name --mtime="@$epoch" \
+        --owner=0 --group=0 --numeric-owner --mode='u+rw,a+r,go-w' --format=posix \
+        --pax-option='exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime' --null -T - \
+    | zstd -q -19 -T1 -o "$tmp" -f
+chmod 644 -- "$tmp"
+mv -f -- "$tmp" "$out"
+echo "pkg-source: $dir/seclegion-src.tar.zst ($(printf '%s\0' "${files[@]}" | LC_ALL=C sort -zu | tr -cd '\0' | wc -c) files)"

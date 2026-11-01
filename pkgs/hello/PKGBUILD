@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: 0BSD
+# Maintainer: SecLegion contributors
+pkgname=hello
+pkgver=1.0
+pkgrel=1
+pkgdesc='SecLegion pkgs-mode smoke test: installs a script that prints hello'
+arch=('any')
+url='https://github.com/seclegion/seclegion-os'
+license=('0BSD')
+depends=('bash')
+source=()
+
+package() {
+    install -d "$pkgdir/usr/bin"
+    printf '#!/bin/sh\necho hello\n' > "$pkgdir/usr/bin/seclegion-hello"
+    chmod 0755 "$pkgdir/usr/bin/seclegion-hello"
+}

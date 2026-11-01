@@ -1,0 +1,11 @@
+#!/usr/bin/python3 -I
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""Launcher: isolated interpreter (-I ignores PYTHONPATH and the cwd), code from /usr/lib/seclegion/python."""
+import sys
+
+sys.path.insert(0, "/usr/lib/seclegion/python")
+
+from seclegion_keys.cheatsheet import main  # noqa: E402
+
+sys.exit(main())

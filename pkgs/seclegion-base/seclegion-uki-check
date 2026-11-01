@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Warn (never fail) when a mkinitcpio preset has no *_uki= line: systemd-boot boots UKIs.
+# SECLEGION_PRESET_DIR overrides the directory (tests).
+set -uo pipefail
+dir=${SECLEGION_PRESET_DIR:-/etc/mkinitcpio.d}
+shopt -s nullglob
+for preset in "$dir"/*.preset; do
+    if ! grep -Eq '^[[:space:]]*[A-Za-z0-9_]*_uki=' "$preset"; then
+        echo "seclegion: warning: $preset has no *_uki= line; no unified kernel image will be built" >&2
+    fi
+done
+exit 0

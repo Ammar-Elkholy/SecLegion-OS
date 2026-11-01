@@ -1,0 +1,20 @@
+#!/bin/bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Installs Steam from Arch's official [multilib] (D-H1). Run as root; also run by seclegion-steam.service
+# on the first online boot. Offline or a failed install exits 0 (the marker stays: the next online boot
+# retries) so it never blocks boot; run by hand it still prints why.
+PENDING="${SECLEGION_STEAM_PENDING:-/var/lib/seclegion/steam-pending}"
+PACMAN="${SECLEGION_PACMAN:-pacman}"
+CONF="${SECLEGION_PACMAN_CONF:-/etc/pacman.conf}"
+
+if ! grep -q '^\[multilib\]' "$CONF"; then
+    echo "seclegion-install-steam: [multilib] is not enabled in $CONF; nothing to do" >&2
+    exit 0
+fi
+if "$PACMAN" -Syu --needed --noconfirm steam; then
+    rm -f "$PENDING"
+else
+    echo "seclegion-install-steam: could not install steam (offline?); will retry on the next online boot" >&2
+fi
+exit 0

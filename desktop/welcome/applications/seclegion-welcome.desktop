@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+[Desktop Entry]
+Type=Application
+Name=Welcome to SecLegion
+GenericName=Welcome
+Comment=First steps: keybindings, settings, vendor apps, updates, dual-boot guide, security tools
+Exec=seclegion-welcome
+Icon=help-about
+Terminal=false
+Categories=System;Utility;
+Keywords=welcome;first;start;help;intro;
+StartupNotify=true

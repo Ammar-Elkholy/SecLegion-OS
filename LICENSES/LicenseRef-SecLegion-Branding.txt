@@ -1,0 +1,11 @@
+SecLegion OS branding assets (the SecLegion logo and the other owner-authored artwork).
+
+Copyright (c) 2026 Ammar Elkholy. All rights reserved.
+
+Interim status (docs/decisions.md, M0-3): the owner has not yet chosen a licence for
+the branding assets. Until the owner does, no right to copy, modify, redistribute or
+reuse them is granted by this notice. The SecLegion OS code, which carries the MIT
+licence, does not cover these assets.
+
+This text is a placeholder for the owner's decision, not a licence grant. It will be
+replaced by the licence the owner picks.

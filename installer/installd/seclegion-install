@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-install --answers FILE [--dev]: gather facts, validate, archinstall offline, seclegion-post.
+
+Configs live in a 0700 tmpfs dir under /run that is removed at the end (also on failure).
+The live /etc/pacman.conf is replaced by an offline one (cache repo + [seclegion], SigLevel Required)
+for the run and restored afterwards; archinstall copies it into the target, seclegion-post finalizes it.
+Passwords are never printed.
+"""
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, HERE)
+import configurator as c  # noqa: E402
+import facts as facts_mod  # noqa: E402
+import release  # noqa: E402
+
+LIVE_CONF = "/etc/pacman.conf"
+GNUPG = "/etc/pacman.d/gnupg"
+OFFLINE_CONF = """[options]
+HoldPkg = pacman glibc
+Architecture = x86_64
+SigLevel = Required DatabaseOptional
+
+[seclegion-cache]
+Server = file:///opt/seclegion/cache
+
+[seclegion]
+SigLevel = Required DatabaseRequired
+Server = file:///opt/seclegion/cache/seclegion
+"""
+ARCHINSTALL_FLAGS = ["--silent", "--offline", "--skip-ntp", "--skip-wkd", "--skip-version-check",
+                     "--no-pkg-lookups"]
+
+
+def archinstall_argv(tmp):
+    return ["archinstall", "--config", os.path.join(tmp, "user_configuration.json"),
+            "--creds", os.path.join(tmp, "user_credentials.json"), *ARCHINSTALL_FLAGS]
+
+
+def post_argv(tmp, root="/mnt"):
+    return ["python3", os.path.join(HERE, "seclegion-post"), "--root", root,
+            "--hints", os.path.join(tmp, "seclegion-post.json"), "--creds-dir", tmp]
+
+
+def run(argv):
+    print("+ " + " ".join(argv), flush=True)
+    subprocess.run(argv, check=True)
+
+
+def ensure_keyring():
+    """Rescue/dev boots do not run pacman-init: the live keyring must exist and trust both keys."""
+    if not os.path.exists(os.path.join(GNUPG, "trustdb.gpg")):
+        run(["pacman-key", "--init"])
+        run(["pacman-key", "--populate", "archlinux", "seclegion"])
+
+
+OPT_IN = ("gaming", "virt")
+
+
+def opt_in_hints(data):
+    """The GUI's tier choices: only gaming/virt, only when exactly True. Never dev or anything else."""
+    return {k: True for k in OPT_IN if isinstance(data, dict) and data.get(k) is True}
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(prog="seclegion-install")
+    ap.add_argument("--answers", required=True)
+    ap.add_argument("--dev", action="store_true")
+    ap.add_argument("--facts", help="facts JSON instead of gathering (tests)")
+    ap.add_argument("--force-install-mode", action="store_true")
+    ap.add_argument("--hints", help="JSON of opt-in tiers from the GUI (only gaming/virt are read)")
+    a = ap.parse_args(argv)
+    bad = release.dev_violations(force_install_mode=a.force_install_mode, dev=a.dev, facts=bool(a.facts))
+    if bad:
+        print(f"refused: release build, DEV-only switch not allowed: {', '.join(bad)}", file=sys.stderr)
+        return 2
+    try:
+        if a.facts:
+            facts = json.load(open(a.facts))
+        else:
+            facts = facts_mod.gather(install_mode=True if a.force_install_mode else None, dev_build=None)
+        answers = c.Answers.from_dict(json.load(open(a.answers)))
+        config, creds = c.build_config(answers, facts)
+    except c.Refusal as r:
+        print(f"refused: {r}", file=sys.stderr)
+        return 2
+    hints = c.post_hints(answers)
+    if a.hints:
+        hints.update(opt_in_hints(json.load(open(a.hints))))
+    if a.dev:
+        hints["dev"] = True
+    tmp = tempfile.mkdtemp(prefix="seclegion-install-", dir="/run")
+    os.chmod(tmp, 0o700)
+    saved = LIVE_CONF + ".seclegion-orig"
+    try:
+        c.write(config, creds, tmp, hints)
+        shutil.copy2(LIVE_CONF, saved)
+        with open(LIVE_CONF, "w") as f:
+            f.write(OFFLINE_CONF)
+        ensure_keyring()
+        run(archinstall_argv(tmp))
+        os.replace(saved, LIVE_CONF)
+        run(post_argv(tmp))
+    finally:
+        if os.path.exists(saved):
+            os.replace(saved, LIVE_CONF)
+        shutil.rmtree(tmp, ignore_errors=True)
+    print("SECLEGION-INSTALL-OK")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except subprocess.CalledProcessError as exc:  # one line: the failing tool's own stderr stays visible above
+        print(f"FAILED rc={exc.returncode}: {' '.join(map(str, exc.cmd))}", file=sys.stderr)
+        sys.exit(1)

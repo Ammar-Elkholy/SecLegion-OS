@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# VM gate only (tests/iso/test_m2_targets.py): runs when the harness passes the system credential
+# seclegion.selftest (an SMBIOS OEM string). A normal boot skips it. Wanted by the three mode targets.
+# Not ordered after pacman-init: that waits for time-sync.target, which never completes offline (qemu net=none).
+[Unit]
+Description=SecLegion in-guest self test (VM gate only)
+ConditionCredential=seclegion.selftest
+After=basic.target
+
+[Service]
+# simple, not oneshot: the script waits for the job queue to empty, which includes this unit's own job.
+Type=simple
+ExecStart=/usr/local/bin/seclegion-selftest

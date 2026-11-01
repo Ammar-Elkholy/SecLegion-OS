@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# host-measure [-t SECONDS] NAME...
+# Idle footprint of running processes, matched by exact name: PSS (kB, from
+# smaps_rollup) and CPU% averaged over the sampling window. Own uid only; read-only.
+set -u
+secs=10
+if [ "${1:-}" = "-t" ]; then secs="$2"; shift 2; fi
+[ $# -gt 0 ] || set -- waybar dunst swaync
+
+hz=$(getconf CLK_TCK)
+declare -A t0 pids
+for n in "$@"; do
+    for p in $(pgrep -x -u "$(id -u)" "$n"); do
+        pids[$p]=$n
+        t0[$p]=$(awk '{print $14+$15}' "/proc/$p/stat" 2>/dev/null || echo 0)
+    done
+done
+sleep "$secs"
+printf '%-10s %7s %10s %7s\n' name pid pss_kB cpu_pct
+for p in "${!pids[@]}"; do
+    [ -r "/proc/$p/smaps_rollup" ] || continue
+    t1=$(awk '{print $14+$15}' "/proc/$p/stat" 2>/dev/null || echo 0)
+    pss=$(awk '/^Pss:/ {print $2}' "/proc/$p/smaps_rollup")
+    cpu=$(awk -v a="${t0[$p]}" -v b="$t1" -v hz="$hz" -v s="$secs" 'BEGIN{printf "%.2f", (b-a)/hz/s*100}')
+    printf '%-10s %7s %10s %7s\n' "${pids[$p]}" "$p" "$pss" "$cpu"
+done | sort

@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# seclegion-autolock - how long the session may sit idle before it locks.
+#
+#   seclegion-autolock status
+#   seclegion-autolock set default|15m|30m|60m|never
+#
+# default  both user units stopped: the owner's hypridle (300 s) applies as it is.
+# never    seclegion-idle-inhibit.service holds an idle inhibitor; the owner's hypridle skips its lock.
+# 15m 30m 60m
+#          the inhibitor plus seclegion-idle.service, a second hypridle whose conf is written from
+#          hypridle.conf.in. Known gap: a D-Bus-only inhibit (a browser) is honoured only by the
+#          owner's instance, which the inhibitor already blocks.
+#
+# State is ~/.config/seclegion/autolock. The owner's ~/.config/hypr/hypridle.conf is never touched.
+# Needs `seclegion-host apply idle` first (it installs the units). No root, no pkexec.
+# Exit status: 0 ok, 2 bad value or usage, 3 the idle component is not applied, 5 systemctl failed.
+# Tests: SL_HOME (fake home) and a PATH stub for systemctl.
+set -Eeuo pipefail
+export LC_ALL=C
+
+PROG=seclegion-autolock
+HOME_DIR="${SL_HOME:-$HOME}"
+HERE="$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")"
+STATE_FILE="$HOME_DIR/.config/seclegion/autolock"
+CONF_DIR="$HOME_DIR/.local/share/seclegion/host/idle"
+UNIT_DIR="$HOME_DIR/.config/systemd/user"
+INHIBIT=seclegion-idle-inhibit.service
+HYPRIDLE=seclegion-idle.service
+CHOICES=(default 15m 30m 60m never)
+
+err() { printf '%s: %s\n' "$PROG" "$*" >&2; }
+usage() {
+    sed -n '3,5s/^# \{0,1\}//p' "${BASH_SOURCE[0]}" >&2
+    exit 2
+}
+
+valid() {
+    local c
+    for c in "${CHOICES[@]}"; do [ "$c" = "$1" ] && return 0; done
+    return 1
+}
+
+current() {
+    local v=""
+    if [ -f "$STATE_FILE" ]; then read -r v < "$STATE_FILE" || true; fi
+    if valid "$v"; then printf '%s\n' "$v"; else printf 'default\n'; fi
+}
+
+seconds() {
+    case "$1" in 15m) echo 900 ;; 30m) echo 1800 ;; 60m) echo 3600 ;; esac
+}
+
+unit_present() { [ -f "$UNIT_DIR/$1" ]; }
+
+# stop and disable a unit; a unit that was never installed has nothing to stop
+unit_off() {
+    unit_present "$1" || return 0
+    systemctl --user disable --now "$1" || { err "could not stop $1"; exit 5; }
+}
+
+render_conf() {
+    local tpl="$HERE/hypridle.conf.in" tmp
+    [ -f "$tpl" ] || { err "template $tpl is missing"; exit 3; }
+    mkdir -p -- "$CONF_DIR"
+    tmp="$(mktemp -- "$CONF_DIR/.hypridle.conf.XXXXXX")"
+    sed "s/@TIMEOUT@/$(seconds "$1")/" "$tpl" > "$tmp"
+    chmod 644 "$tmp"
+    mv -f -- "$tmp" "$CONF_DIR/hypridle.conf"
+}
+
+write_state() {
+    local tmp
+    mkdir -p -- "$(dirname -- "$STATE_FILE")"
+    tmp="$(mktemp -- "$STATE_FILE.XXXXXX")"
+    printf '%s\n' "$1" > "$tmp"
+    chmod 644 "$tmp"
+    mv -f -- "$tmp" "$STATE_FILE"
+}
+
+cmd_status() {
+    local v
+    v="$(current)"
+    printf '%s\n' "$v"
+    # say so when the units do not match the state (a unit stopped by hand)
+    case "$v" in
+        never | 15m | 30m | 60m)
+            systemctl --user is-active "$INHIBIT" >/dev/null 2>&1 || err "warning: $v is set but $INHIBIT is not running"
+            ;;
+    esac
+    case "$v" in
+        15m | 30m | 60m)
+            systemctl --user is-active "$HYPRIDLE" >/dev/null 2>&1 || err "warning: $v is set but $HYPRIDLE is not running"
+            ;;
+    esac
+    return 0
+}
+
+cmd_set() {
+    local v="${1:-}"
+    [ $# -eq 1 ] || usage
+    valid "$v" || { err "'$v' is not one of default, 15m, 30m, 60m, never"; exit 2; }
+    if [ "$v" != default ]; then
+        { unit_present "$INHIBIT" && unit_present "$HYPRIDLE"; } \
+            || { err "the idle units are not installed in $UNIT_DIR: run 'seclegion-host apply idle' first"; exit 3; }
+    fi
+    case "$v" in
+        default)
+            unit_off "$HYPRIDLE"
+            unit_off "$INHIBIT"
+            ;;
+        never)
+            unit_off "$HYPRIDLE"
+            systemctl --user enable --now "$INHIBIT" || { err "could not start $INHIBIT"; exit 5; }
+            ;;
+        *)
+            render_conf "$v"
+            # the inhibitor first, so the owner's timer is never left running between the two steps
+            systemctl --user enable --now "$INHIBIT" || { err "could not start $INHIBIT"; exit 5; }
+            systemctl --user enable "$HYPRIDLE" || { err "could not enable $HYPRIDLE"; exit 5; }
+            systemctl --user restart "$HYPRIDLE" || { err "could not restart $HYPRIDLE"; exit 5; }
+            ;;
+    esac
+    write_state "$v"
+    printf '%s\n' "$v"
+}
+
+case "${1:-}" in
+    status) [ $# -eq 1 ] || usage; cmd_status ;;
+    set) shift; cmd_set "$@" ;;
+    *) usage ;;
+esac

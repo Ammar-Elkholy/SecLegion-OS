@@ -1,0 +1,4 @@
+-- SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+-- SPDX-License-Identifier: MIT
+-- Append to ~/.config/yazi/init.lua (plugin dir: ~/.config/yazi/plugins/seclegion-space.yazi/)
+require("seclegion-space"):setup()

@@ -1,0 +1,77 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# desktop.x86_64: the official Arch packages the SecLegion desktop launches (plan r14 R3a).
+# Hyprland is the only session (owner decision 2026-10-17): greetd + regreet password login,
+# then Hyprland. No GNOME. Every name was checked with `pacman -Si` (core/extra).
+# The seclegion-{desktop,dotfiles,theme,settings,branding} packages come from the [seclegion]
+# repository and depend on these; the ISO assembler adds them, this fragment lists only
+# official packages.
+# login: greetd runs regreet inside the cage kiosk compositor
+greetd
+greetd-regreet
+cage
+# session: compositor, lock, idle, portals, polkit agent, Xwayland
+hyprland
+hyprlock
+hypridle
+hyprpolkitagent
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+xorg-xwayland
+polkit
+# bar, notifications, OSD, launcher (what desktop/waybar, swaync, osd and the keys launch)
+waybar
+swaync
+swayosd
+rofi
+libnotify
+# apps the components start
+foot
+kitty
+thunar
+gvfs
+tumbler
+yazi
+btop
+pavucontrol
+blueman
+nm-connection-editor
+network-manager-applet
+networkmanager
+bluez
+bluez-utils
+# audio, brightness, media keys, power profiles
+pipewire
+pipewire-pulse
+wireplumber
+brightnessctl
+playerctl
+power-profiles-daemon
+# screenshots and clipboard
+grim
+slurp
+swappy
+wl-clipboard
+# wallpaper engine and the theme engine's colour extraction
+awww
+matugen
+# settings app (GTK4 + libadwaita through PyGObject), apply-time validation (luac), user dirs
+python
+python-gobject
+python-psutil
+libnm
+gtk4
+libadwaita
+lua
+xdg-user-dirs
+# Qt/GTK theming targets of the gtk component
+qt6ct
+kvantum
+qt6-wayland
+# fonts the bar and lock screen use
+ttf-jetbrains-mono
+ttf-jetbrains-mono-nerd
+otf-font-awesome
+noto-fonts
+noto-fonts-emoji

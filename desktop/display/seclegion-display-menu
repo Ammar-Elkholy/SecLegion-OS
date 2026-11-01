@@ -1,0 +1,184 @@
+#!/usr/bin/python3 -I
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-display-menu: Laptop only / Extend / Mirror / External only (owner issue 14).
+
+    seclegion-display-menu           rofi menu (XF86Display, Super+Shift+P, the bar's display button)
+    seclegion-display-menu MODE      apply MODE (laptop, extend, mirror, external) without the menu
+    seclegion-display-menu --print MODE   print the hyprctl calls MODE would make, one JSON list a line
+
+Applied at runtime through hyprctl; no file is written, so a reload or a new session goes back to
+the configured monitors. render() maps (mode, `hyprctl -j monitors all`, `hyprctl -j workspaces`)
+to the hyprctl argv lists; main() runs them. Forms (tests/display/spike-monitor-apply.sh): the first
+runtime rule for an output drops the catch-all rule, so each rule carries the output's current
+mode and scale; later rules merge, so enabling sends `disabled = false` and un-mirroring
+`mirror = ""`. External only keeps a way back: when no external output ends up enabled, the laptop
+screen is enabled again (restore()). With one monitor the menu says so and offers nothing.
+One instance at a time (flock on $XDG_RUNTIME_DIR/seclegion/display-menu.lock).
+
+Env (tests): SL_HYPRCTL (default hyprctl, split like a shell), SL_ROFI (default
+"rofi -dmenu -i -p display"), SL_DISPLAY_INTERNAL (the laptop output; default the first eDP/LVDS/DSI
+monitor), SL_LOCK (lock file), SL_SETTLE (seconds before the External only check, default 1).
+"""
+import fcntl
+import json
+import os
+import shlex
+import subprocess
+import sys
+import time
+
+MODES = {"laptop": "Laptop only", "extend": "Extend", "mirror": "Mirror", "external": "External only"}
+INTERNAL_PREFIXES = ("eDP", "LVDS", "DSI")
+FALLBACK = "FALLBACK"   # the monitor Hyprland adds when every output is disabled
+
+
+def _rule(name, **fields):
+    body = "".join(f", {k} = {v}" for k, v in fields.items())
+    return ["eval", f'hl.monitor({{ output = "{name}"{body} }})']
+
+
+def _on(m, mirror=""):
+    """Enable rule keeping the monitor's current mode and scale (a first rule would drop them)."""
+    fields = {"disabled": "false", "mirror": f'"{mirror}"'}
+    if m.get("width") and m.get("height"):
+        fields["mode"] = '"%dx%d@%.2f"' % (m["width"], m["height"], m.get("refreshRate") or 60)
+    if m.get("scale"):
+        fields["scale"] = "%g" % m["scale"]
+    return _rule(m["name"], **fields)
+
+
+def _off(m):
+    return _rule(m["name"], disabled="true")
+
+
+def _move(ws, mon):
+    return ["dispatch", f'hl.dsp.workspace.move({{ workspace = "{ws}", monitor = "{mon}" }})']
+
+
+def _focus(mon):
+    return ["dispatch", f'hl.dsp.focus({{ monitor = "{mon}" }})']
+
+
+def split(monitors, internal=None):
+    """(the internal monitor or None, [external monitors]); FALLBACK is neither."""
+    ms = [m for m in monitors if m.get("name") and m["name"] != FALLBACK]
+    if internal is None:
+        internal = next((m["name"] for m in ms if m["name"].startswith(INTERNAL_PREFIXES)), None)
+    inner = next((m for m in ms if m["name"] == internal), None)
+    return inner, [m for m in ms if m is not inner]
+
+
+def _moves(workspaces, sources, target):
+    names = {m["name"] for m in sources}
+    return [_move(w["id"], target) for w in sorted(workspaces, key=lambda w: w["id"])
+            if w.get("monitor") in names and w["id"] > 0]
+
+
+def render(mode, monitors, workspaces=(), internal=None):
+    """The hyprctl argv lists that put the monitors in `mode`; [] when there is nothing to do safely
+    (no laptop screen or no external one)."""
+    if mode not in MODES:
+        raise ValueError(f"unknown mode {mode!r}")
+    inner, ext = split(monitors, internal)
+    if inner is None or not ext:
+        return []
+    n = inner["name"]
+    if mode == "laptop":
+        return [_on(inner), *_moves(workspaces, ext, n), *[_off(m) for m in ext], _focus(n)]
+    if mode == "extend":
+        return [_on(inner), *[_on(m) for m in ext], _focus(n)]
+    if mode == "mirror":
+        return [_on(inner), *_moves(workspaces, ext, n), *[_on(m, mirror=n) for m in ext], _focus(n)]
+    target = ext[0]["name"]
+    return [*[_on(m) for m in ext], *_moves(workspaces, [inner], target), _off(inner), _focus(target)]
+
+
+def restore(monitors, internal=None):
+    """After External only: the calls that bring the laptop screen back when no external output is
+    enabled (and not mirroring); [] when one is."""
+    inner, ext = split(monitors, internal)
+    if inner is None:
+        return []
+    if any(not m.get("disabled") and str(m.get("mirrorOf", "none")) == "none" for m in ext):
+        return []
+    return [_on(inner), _focus(inner["name"])]
+
+
+def current(monitors, internal=None):
+    inner, ext = split(monitors, internal)
+    shown = [m for m in ([inner] if inner else []) + ext if not m.get("disabled")]
+    return ", ".join(m["name"] + (" (mirror)" if str(m.get("mirrorOf", "none")) != "none" else "")
+                     for m in shown)
+
+
+class Hypr:
+    def __init__(self):
+        self.cmd = shlex.split(os.environ.get("SL_HYPRCTL", "hyprctl"))
+
+    def query(self, *what):
+        r = subprocess.run([*self.cmd, "-j", *what], capture_output=True, text=True)
+        return json.loads(r.stdout) if r.returncode == 0 and r.stdout.strip() else []
+
+    def run(self, calls):
+        bad = []
+        for argv in calls:
+            r = subprocess.run([*self.cmd, *argv], capture_output=True, text=True)
+            if r.returncode != 0 or r.stdout.strip().startswith("error"):
+                bad.append(f"{argv[-1]}: {(r.stdout + r.stderr).strip()}")
+        return bad
+
+
+def apply(h, mode, internal):
+    calls = render(mode, h.query("monitors", "all"), h.query("workspaces"), internal)
+    bad = h.run(calls)
+    if mode == "external" and calls:
+        time.sleep(float(os.environ.get("SL_SETTLE", "1")))
+        back = restore(h.query("monitors", "all"), internal)
+        if back:
+            bad.append("no external output came up: the laptop screen is back on")
+            bad += h.run(back)
+    for line in bad:
+        print(f"seclegion-display-menu: {line}", file=sys.stderr)
+    return 1 if bad else 0
+
+
+def menu(h, internal):
+    mons = h.query("monitors", "all")
+    inner, ext = split(mons, internal)
+    rofi = shlex.split(os.environ.get("SL_ROFI", "rofi -dmenu -i -p display"))
+    if inner is None or not ext:
+        only = (inner or {}).get("name") or current(mons, internal) or "none"
+        subprocess.run([*rofi, "-mesg", f"Only one display is connected ({only})"],
+                       input="", capture_output=True, text=True)
+        return 0
+    r = subprocess.run([*rofi, "-mesg", f"Now: {current(mons, internal)}"],
+                       input="\n".join(MODES.values()), capture_output=True, text=True)
+    pick = r.stdout.strip()
+    mode = next((k for k, v in MODES.items() if v == pick), None)
+    return apply(h, mode, internal) if r.returncode == 0 and mode else 0
+
+
+def main(argv):
+    internal = os.environ.get("SL_DISPLAY_INTERNAL") or None
+    if argv[:1] == ["--print"] and len(argv) == 2 and argv[1] in MODES:
+        h = Hypr()
+        for c in render(argv[1], h.query("monitors", "all"), h.query("workspaces"), internal):
+            print(json.dumps(c))
+        return 0
+    if len(argv) > 1 or (argv and argv[0] not in MODES):
+        print(__doc__.split("\n\n")[1], file=sys.stderr)
+        return 2
+    run = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
+    lock = os.environ.get("SL_LOCK") or os.path.join(run, "seclegion", "display-menu.lock")
+    os.makedirs(os.path.dirname(lock), exist_ok=True)
+    with open(lock, "a") as f:
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return 0   # another menu is open
+        return apply(Hypr(), argv[0], internal) if argv else menu(Hypr(), internal)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

@@ -1,0 +1,7 @@
+I: Bus=0011 Vendor=0001 Product=0001 Version=ab41
+N: Name="AT Translated Set 2 keyboard"
+
+I: Bus=0018 Vendor=04f3 Product=3140 Version=0100
+N: Name="ELAN0678:00 04F3:3140 Touchpad"
+P: Phys=i2c-ELAN0678:00
+

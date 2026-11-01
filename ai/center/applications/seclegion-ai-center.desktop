@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+[Desktop Entry]
+Type=Application
+Name=SecLegion AI Center
+GenericName=AI Center
+Comment=Local AI runtime, installed models, and cloud provider keys kept in the Secret Service
+Exec=seclegion-ai-center
+Icon=applications-science
+Terminal=false
+Categories=System;Utility;
+Keywords=ai;llm;ollama;models;api;key;
+StartupNotify=true

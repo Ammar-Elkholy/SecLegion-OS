@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# seclegion.list: packages from our own signed [seclegion] repository (tools/build-pkgs), ISO only.
+# They join packages.x86_64 but are never resolved against core/extra (tools/container-build.sh):
+# the repository is embedded in the ISO at /opt/seclegion/cache/seclegion.
+seclegion-keyring
+# The installer (seclegion-install, the GTK GUI) and what it reads at run time: seclegion-hwdetect
+# supplies seclegion-hwreport (installer page 11) and /usr/share/seclegion/hw/gaming.toml (gaming tier).
+seclegion-hwdetect
+seclegion-installer

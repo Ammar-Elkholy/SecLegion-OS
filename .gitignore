@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: MIT
+# build products
+build/
+out/
+*.iso
+*.qcow2
+*.img
+# local tooling
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+# evidence/<test-id>/<iso-sha256>/<UTC-timestamp>/: the result and its small artifacts
+# (serial.log, screen.png; hashed in result.json) are tracked so a PASS stays verifiable
+# from a fresh clone. Anything else a run leaves there (qemu.stderr, scratch) is not.
+evidence/**
+!evidence/README.md
+!evidence/*/
+!evidence/*/*/
+!evidence/*/*/*/
+!evidence/*/*/*/result.json
+!evidence/*/*/*/serial.log
+!evidence/*/*/*/screen.png
+!evidence/*/*/*/theme.log
+*.pyc
+# agent/build scratch (gitignored, dies with the worktree)
+.build/
+# Claude Code local state and agent worktrees (full repo copies; never scanned or committed)
+.claude/
+pkgs/*/seclegion-src.tar.zst

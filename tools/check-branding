@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""Boot an ISO's default entry in the VM harness and check that it shows no Arch branding.
+
+Scans the serial console and, when tesseract is installed, the OCR of a screendump, against the
+rule in tools/lib/branding.py. Prints `branding-ok` (exit 0) or `branding-FAIL: <hits>` (exit 1).
+
+  check-branding out/<iso>                  boot and scan
+  check-branding --evidence out/<iso>       also write the M1-branding evidence record
+  check-branding --plant "Arch Linux" ISO   self-test: append the string to what was captured;
+                                            must print branding-FAIL
+  check-branding --scan-file FILE           scan a text file only, no VM (unit tests)
+
+The image is only ever a file: the harness refuses /dev paths. Exit 2 = could not run.
+"""
+
+import argparse
+import os
+import sys
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+REPO = os.path.dirname(HERE)
+sys.path.insert(0, os.path.join(HERE, "lib"))
+sys.path.insert(0, REPO)
+import branding  # noqa: E402
+
+
+def verdict(texts):
+    hits = [hit for text in texts for hit in branding.scan(text)]
+    if hits:
+        print("branding-FAIL: " + "; ".join(sorted(set(hits))[:5]))
+        return 1
+    print("branding-ok")
+    return 0
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("iso", nargs="?", help="ISO image file to boot")
+    parser.add_argument("--plant", help="append this string to the captured text (negative self-test)")
+    parser.add_argument("--scan-file", help="scan this text file instead of booting")
+    parser.add_argument("--evidence", action="store_true", help="write the M1-branding record")
+    args = parser.parse_args(argv)
+
+    if args.evidence and args.plant:
+        parser.error("--plant is a self-test and never writes evidence")
+    if args.scan_file:
+        with open(args.scan_file, encoding="utf-8", errors="replace") as handle:
+            return verdict([handle.read(), args.plant or ""])
+    if not args.iso:
+        parser.error("an ISO file (or --scan-file) is required")
+
+    from tests.lib import bootgate  # noqa: PLC0415 - needs REPO on sys.path first
+    from tests.lib.ovmf import OvmfNotFound  # noqa: PLC0415
+    from tests.lib.qemu import DevicePathRefused, QemuVM  # noqa: PLC0415
+
+    captured = {}
+
+    def body(result_dir, iso):
+        text, shot, command = bootgate.boot_default(QemuVM, iso, result_dir)
+        status, ocr_text = bootgate.ocr_status_of(shot)
+        captured.update(text=text, ocr=ocr_text)
+        problems = [h for t in (text, ocr_text) for h in branding.scan(t)]
+        assert not problems, "Arch branding shown: " + "; ".join(sorted(set(problems))[:5])
+        return ("serial (and OCR when available) show no Arch branding; ocr " + status,
+                command, status)
+
+    try:
+        if args.evidence:
+            os.environ["SECLEGION_ISO"] = args.iso
+            status, actual = bootgate.run_gate(
+                "M1-branding", "serial and OCR of the default boot contain no Arch branding", body)
+            if status == "NOT RUN":
+                print(f"branding-NOT-RUN: {actual}")
+                return 2
+            print(f"check-branding: evidence recorded ({status})", file=sys.stderr)
+        else:
+            import tempfile  # noqa: PLC0415
+            with tempfile.TemporaryDirectory(prefix="check-branding-", dir="/var/tmp") as work:
+                text, shot, _command = bootgate.boot_default(QemuVM, args.iso, work)
+                captured["text"] = text
+                captured["ocr"] = bootgate.ocr_status_of(shot)[1]
+    except (OvmfNotFound, DevicePathRefused, RuntimeError) as exc:
+        print(f"branding-NOT-RUN: {exc}")
+        return 2
+    except AssertionError as exc:
+        print(f"branding-FAIL: {exc}")
+        return 1
+    return verdict([captured.get("text", ""), captured.get("ocr", ""), args.plant or ""])
+
+
+if __name__ == "__main__":
+    sys.exit(main())

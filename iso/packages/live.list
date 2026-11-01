@@ -1,0 +1,46 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# live.list: ISO only (never in the offline cache): archiso hooks, the bootloader
+# pieces, rescue tools. No openssh; the BIOS bootloader, refind and the BIOS memtest are
+# gone (UEFI + GRUB only). iwd, modemmanager, pcsclite, the guest agents and livecd-sounds
+# stay because the stock airootfs still enables their units.
+mkinitcpio-archiso
+mkinitcpio-nfs-utils
+nbd
+nfs-utils
+grub
+memtest86+-efi
+iwd
+modemmanager
+pcsclite
+brltty
+espeakup
+livecd-sounds
+alsa-utils
+grml-zsh-config
+tmux
+ntfs-3g
+exfatprogs
+xfsprogs
+f2fs-tools
+mdadm
+lvm2
+partclone
+ddrescue
+testdisk
+smartmontools
+nvme-cli
+hdparm
+dmidecode
+tpm2-tools
+tpm2-tss
+ethtool
+bind
+qemu-guest-agent
+spice-vdagent
+open-vm-tools
+virtualbox-guest-utils-nox
+hyperv
+# installer engine (D-R14-2): pinned to Arch extra 4.5-1; ISO only
+archinstall

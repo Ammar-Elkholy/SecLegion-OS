@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+[Desktop Entry]
+Type=Application
+Name=Firmware Update
+Comment=Check for and install firmware updates (fwupd)
+Exec=kitty --title "Firmware Update" seclegion-firmware
+Icon=system-software-update
+Terminal=false
+Categories=System;Settings;
+Keywords=firmware;fwupd;update;bios;

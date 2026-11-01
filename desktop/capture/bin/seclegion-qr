@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-qr: select a region, decode the QR/bar code (zbarimg), copy the decoded text and
+notify. The result is only copied, never opened. `seclegion-qr FILE` decodes an image file.
+
+Env (tests): SL_GRIM, SL_SLURP, SL_ZBARIMG, SL_WLCOPY, SL_NOTIFY.
+"""
+import os
+import shlex
+import subprocess
+import sys
+import tempfile
+
+
+def cmd(var, default):
+    return shlex.split(os.environ.get(var, default))
+
+
+def notify(title, body=""):
+    subprocess.run(cmd("SL_NOTIFY", "notify-send") + ["-a", "seclegion-capture", title, body], check=False)
+
+
+def main(argv):
+    with tempfile.TemporaryDirectory(prefix="seclegion-qr-") as td:
+        if argv:
+            img = argv[0]
+        else:
+            r = subprocess.run(cmd("SL_SLURP", "slurp"), capture_output=True, text=True)
+            g = r.stdout.strip()
+            if r.returncode != 0 or not g:
+                return 0
+            img = os.path.join(td, "r.png")
+            if subprocess.run(cmd("SL_GRIM", "grim") + ["-g", g, img]).returncode != 0:
+                notify("QR scan failed", "grim returned an error")
+                return 1
+        r = subprocess.run(cmd("SL_ZBARIMG", "zbarimg") + ["--quiet", "--raw", img], capture_output=True, text=True)
+        text = r.stdout.rstrip("\n")
+        if r.returncode != 0 or not text:
+            notify("No QR code found")
+            return 1
+        subprocess.run(cmd("SL_WLCOPY", "wl-copy"), input=text, text=True, check=False)
+        notify("QR decoded (copied, not opened)", text.splitlines()[0])
+        if argv:
+            print(text)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

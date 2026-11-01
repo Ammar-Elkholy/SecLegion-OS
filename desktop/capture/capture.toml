@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Capture tools; tests/desktop/test_capture.py checks each is reachable from its shortcut.
+[[util]]
+name = "screenshot-region"
+script = "seclegion-screenshot"
+bind = "ALT + Print"
+
+[[util]]
+name = "screenshot-screen"
+script = "seclegion-screenshot"
+bind = "ALT + SHIFT + Print"
+
+[[util]]
+name = "screenshot-window"
+script = "seclegion-screenshot"
+bind = "SUPER + ALT + Print"
+
+[[util]]
+name = "ocr"
+script = "seclegion-ocr"
+bind = "SUPER + CONTROL + O"
+
+[[util]]
+name = "qr"
+script = "seclegion-qr"
+bind = "SUPER + CONTROL + Q"
+
+[[util]]
+name = "record"
+script = "seclegion-record"
+bind = "SUPER + CONTROL + R"

@@ -1,0 +1,16 @@
+/* SPDX-License-Identifier: MIT */
+/* SecLegion Dark - fallback palette used until the theme engine writes
+ * ~/.local/state/seclegion/theme/current/colors.css (same variable contract). */
+@define-color sl_bg #050F0E;
+@define-color sl_surface #0B1E1C;
+@define-color sl_surface2 #12302C;
+@define-color sl_text #E0FFF4;
+@define-color sl_muted #7FA89E;
+@define-color sl_accent #00FF88;
+@define-color sl_accent2 #00F0FF;
+@define-color sl_border_active #00FF88;
+@define-color sl_border_inactive #0B1E1C;
+@define-color sl_ok #00FF88;
+@define-color sl_warn #FFCC66;
+@define-color sl_err #FF6666;
+@define-color sl_crit #FF2266;

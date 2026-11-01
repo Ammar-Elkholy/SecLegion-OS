@@ -1,0 +1,30 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# /etc/skel content for new users: a minimal Hyprland config that loads the modules of
+# seclegion-desktop, and the lock screen config as a symlink to the packaged one. The skel files
+# live in this directory (skel/), so no source.list is needed. No personal files, no wallpapers.
+# seclegion-desktop supplies the modules the config loads (see the note in its PKGBUILD on why the
+# sibling packages are not in depends=()).
+pkgname=seclegion-dotfiles
+pkgver=0.1.0
+pkgrel=2
+pkgdesc='SecLegion OS default user config (/etc/skel): Hyprland config, lock screen link, browser defaults'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('MIT')
+depends=('hyprland' 'hyprlock' 'hypridle' 'waybar' 'swaync' 'foot' 'rofi')
+
+package() {
+    install -Dm644 "$startdir/skel/.config/hypr/hyprland.lua" "$pkgdir/etc/skel/.config/hypr/hyprland.lua"
+    # hypridle exits without a config: this one turns logind's Lock signal into hyprlock
+    install -Dm644 "$startdir/skel/.config/hypr/hypridle.conf" "$pkgdir/etc/skel/.config/hypr/hypridle.conf"
+    # hyprlock reads ~/.config/hypr/hyprlock.conf: point it at the packaged lock screen
+    ln -s /usr/share/seclegion/hypr/hyprlock.conf "$pkgdir/etc/skel/.config/hypr/hyprlock.conf"
+    # browsers: Firefox default (system-wide), Wayland flags files for the vendor apps
+    install -Dm644 "$startdir/xdg/mimeapps.list" "$pkgdir/etc/xdg/mimeapps.list"
+    install -Dm644 "$startdir/skel/.config/code-flags.conf" "$pkgdir/etc/skel/.config/code-flags.conf"
+    install -Dm644 "$startdir/skel/.config/brave-flags.conf" "$pkgdir/etc/skel/.config/brave-flags.conf"
+}

@@ -1,0 +1,5 @@
+e2c2d1003cad079ac954b837e27cb8fffb9397584e4d5726ad900bf0f9184707
+# Expected sha256 of the vendor file /usr/share/doc/nvidia/html/supportedchips.html (nvidia-utils).
+# Pinned 2026-10-18 from nvidia-utils 615.78.08-1 (archive pin 2026/10/15). Re-pin when nvidia-utils
+# changes: the table check then fails until hw/nvidia-table.toml is regenerated (--emit) and reviewed.
+# check-nvidia-table --require-pinned makes UNPINNED fail.

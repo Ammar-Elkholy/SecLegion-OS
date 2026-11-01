@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# Weekly trigger for seclegion-canary.service, for the OWNER's host only (see the service file).
+[Unit]
+Description=Weekly SecLegion vendor update canary
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target

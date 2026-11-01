@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# M1 stub: say which mode booted, on the serial port the VM gate reads (tests/iso/test_m1_menu.py).
+[Unit]
+Description=SecLegion mode marker (%i)
+After=basic.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'echo SECLEGION-MODE=%i > /dev/ttyS0'

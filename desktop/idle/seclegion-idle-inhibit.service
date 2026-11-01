@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# seclegion-host:managed idle
+# Holds an idle inhibitor, so the owner's hypridle skips its lock timer.
+# Written by `seclegion-host apply idle`, enabled by `seclegion-autolock set never|15m|30m|60m`.
+[Unit]
+Description=SecLegion: no automatic lock (idle inhibitor)
+
+[Service]
+ExecStart=/usr/bin/systemd-inhibit --what=idle --who=SecLegion --why=autolock-off --mode=block sleep infinity
+
+[Install]
+WantedBy=default.target

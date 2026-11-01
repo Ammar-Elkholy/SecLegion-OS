@@ -1,0 +1,46 @@
+/* SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors */
+/* SPDX-License-Identifier: MIT */
+/* SecLegion System Monitor. Loaded after colors.css (@sl_* tokens), like the Settings app's
+   settings.css: the same mapping onto libadwaita's named colours, plus the graph colours. */
+
+@define-color window_bg_color @sl_bg;
+@define-color window_fg_color @sl_text;
+@define-color view_bg_color @sl_surface;
+@define-color view_fg_color @sl_text;
+@define-color headerbar_bg_color @sl_surface;
+@define-color headerbar_fg_color @sl_text;
+@define-color headerbar_border_color @sl_border_active;
+@define-color card_bg_color @sl_surface2;
+@define-color card_fg_color @sl_text;
+@define-color popover_bg_color @sl_surface;
+@define-color popover_fg_color @sl_text;
+@define-color dialog_bg_color @sl_surface;
+@define-color dialog_fg_color @sl_text;
+@define-color accent_bg_color @sl_accent;
+@define-color accent_fg_color @sl_bg;
+@define-color accent_color @sl_accent;
+@define-color destructive_bg_color @sl_crit;
+@define-color destructive_color @sl_crit;
+@define-color warning_color @sl_warn;
+@define-color success_color @sl_ok;
+@define-color error_color @sl_err;
+@define-color borders @sl_border_active;
+
+.title-1, .title-2, .title-3, .title-4, .heading, .sl-value, .sl-mono, columnview {
+  font-family: "JetBrainsMono Nerd Font", "JetBrainsMono Nerd Font Mono", monospace;
+}
+.sl-value { color: @sl_text; }
+.sl-muted { color: @sl_muted; }
+
+list.boxed-list {
+  background-color: @sl_surface2;
+  border: 1px solid @sl_border_inactive;
+  box-shadow: none;
+}
+list.boxed-list > row { background-color: transparent; }
+
+/* graphs draw in their CSS colour (Gtk.Widget.get_color) */
+.sl-graph { color: @sl_accent; }
+.sl-graph.sl-graph-mem { color: @sl_ok; }
+.sl-graph.sl-graph-up { color: @sl_warn; }
+.sl-core { font-size: 0.85em; min-width: 7em; }

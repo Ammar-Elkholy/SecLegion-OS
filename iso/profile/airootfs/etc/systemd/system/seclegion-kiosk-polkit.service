@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Wanted only by seclegion-install.target (spec A3). Writes the polkit rule that lets the no-sudo
+# seclegion-installer user run exactly /usr/bin/seclegion-install through pkexec into /run, so it is
+# gone after every boot and never exists in Live or Rescue. polkitd is restarted if it already runs:
+# it may have started before /run/polkit-1/rules.d existed and so not be watching it (spec U9).
+[Unit]
+Description=Authorize the installer kiosk user to run seclegion-install (polkit rule in /run)
+Before=seclegion-kiosk.service
+After=polkit.service
+
+[Service]
+Type=oneshot
+TimeoutStartSec=30
+ExecStart=/usr/bin/install -D -m 0644 /usr/share/seclegion/install/50-seclegion-installer.rules /run/polkit-1/rules.d/50-seclegion-installer.rules
+ExecStart=-/usr/bin/systemctl try-restart polkit.service

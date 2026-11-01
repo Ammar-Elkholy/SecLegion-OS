@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Tier-1 catalog, batch 2: wireless auditing. Schema and rules: catalog/README.md.
+
+[[tool]]
+name = "aircrack-ng"
+package = "aircrack-ng"
+source = "arch-extra"
+category = "wireless"
+purpose = "Wi-Fi audit suite: capture (airodump-ng), injection (aireplay-ng) and WEP/WPA key recovery (aircrack-ng)."
+privileges = "root"
+privileges_why = "Monitor mode and packet injection need root (or CAP_NET_ADMIN and CAP_NET_RAW) on a wireless interface; cracking a capture file needs none."
+safe_test = ["aircrack-ng", "--help"]
+safe_test_expect = "Aircrack-ng \\d+"
+removal = "sudo pacman -Rns aircrack-ng"
+update_policy = "Follows the Arch package; updated with the system (pacman -Syu). No pinning. The test touches no interface."
+docs = "aircrack-ng --help; man aircrack-ng; https://www.aircrack-ng.org/documentation.html"
+licence = "GPL-2.0-only AND BSD-3-Clause"
+needs_internet = false

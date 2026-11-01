@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""Fail when hw/nvidia-table.toml disagrees with NVIDIA's supportedchips.html.
+
+  check-nvidia-table [--table T] [--sha256-file F] [--require-pinned] HTML
+  check-nvidia-table --emit HTML     print a table (TOML) generated from HTML
+
+The vendor file (nvidia-utils: /usr/share/doc/nvidia/html/supportedchips.html) is read, never
+copied into the repository. It has one table of rows `<tr id="devidXXXX[_SSSS_DDDD]">` per driver
+branch; each table is announced by an anchor (`Current`, `legacy_580.xx`, ...). The table file lists
+the base 4-hex PCI device IDs of each anchor; the two must match exactly, in both directions.
+
+The expected sha256 of the vendor file is in hw/nvidia-html.sha256 (`UNPINNED` until the release
+checkpoint pins it). Exit 0 = agree, 1 = disagree or hash mismatch, 2 = could not run.
+"""
+
+import argparse
+import hashlib
+import sys
+import tomllib
+from html.parser import HTMLParser
+from pathlib import Path
+
+HW = Path(__file__).resolve().parent.parent
+SECTION_ANCHORS = ("Current", "legacy_")
+
+
+class _Parser(HTMLParser):
+    """Collect {anchor: set(base device IDs)} from the supportedchips.html structure."""
+
+    def __init__(self):
+        super().__init__()
+        self.sections = {}
+        self._anchor = None
+        self._row = False
+        self._cell = -1
+        self._text = ""
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "a" and (attrs.get("id") or "").startswith(SECTION_ANCHORS):
+            self._anchor = attrs["id"]
+            self.sections.setdefault(self._anchor, set())
+        elif tag == "tr" and (attrs.get("id") or "").startswith("devid"):
+            self._row, self._cell = True, -1
+        elif tag == "td" and self._row:
+            self._cell += 1
+            self._text = ""
+
+    def handle_data(self, data):
+        if self._row and self._cell == 1:
+            self._text += data
+
+    def handle_endtag(self, tag):
+        if tag == "td" and self._row and self._cell == 1:
+            ident = self._text.split()
+            if ident and self._anchor:
+                self.sections[self._anchor].add(ident[0].upper())
+        elif tag == "tr":
+            self._row = False
+
+
+def parse_html(text):
+    parser = _Parser()
+    parser.feed(text)
+    return {name: ids for name, ids in parser.sections.items() if ids}
+
+
+def load_table(path):
+    with open(path, "rb") as handle:
+        data = tomllib.load(handle)
+    return {s["anchor"]: {i.upper() for i in s["ids"]} for s in data.get("section", [])}
+
+
+def compare(html_sections, table_sections):
+    """Return the list of disagreements (empty = the two agree)."""
+    problems = []
+    for anchor in sorted(set(html_sections) | set(table_sections)):
+        html_ids, table_ids = html_sections.get(anchor), table_sections.get(anchor)
+        if html_ids is None:
+            problems.append(f"{anchor}: in the table but not in the HTML")
+        elif table_ids is None:
+            problems.append(f"{anchor}: in the HTML but not in the table")
+        else:
+            for ident in sorted(html_ids - table_ids):
+                problems.append(f"{anchor}: {ident} in the HTML, missing from the table")
+            for ident in sorted(table_ids - html_ids):
+                problems.append(f"{anchor}: {ident} in the table, not in the HTML")
+    return problems
+
+
+# Per-anchor metadata for --emit: family name and the driver that covers it.
+FAMILIES = {
+    "Current": ("turing-plus", "nvidia-open"),
+    "legacy_580.xx": ("maxwell-pascal-volta", "nouveau"),
+    "legacy_470.xx": ("kepler", "nouveau"),
+    "legacy_390.xx": ("fermi", "nouveau"),
+}
+
+
+def emit(html_sections):
+    out = [
+        "# SPDX-" + "FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors",
+        "# SPDX-" + "License-Identifier: MIT",
+        "# NVIDIA PCI device IDs by driver branch. Facts only; the vendor HTML is not copied.",
+        "# Checked against supportedchips.html by hw/tools/check-nvidia-table (regenerate: --emit).",
+        "# driver: nvidia-open = Turing and newer (open kernel modules, no DKMS); nouveau = older.",
+        "schema = 1",
+        "",
+    ]
+    for anchor in sorted(html_sections, key=lambda a: (a != "Current", a)):
+        family, driver = FAMILIES.get(anchor, ("tesla-and-older", "nouveau"))
+        ids = sorted(html_sections[anchor])
+        out += ["[[section]]", f'anchor = "{anchor}"', f'family = "{family}"', f'driver = "{driver}"']
+        out.append("ids = [")
+        for i in range(0, len(ids), 10):
+            out.append("  " + " ".join(f'"{d}",' for d in ids[i : i + 10]))
+        out += ["]", ""]
+    return "\n".join(out)
+
+
+def check_pin(html_bytes, pin_file, require):
+    words = Path(pin_file).read_text().split("#")[0].split()
+    pin = words[0] if words else ""
+    if pin == "UNPINNED":
+        if require:
+            return "sha256 is UNPINNED (--require-pinned)"
+        print("note: nvidia-html.sha256 is UNPINNED; vendor file hash not checked", file=sys.stderr)
+        return None
+    actual = hashlib.sha256(html_bytes).hexdigest()
+    if actual != pin.lower():
+        return f"vendor HTML sha256 {actual} != pinned {pin}"
+    return None
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("html", help="supportedchips.html from nvidia-utils")
+    parser.add_argument("--table", default=str(HW / "nvidia-table.toml"))
+    parser.add_argument("--sha256-file", default=str(HW / "nvidia-html.sha256"),
+                        help="pin file; '-' skips the hash check (synthetic fixtures)")
+    parser.add_argument("--require-pinned", action="store_true")
+    parser.add_argument("--emit", action="store_true", help="print a table generated from HTML")
+    args = parser.parse_args(argv)
+    try:
+        html_bytes = Path(args.html).read_bytes()
+        sections = parse_html(html_bytes.decode("utf-8", "replace"))
+        if not sections:
+            print("check-nvidia-table: no device tables found in the HTML", file=sys.stderr)
+            return 2
+        if args.emit:
+            print(emit(sections))
+            return 0
+        problems = compare(sections, load_table(args.table))
+        if args.sha256_file != "-":
+            bad = check_pin(html_bytes, args.sha256_file, args.require_pinned)
+            if bad:
+                problems.append(bad)
+    except (OSError, ValueError, KeyError) as err:
+        print(f"check-nvidia-table: {err}", file=sys.stderr)
+        return 2
+    if problems:
+        print(f"nvidia-table-FAIL: {len(problems)} disagreement(s)")
+        for line in problems[:40]:
+            print("  " + line)
+        return 1
+    print("nvidia-table-ok: " + ", ".join(f"{a}={len(i)}" for a, i in sorted(sections.items())))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

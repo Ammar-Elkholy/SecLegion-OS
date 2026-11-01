@@ -1,0 +1,32 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# The System Monitor (python package seclegion_sysmon, the seclegion-sysmon launcher, the desktop entry):
+# CPU, memory, disks, network, GPUs and processes in a GTK4 + libadwaita window.
+pkgname=seclegion-sysmon
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='SecLegion OS System Monitor (GTK4)'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('MIT')
+depends=('python' 'python-gobject' 'gtk4' 'libadwaita' 'python-psutil')
+source=(seclegion-src.tar.zst)
+sha256sums=('SKIP')  # generated for the build from tracked files (tools/pkg-source)
+
+_tree() {
+    local f
+    while IFS= read -r -d '' f; do
+        install -Dm644 "$srcdir/$1/$f" "$pkgdir/$2/$f"
+    done < <(cd "$srcdir/$1" && find . -type f ! -name '*.license' ! -path '*/__pycache__/*' -print0)
+}
+
+package() {
+    _tree desktop/sysmon/seclegion_sysmon usr/lib/seclegion/python/seclegion_sysmon
+    install -Dm755 "$srcdir/tools/seclegion-sysmon" "$pkgdir/usr/bin/seclegion-sysmon"
+    install -Dm644 "$srcdir/desktop/sysmon/seclegion-sysmon.desktop" \
+        "$pkgdir/usr/share/applications/seclegion-sysmon.desktop"
+    install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

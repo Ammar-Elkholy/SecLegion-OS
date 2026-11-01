@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# gaming.x86_64: official Arch packages for the opt-in gaming set (job H1), all in core/extra.
+# Mirrors hw/gaming.toml [packages].official; a test keeps the two equal. Steam is in [multilib],
+# which SecLegion does not enable, so it is not listed (see hw/gaming.toml [unavailable]).
+gamemode
+mangohud
+gamescope
+vulkan-tools

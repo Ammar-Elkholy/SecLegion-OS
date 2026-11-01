@@ -1,0 +1,96 @@
+#!/usr/bin/python3 -I
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-wallpaper: paint the SecLegion background on one output, or on all of them (owner issue 16).
+
+    seclegion-wallpaper [--output NAME] [--image IMG] [--tries N]
+
+The image is the first of these that is a file (--image skips the search):
+  1. the path in ~/.cache/current_wallpaper (the owner's wallpaper scripts write it), unless
+     ~/.cache/current_wallpaper_type says `video` (those play through mpvpaper, not awww)
+  2. the theme's wallpaper: $XDG_STATE_HOME/seclegion/theme/current/wallpaper (seclegion-theme)
+  3. /usr/share/backgrounds/seclegion/default.png (seclegion-branding)
+
+It runs `awww img [--outputs NAME] IMG --transition-type none` up to --tries times (default 10),
+0.3 s apart: awww-daemon may still be starting, or may not have bound a just-added output yet.
+No --output paints every output. Without awww, or with no image, it exits 0 quietly; when every
+try failed it exits 1. Logs go to stderr with a "wallpaper:" prefix.
+
+Called by seclegion-displayd (at start for all outputs, on monitoradded for that output) and by
+the seclegion-theme apply hook. Hooks (tests): SL_AWWW (awww command, split like a shell),
+SL_HOME (home of the .cache files), SL_THEME_WALLPAPER, SL_DEFAULT_WALLPAPER.
+"""
+
+import argparse
+import os
+import shlex
+import shutil
+import subprocess
+import sys
+import time
+
+DEFAULT = "/usr/share/backgrounds/seclegion/default.png"
+DELAY = 0.3   # seconds between tries
+
+
+def log(msg):
+    print(f"wallpaper: {msg}", file=sys.stderr, flush=True)
+
+
+def read(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read().strip()
+    except (OSError, ValueError):
+        return ""
+
+
+def pick_image(env):
+    home = env.get("SL_HOME") or env.get("HOME") or os.path.expanduser("~")
+    cache = os.path.join(home, ".cache")
+    named = read(os.path.join(cache, "current_wallpaper"))
+    if named and read(os.path.join(cache, "current_wallpaper_type")) != "video" and os.path.isfile(named):
+        return named
+    state = env.get("XDG_STATE_HOME") or os.path.join(home, ".local", "state")
+    theme = env.get("SL_THEME_WALLPAPER") or os.path.join(state, "seclegion", "theme", "current", "wallpaper")
+    for path in (theme, env.get("SL_DEFAULT_WALLPAPER") or DEFAULT):
+        if os.path.isfile(path):
+            return os.path.realpath(path)   # the theme's is a symlink into its own store
+    return None
+
+
+def main(argv=None):
+    a = argparse.ArgumentParser(prog="seclegion-wallpaper")
+    a.add_argument("--output", metavar="NAME", help="one output (default: all)")
+    a.add_argument("--image", metavar="IMG", help="paint this image instead of searching")
+    a.add_argument("--tries", type=int, default=10)
+    args = a.parse_args(argv)
+    env = os.environ
+    awww = shlex.split(env["SL_AWWW"]) if env.get("SL_AWWW") else [shutil.which("awww") or ""]
+    if not awww[0]:
+        return 0   # no awww installed: nothing to paint with
+    img = args.image if args.image and os.path.isfile(args.image) else pick_image(env)
+    if img is None:
+        log("no wallpaper image found")
+        return 0
+    where = ["--outputs", args.output] if args.output else []
+    cmd = [*awww, "img", *where, img, "--transition-type", "none"]
+    err = ""
+    for i in range(max(1, args.tries)):
+        if i:
+            time.sleep(DELAY)
+        try:
+            p = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True, check=False)
+        except OSError as e:
+            log(f"{awww[0]}: {e.strerror or e}")
+            return 1
+        if p.returncode == 0:
+            log(f"{args.output or 'all outputs'}: {img}")
+            return 0
+        err = (p.stderr or p.stdout).strip()
+    log(f"{args.output or 'all outputs'}: awww img failed {max(1, args.tries)} times: {err[:200]}")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

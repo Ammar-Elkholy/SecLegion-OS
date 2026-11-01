@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# Gaming manifest (job H1). Read by installer/installd/gaming.py; opt-in only (hints gaming: true).
+# Every name was checked with `pacman -Si`.
+schema = 1
+
+# Installed when the user opts in. All in core/extra, so all in the offline cache.
+[packages]
+official = ["gamemode", "mangohud", "gamescope", "vulkan-tools"]
+seclegion = ["seclegion-gaming"]
+
+# D-H1: Steam is in Arch's official [multilib] repository (32-bit libraries; steam pulls steam-devices
+# and a dozen lib32-* packages). The gaming opt-in enables [multilib] in the installed pacman.conf, but
+# the offline install cache has none of these, so they are NOT in the install: seclegion-steam.service
+# (seclegion-gaming) runs `pacman -Sy --needed steam` on the first online boot.
+[multilib]
+packages = ["steam", "steam-devices"]
+
+# NVIDIA module package -> the kernel package it is built for (nvidia-open depends on linux=VERSION).
+# No DKMS, so no kernel headers are needed.
+[nvidia_kernel_pair]
+nvidia-open = "linux"
+nvidia-open-lts = "linux-lts"

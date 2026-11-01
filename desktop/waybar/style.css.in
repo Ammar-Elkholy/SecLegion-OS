@@ -1,0 +1,183 @@
+/* SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors */
+/* SPDX-License-Identifier: MIT */
+/* SecLegion OS bar. __HOME__ is substituted by tools/host-apply at install. */
+@import url("file://__HOME__/.local/state/seclegion/theme/current/colors.css");
+
+* {
+  font-family: "JetBrainsMono Nerd Font", "JetBrainsMono NF", monospace;
+  font-size: 14px;
+  font-weight: bold;
+  min-height: 0;
+}
+
+window#waybar {
+  background: transparent;
+  color: @sl_text;
+}
+
+tooltip {
+  background: alpha(@sl_bg, 0.95);
+  border: 1px solid @sl_border_active;
+  border-radius: 8px;
+}
+tooltip label { color: @sl_text; }
+
+/* pills */
+#custom-launcher,
+#sl-media,
+#tray,
+#language,
+#disk,
+#custom-sl-sec,
+#cpu,
+#temperature,
+#memory,
+#custom-sl-gpu,
+#custom-sl-uptime,
+#custom-sl-vpn,
+#bluetooth,
+#power-profiles-daemon,
+#custom-notification,
+#network,
+#pulseaudio,
+#custom-sl-display,
+#backlight,
+#battery,
+#clock {
+  background-color: alpha(@sl_bg, 0.6);
+  color: @sl_text;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+#sl-media,
+#tray,
+#language,
+#disk,
+#custom-sl-sec,
+#cpu,
+#temperature,
+#memory,
+#custom-sl-gpu,
+#custom-sl-uptime,
+#custom-sl-vpn,
+#bluetooth,
+#power-profiles-daemon,
+#custom-notification,
+#network,
+#pulseaudio,
+#custom-sl-display,
+#backlight,
+#battery,
+#clock {
+  margin: 4px;
+  padding: 0 12px;
+}
+#sl-media { margin: 8px; }
+#sl-media.stopped { min-width: 0; margin: 0; padding: 0; background: none; opacity: 0; }
+#sl-media.paused { opacity: 0.7; }
+#language { min-width: 50px; }
+
+#language:hover,
+#disk:hover,
+#custom-sl-sec:hover,
+#cpu:hover,
+#temperature:hover,
+#memory:hover,
+#custom-sl-gpu:hover,
+#custom-sl-uptime:hover,
+#custom-sl-vpn:hover,
+#bluetooth:hover,
+#power-profiles-daemon:hover,
+#custom-notification:hover,
+#network:hover,
+#pulseaudio:hover,
+#custom-sl-display:hover,
+#backlight:hover,
+#battery:hover,
+#clock:hover,
+#sl-media:hover {
+  background-color: alpha(@sl_accent, 0.18);
+}
+
+/* launcher with the SecLegion emblem */
+#custom-launcher {
+  background-image: url("__HOME__/.local/share/seclegion/seclegion-logo.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 26px 26px;
+  min-width: 32px;
+  margin: 4px 6px 4px 2px;
+  padding: 0 4px;
+}
+#custom-launcher:hover {
+  background-color: alpha(@sl_accent, 0.25);
+}
+
+/* workspaces */
+button {
+  box-shadow: none;
+  border: none;
+  border-radius: 8px;
+}
+@WS_CSS@
+
+/* state colours */
+#pulseaudio.muted { color: @sl_err; }
+#network.disconnected { color: @sl_err; }
+#custom-sl-vpn.hidden,
+#custom-sl-ai.hidden,
+#custom-sl-gpu.hidden,
+#custom-sl-uptime.hidden {
+  background: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  opacity: 0;
+}
+#custom-sl-vpn.active { color: @sl_accent; }
+#custom-sl-ai.active { color: @sl_accent; }
+/* Bluetooth and notification chips: hidden states collapse like the other optional chips */
+#bluetooth.off,
+#bluetooth.disabled,
+#bluetooth.no-controller,
+#custom-notification.hidden {
+  background: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  opacity: 0;
+}
+#bluetooth.connected { color: @sl_accent; }
+#power-profiles-daemon.performance { color: @sl_err; }
+#power-profiles-daemon.balanced { color: @sl_text; }
+#power-profiles-daemon.power-saver { color: @sl_ok; }
+#custom-notification.dnd { color: @sl_warn; }
+#custom-notification.unread { color: @sl_accent; }
+/* resize mode chip (hyprland/submap; waybar hides it when no submap is active) */
+#submap {
+  background-color: @sl_accent;
+  color: @sl_bg;
+  border: none;
+  box-shadow: none;
+  border-radius: 8px;
+  margin: 4px;
+  padding: 0 12px;
+}
+#cpu.warning,
+#memory.warning,
+#custom-sl-gpu.warn { background-color: alpha(@sl_warn, 0.3); }
+#cpu.critical,
+#memory.critical,
+#temperature.critical { background-color: alpha(@sl_err, 0.4); }
+#custom-sl-sec.warn { background-color: alpha(@sl_warn, 0.3); }
+#disk.warning { background-color: alpha(@sl_warn, 0.3); }
+#disk.critical { background-color: alpha(@sl_err, 0.4); }
+#battery.warning:not(.charging) {
+  background-color: alpha(@sl_warn, 0.3);
+}
+#battery.critical:not(.charging) {
+  background-color: alpha(@sl_err, 0.4);
+}
+#tray > .passive { opacity: 0.6; }
+#tray > .needs-attention { background-color: alpha(@sl_err, 0.4); }

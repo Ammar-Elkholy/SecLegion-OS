@@ -1,0 +1,8 @@
+{
+  "colors": {
+    "primary": {"dark": {"color": "#e8b4ff"}, "light": {"color": "#6b3a8a"}},
+    "secondary": {"dark": {"color": "#d2bfdc"}},
+    "tertiary": {"dark": {"color": "#f4b7bd"}},
+    "surface": {"dark": {"color": "#151218"}}
+  }
+}

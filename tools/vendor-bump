@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""tools/vendor-bump <vscode|brave|claude>: pin the vendor's latest stable release in its fetcher manifest.
+
+Reads the vendor's latest version and its PUBLISHED hash (VS Code: the update API's sha256hash;
+Brave: the release's <asset>.sha256 file; Claude Code: platforms.linux-x64.checksum of the `stable`
+release's manifest.json), downloads the artifact (streamed, nothing kept) and
+refuses the bump unless the bytes hash to the published value. Then it rewrites version, released,
+url, sha256 (and hash_source, hash_url, signature for Brave and Claude Code) in
+pkgs/seclegion-<name>-fetch/<name>.toml and the pkgver of that PKGBUILD, and prints the diff. Needs
+network: update.code.visualstudio.com, api.github.com, github.com and downloads.claude.ai only. Run by
+the owner; commit the result.
+
+--no-download   trust the published hash without downloading the artifact (cross-check skipped)
+"""
+
+import argparse
+import difflib
+import hashlib
+import json
+import re
+import sys
+import urllib.request
+from datetime import UTC, datetime
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+VSCODE_API = "https://update.code.visualstudio.com/api/update/linux-x64/stable/latest"
+BRAVE_API = "https://api.github.com/repos/brave/brave-browser/releases?per_page=100"
+BRAVE_DL = "https://github.com/brave/brave-browser/releases/download/v{v}/brave-browser-{v}-linux-amd64.zip"
+CLAUDE_BASE = "https://downloads.claude.ai/claude-code-releases"
+HEX64 = re.compile(r"[0-9a-f]{64}")
+
+
+def get(url):
+    req = urllib.request.Request(url, headers={"User-Agent": "seclegion-vendor-bump"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return r.read()
+
+
+def stream_sha256(url):
+    req = urllib.request.Request(url, headers={"User-Agent": "seclegion-vendor-bump"})
+    h = hashlib.sha256()
+    with urllib.request.urlopen(req, timeout=60) as r:
+        while chunk := r.read(1 << 20):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def latest_vscode():
+    d = json.loads(get(VSCODE_API))
+    version = d["productVersion"]
+    return {
+        "version": version,
+        "released": datetime.fromtimestamp(d["timestamp"] / 1000, UTC).strftime("%Y-%m-%d"),
+        "url": f"https://update.code.visualstudio.com/{version}/linux-x64/stable",
+        "published_sha256": d["sha256hash"],
+        "extra": {"hash_source": VSCODE_API, "hash_url": "",
+                  "signature": "none published for the tarball; trust is TLS to "
+                               "update.code.visualstudio.com plus the pinned sha256"},
+    }
+
+
+def latest_brave(releases=None):
+    if releases is None:
+        releases = json.loads(get(BRAVE_API))
+    for r in releases:  # newest first; stable = not a prerelease and carries the plain linux zip
+        v = r["tag_name"].lstrip("v")
+        want = f"brave-browser-{v}-linux-amd64.zip"
+        if not r["prerelease"] and any(a["name"] == want for a in r["assets"]):
+            break
+    else:
+        sys.exit("vendor-bump: no stable Brave release with a linux-amd64 zip found")
+    url = BRAVE_DL.format(v=v)
+    published = get(url + ".sha256").decode().split()[0].lower()
+    return {
+        "version": v,
+        "released": r["published_at"][:10],
+        "url": url,
+        "published_sha256": published,
+        "extra": {"hash_source": url + ".sha256", "hash_url": url + ".sha256",
+                  "signature": url + ".sha256.asc"},
+    }
+
+
+def latest_claude():
+    """Claude Code's `stable` channel (about a week behind `latest`, skips regressions)."""
+    version = get(f"{CLAUDE_BASE}/stable").decode().strip()
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
+        sys.exit(f"vendor-bump: the Claude Code stable pointer {version!r} is not a plain version")
+    manifest_url = f"{CLAUDE_BASE}/{version}/manifest.json"
+    return claude_from_manifest(json.loads(get(manifest_url)), manifest_url)
+
+
+def claude_from_manifest(manifest, manifest_url):
+    version = manifest["version"]
+    return {
+        "version": version,
+        "released": manifest["buildDate"][:10],
+        "url": f"{CLAUDE_BASE}/{version}/linux-x64/claude",
+        "published_sha256": manifest["platforms"]["linux-x64"]["checksum"],
+        "extra": {"hash_source": manifest_url, "hash_url": "", "signature": manifest_url + ".sig"},
+    }
+
+
+LATEST = {"vscode": latest_vscode, "brave": latest_brave, "claude": latest_claude}
+
+
+def update_manifest(text, fields):
+    """Replace the value of each `key = "..."` line named in fields; a missing key is an error."""
+    for key, value in fields.items():
+        text, n = re.subn(rf'(?m)^({key}\s*=\s*)".*"', lambda m, v=value: f'{m.group(1)}"{v}"', text)
+        if n != 1:
+            raise ValueError(f"manifest has no single '{key}' line")
+    return text
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
+    ap.add_argument("name", choices=sorted(LATEST))
+    ap.add_argument("--no-download", action="store_true")
+    ap.add_argument("--root", type=Path, default=REPO, help=argparse.SUPPRESS)
+    args = ap.parse_args(argv)
+
+    d = LATEST[args.name]()
+    if not HEX64.fullmatch(d["published_sha256"]):
+        sys.exit(f"vendor-bump: the published hash {d['published_sha256']!r} is not a sha256")
+    if args.no_download:
+        print("vendor-bump: --no-download: the artifact was not hashed", file=sys.stderr)
+    else:
+        print(f"vendor-bump: downloading {d['url']} to hash it ...", file=sys.stderr)
+        got = stream_sha256(d["url"])
+        if got != d["published_sha256"]:
+            sys.exit(f"vendor-bump: REFUSED: the download hashes to {got} but the vendor publishes "
+                     f"{d['published_sha256']}; manifest unchanged")
+    pkg = args.root / "pkgs" / f"seclegion-{args.name}-fetch"
+    manifest, pkgbuild = pkg / f"{args.name}.toml", pkg / "PKGBUILD"
+    old_m, old_p = manifest.read_text(), pkgbuild.read_text()
+    new_m = update_manifest(old_m, {"version": d["version"], "released": d["released"], "url": d["url"],
+                                    "sha256": d["published_sha256"], **d["extra"]})
+    new_p = re.sub(r"(?m)^pkgver=.*$", f"pkgver={d['version']}", old_p)
+    new_p = re.sub(r"(?m)^pkgrel=.*$", "pkgrel=1", new_p)
+    if (new_m, new_p) == (old_m, old_p):
+        print(f"vendor-bump: {args.name} is already at {d['version']}")
+        return 0
+    manifest.write_text(new_m)
+    pkgbuild.write_text(new_p)
+    for path, old, new in ((manifest, old_m, new_m), (pkgbuild, old_p, new_p)):
+        sys.stdout.writelines(difflib.unified_diff(
+            old.splitlines(True), new.splitlines(True),
+            f"a/{path.relative_to(args.root)}", f"b/{path.relative_to(args.root)}"))
+    print(f"vendor-bump: now update the {args.name} version in docs/third-party.md "
+          "(tests/pkgs/test_fetchers.py checks it)", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

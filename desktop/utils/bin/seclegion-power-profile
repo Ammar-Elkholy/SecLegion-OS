@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# seclegion-power-profile [cycle|get|set PROFILE]: switch power-profiles-daemon between
+# power-saver, balanced and performance (only those the machine offers). Env (tests):
+# SL_PPCTL (default powerprofilesctl), SL_NOTIFY.
+set -u
+ppctl="${SL_PPCTL:-powerprofilesctl}"
+notify="${SL_NOTIFY:-notify-send}"
+cur="$("$ppctl" get 2>/dev/null)" || { echo "power-profiles-daemon is not available" >&2; exit 1; }
+set_profile() {
+    "$ppctl" set "$1" || exit 1
+    "$notify" -a SecLegion "Power profile" "$1" >/dev/null 2>&1 || true
+}
+case "${1:-cycle}" in
+    get) echo "$cur" ;;
+    set)
+        case "${2:-}" in
+            power-saver|balanced|performance) set_profile "$2" ;;
+            *) echo "unknown profile" >&2; exit 2 ;;
+        esac ;;
+    cycle)
+        avail="$("$ppctl" list 2>/dev/null | sed -n 's/^[* ] *\([a-z-]*\):$/\1/p')"
+        order=()
+        for p in power-saver balanced performance; do
+            printf '%s\n' "$avail" | grep -qx "$p" && order+=("$p")
+        done
+        [ "${#order[@]}" -gt 0 ] || { echo "no profiles" >&2; exit 1; }
+        next="${order[0]}"
+        for i in "${!order[@]}"; do
+            [ "${order[$i]}" = "$cur" ] && next="${order[$(( (i + 1) % ${#order[@]} ))]}"
+        done
+        set_profile "$next" ;;
+    *) echo "usage: seclegion-power-profile [cycle|get|set PROFILE]" >&2; exit 2 ;;
+esac

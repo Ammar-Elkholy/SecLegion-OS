@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# Pinned vendor manifest read by seclegion-brave-fetch and bumped by tools/vendor-bump brave.
+# `released` is the vendor's release date of this version (tools/canary measures the lag from it).
+name = "brave"
+version = "1.97.59"
+released = "2026-10-16"
+url = "https://github.com/brave/brave-browser/releases/download/v1.97.59/brave-browser-1.97.59-linux-amd64.zip"
+sha256 = "32979198ff09c4c656b0b060d929a44cdd6af167b2a141a77c2b7f36fd59e661"
+# The release publishes <asset>.sha256 and a detached signature <asset>.sha256.asc; the fetcher
+# compares the .sha256 file with the pin. The signature is not checked on the user's machine (no
+# pinned Brave key is shipped); tools/vendor-bump records its URL for the owner.
+hash_source = "https://github.com/brave/brave-browser/releases/download/v1.97.59/brave-browser-1.97.59-linux-amd64.zip.sha256"
+hash_url = "https://github.com/brave/brave-browser/releases/download/v1.97.59/brave-browser-1.97.59-linux-amd64.zip.sha256"
+signature = "https://github.com/brave/brave-browser/releases/download/v1.97.59/brave-browser-1.97.59-linux-amd64.zip.sha256.asc"

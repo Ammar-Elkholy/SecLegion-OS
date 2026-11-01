@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Repo files seclegion-theme needs (tools/pkg-source packs them into seclegion-src.tar.zst).
+desktop/theme/seclegion_theme
+desktop/theme/tokens.toml
+desktop/theme/default
+desktop/theme/default-colors.css
+desktop/theme/systemd
+tools/seclegion-theme
+tools/seclegion-theme-pick
+LICENSE

@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+[Unit]
+Description=SecLegion OS first boot setup
+ConditionPathExists=!/var/lib/seclegion/firstboot.done
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/seclegion-firstboot
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=multi-user.target

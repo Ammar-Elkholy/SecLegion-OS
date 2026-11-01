@@ -1,0 +1,67 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Tier-1 catalog, batch 1: web application testing. Schema and rules: catalog/README.md.
+
+[[tool]]
+name = "nikto"
+package = "nikto"
+source = "arch-extra"
+category = "web"
+purpose = "Web server scanner: dangerous files, outdated server software, misconfigurations."
+privileges = "none"
+privileges_why = "Plain HTTP(S) client; no raw sockets."
+safe_test = ["nikto", "-Version"]
+safe_test_expect = "Nikto"
+removal = "sudo pacman -Rns nikto"
+update_policy = "Follows the Arch package; updated with the system (pacman -Syu). Plugin databases ship in the package; do not run nikto -update."
+docs = "man nikto; https://github.com/sullo/nikto"
+licence = "GPL-3.0-only"
+needs_internet = false
+
+[[tool]]
+name = "gobuster"
+package = "gobuster"
+source = "arch-extra"
+category = "web"
+purpose = "Brute-force directories, files, DNS subdomains and virtual hosts from a wordlist."
+privileges = "none"
+privileges_why = "Plain HTTP/DNS client; no raw sockets."
+safe_test = ["gobuster", "version"]
+safe_test_expect = "\\d+\\.\\d+"
+removal = "sudo pacman -Rns gobuster"
+update_policy = "Follows the Arch package; updated with the system (pacman -Syu). No pinning."
+docs = "man gobuster; https://github.com/OJ/gobuster"
+licence = "Apache-2.0"
+needs_internet = false
+
+[[tool]]
+name = "ffuf"
+package = "ffuf"
+source = "seclegion"
+category = "web"
+purpose = "Fast web fuzzer: content discovery, parameter and vhost fuzzing with wildcard FUZZ keywords."
+privileges = "none"
+privileges_why = "Plain HTTP client; no raw sockets."
+safe_test = ["ffuf", "-V"]
+safe_test_expect = "ffuf version"
+removal = "sudo pacman -Rns ffuf"
+update_policy = "Vendored clean-chroot build in the [seclegion] repository (spec A8); rebuilt and republished by the project when upstream releases, shipped with the next repository update."
+docs = "ffuf -h; https://github.com/ffuf/ffuf"
+licence = "MIT"
+needs_internet = false
+
+[[tool]]
+name = "sqlmap"
+package = "sqlmap"
+source = "arch-extra"
+category = "web"
+purpose = "Automatic SQL injection detection and exploitation, database takeover."
+privileges = "none"
+privileges_why = "Python HTTP client; writes its session data under ~/.local/share/sqlmap."
+safe_test = ["sqlmap", "--version"]
+safe_test_expect = "\\d+\\.\\d+"
+removal = "sudo pacman -Rns sqlmap"
+update_policy = "Follows the Arch package; updated with the system (pacman -Syu). Do not use sqlmap --update."
+docs = "man sqlmap; https://github.com/sqlmapproject/sqlmap/wiki/Usage"
+licence = "GPL-2.0-or-later"
+needs_internet = false

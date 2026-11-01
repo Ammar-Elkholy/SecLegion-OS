@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# seclegion-host:managed theme-auto
+# One theme sync per wallpaper change (the .path unit starts it). `sync` does nothing when auto theme is off.
+# Written by `seclegion-host apply theme-auto`; rollback disables and removes it.
+[Unit]
+Description=SecLegion: derive the theme from the current wallpaper
+
+[Service]
+Type=oneshot
+# the wallpaper script writes current_wallpaper and then the frame: let both settle
+ExecStartPre=/usr/bin/sleep 1
+ExecStart=/usr/bin/python3 -I %h/.local/share/seclegion/host/theme-auto/seclegion-theme sync

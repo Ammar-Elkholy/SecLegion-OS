@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-screenshot [region|window|screen]: grim (+ slurp) -> ~/Pictures/Screenshots/,
+clipboard (wl-copy) and a notification. Window geometry comes from a read-only
+`hyprctl activewindow -j`. Cancelling the region selection does nothing.
+
+Env (tests): SL_GRIM, SL_SLURP, SL_HYPRCTL, SL_WLCOPY, SL_NOTIFY, SL_SCREENSHOT_DIR.
+"""
+import datetime
+import json
+import os
+import pathlib
+import shlex
+import subprocess
+import sys
+
+
+def cmd(var, default):
+    return shlex.split(os.environ.get(var, default))
+
+
+def notify(title, body=""):
+    subprocess.run(cmd("SL_NOTIFY", "notify-send") + ["-a", "seclegion-capture", title, body], check=False)
+
+
+def geometry(mode):
+    if mode == "screen":
+        return None
+    if mode == "region":
+        r = subprocess.run(cmd("SL_SLURP", "slurp"), capture_output=True, text=True)
+        g = r.stdout.strip()
+        return g if r.returncode == 0 and g else False
+    r = subprocess.run(cmd("SL_HYPRCTL", "hyprctl") + ["activewindow", "-j"], capture_output=True, text=True)
+    try:
+        w = json.loads(r.stdout)
+        (x, y), (ww, hh) = w["at"], w["size"]
+    except (ValueError, KeyError, TypeError):
+        return False
+    return f"{x},{y} {ww}x{hh}"
+
+
+def main(argv):
+    mode = argv[0] if argv else "region"
+    if mode not in ("region", "window", "screen"):
+        print(__doc__, file=sys.stderr)
+        return 2
+    g = geometry(mode)
+    if g is False:
+        if mode == "window":
+            notify("Screenshot failed", "no active window")
+        return 0
+    d = pathlib.Path(os.environ.get("SL_SCREENSHOT_DIR") or pathlib.Path.home() / "Pictures/Screenshots")
+    d.mkdir(parents=True, exist_ok=True)
+    out = d / datetime.datetime.now().strftime("screenshot-%Y%m%d-%H%M%S.png")
+    r = subprocess.run(cmd("SL_GRIM", "grim") + (["-g", g] if g else []) + [str(out)])
+    if r.returncode != 0 or not out.is_file():
+        notify("Screenshot failed", "grim returned an error")
+        return 1
+    with open(out, "rb") as f:
+        subprocess.run(cmd("SL_WLCOPY", "wl-copy") + ["--type", "image/png"], stdin=f, check=False)
+    notify("Screenshot saved", str(out))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

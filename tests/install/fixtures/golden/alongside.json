@@ -1,0 +1,240 @@
+{
+  "archinstall-language": "English",
+  "bootloader_config": {
+    "bootloader": "Systemd-boot",
+    "removable": false,
+    "uki": true
+  },
+  "custom_commands": [],
+  "disk_config": {
+    "config_type": "default_layout",
+    "device_modifications": [
+      {
+        "device": "/dev/vdb",
+        "partitions": [
+          {
+            "btrfs": [],
+            "dev_path": "/dev/vdb1",
+            "flags": [
+              "boot",
+              "esp"
+            ],
+            "fs_type": "fat32",
+            "mount_options": [],
+            "mountpoint": null,
+            "obj_id": "b3722da6-d595-516b-a200-d535ccff19bb",
+            "size": {
+              "sector_size": {
+                "unit": "B",
+                "value": 512
+              },
+              "unit": "B",
+              "value": 104857600
+            },
+            "start": {
+              "sector_size": {
+                "unit": "B",
+                "value": 512
+              },
+              "unit": "B",
+              "value": 1048576
+            },
+            "status": "existing",
+            "type": "primary"
+          },
+          {
+            "btrfs": [],
+            "dev_path": "/dev/vdb2",
+            "flags": [],
+            "fs_type": null,
+            "mount_options": [],
+            "mountpoint": null,
+            "obj_id": "175bc411-d180-5f27-ba0a-b4e0ca198968",
+            "size": {
+              "sector_size": {
+                "unit": "B",
+                "value": 512
+              },
+              "unit": "B",
+              "value": 16777216
+            },
+            "start": {
+              "sector_size": {
+                "unit": "B",
+                "value": 512
+              },
+              "unit": "B",
+              "value": 105906176
+            },
+            "status": "existing",
+            "type": "primary"
+          },
+          {
+            "btrfs": [],
+            "dev_path": "/dev/vdb3",
+            "flags": [],
+            "fs_type": "ntfs",
+            "mount_options": [],
+            "mountpoint": null,
+            "obj_id": "8d182b01-f121-5cf5-af6d-44a50b08bbac",
+            "size": {
+              "sector_size": {
+                "unit": "B",
+                "value": 512
+              },
+              "unit": "B",
+              "value": 64424509440
+            },
+            "start": {
+              "sector_size": {
+                "unit": "B",
+                "value": 512
+              },
+              "unit": "B",
+              "value": 122683392
+            },
+            "status": "existing",
+            "type": "primary"
+          },
+          {
+            "btrfs": [],
+            "dev_path": "/dev/vdb4",
+            "flags": [],
+            "fs_type": "ntfs",
+            "mount_options": [],
+            "mountpoint": null,
+            "obj_id": "700de2d0-7c76-5b1d-b8c1-86d4f86e6773",
+            "size": {
+              "sector_size": {
+                "unit": "B",
+                "value": 512
+              },
+              "unit": "B",
+              "value": 1073741824
+            },
+            "start": {
+              "sector_size": {
+                "unit": "B",
+                "value": 512
+              },
+              "unit": "B",
+              "value": 64547192832
+            },
+            "status": "existing",
+            "type": "primary"
+          },
+          {
+            "btrfs": [],
+            "dev_path": null,
+            "flags": [
+              "boot",
+              "esp"
+            ],
+            "fs_type": "fat32",
+            "mount_options": [],
+            "mountpoint": "/boot",
+            "obj_id": "f351bf1e-1dc3-502e-b029-92a947dbe72b",
+            "size": {
+              "sector_size": {
+                "unit": "B",
+                "value": 512
+              },
+              "unit": "MiB",
+              "value": 1024
+            },
+            "start": {
+              "sector_size": {
+                "unit": "B",
+                "value": 512
+              },
+              "unit": "MiB",
+              "value": 62581
+            },
+            "status": "create",
+            "type": "primary"
+          },
+          {
+            "btrfs": [
+              {
+                "mountpoint": "/",
+                "name": "@"
+              },
+              {
+                "mountpoint": "/home",
+                "name": "@home"
+              },
+              {
+                "mountpoint": "/var/log",
+                "name": "@log"
+              },
+              {
+                "mountpoint": "/var/cache/pacman/pkg",
+                "name": "@pkg"
+              },
+              {
+                "mountpoint": "/.snapshots",
+                "name": "@.snapshots"
+              }
+            ],
+            "dev_path": null,
+            "flags": [],
+            "fs_type": "btrfs",
+            "mount_options": [
+              "compress=zstd"
+            ],
+            "mountpoint": null,
+            "obj_id": "227257be-64ff-59c3-a385-9d703c38517b",
+            "size": {
+              "sector_size": {
+                "unit": "B",
+                "value": 512
+              },
+              "unit": "MiB",
+              "value": 141194
+            },
+            "start": {
+              "sector_size": {
+                "unit": "B",
+                "value": 512
+              },
+              "unit": "MiB",
+              "value": 63605
+            },
+            "status": "create",
+            "type": "primary"
+          }
+        ],
+        "wipe": false
+      }
+    ]
+  },
+  "hostname": "seclegion",
+  "kernels": [
+    "linux"
+  ],
+  "locale_config": {
+    "kb_layout": "us",
+    "sys_enc": "UTF-8",
+    "sys_lang": "en_US.UTF-8"
+  },
+  "network_config": {
+    "type": "nm"
+  },
+  "ntp": true,
+  "offline": true,
+  "packages": [],
+  "profile_config": {
+    "gfx_driver": null,
+    "greeter": null,
+    "profile": {
+      "details": [],
+      "main": "Minimal"
+    }
+  },
+  "script": "guided",
+  "swap": {
+    "algorithm": "zstd",
+    "enabled": true
+  },
+  "timezone": "UTC"
+}

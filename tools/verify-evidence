@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""Verify that TESTING.md and the evidence tree tell the same, untampered story.
+
+Checks, in order, for every evidence/<test>/<iso>/<timestamp>/result.json:
+  1. well formed and self-consistent (PASS needs exit 0, artifacts, a clean-tree commit)
+  2. the commit is a full sha that exists and is an ancestor of HEAD
+  3. the timestamp is ISO-8601 UTC, not in the future, and names the run directory
+  4. a PASS iso_sha256 matches the ISO: --iso PATH (hashed), else out/SHA256SUMS if present;
+     with neither, verification FAILS when any PASS is recorded; only --rows-only skips this
+     one check (and says so)
+  5. a PASS serial.log still matches the recorded serial_patterns, in order
+  6. every listed artifact exists and re-hashes to the value in result.json (never skipped)
+and finally that TESTING.md is byte-identical to the file regenerated from the results
+(a hand-edited, added or removed row fails here).
+
+Usage: verify-evidence [--root DIR] [--iso PATH] [--rows-only] [--results-only]
+(--results-only skips the TESTING.md comparison: `make evidence` verifies before generating.)
+Exit status: 0 = verified, 1 = verification failed.
+"""
+
+import argparse
+import difflib
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "lib"))
+import evidence  # noqa: E402
+
+
+def main(argv=None):
+    here = os.path.dirname(os.path.realpath(__file__))
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--root", default=os.path.dirname(here), help="repository root")
+    parser.add_argument("--iso", help="ISO file whose sha256 every PASS must carry")
+    parser.add_argument("--rows-only", action="store_true",
+                        help="skip only the ISO sha256 check (fresh clone without an ISO)")
+    parser.add_argument("--results-only", action="store_true",
+                        help="check the results but not TESTING.md (used before regenerating it)")
+    args = parser.parse_args(argv)
+
+    results = evidence.load_results(os.path.join(args.root, "evidence"))
+    problems = []
+    iso_hashes = None
+    sums = os.path.join(args.root, "out", "SHA256SUMS")
+    if args.rows_only:
+        print("verify-evidence: note: ISO sha256 check skipped (--rows-only)")
+    elif args.iso:
+        iso_hashes = {evidence.sha256_file(args.iso)}
+    elif os.path.isfile(sums):
+        iso_hashes = evidence.iso_hashes_from_sums(sums)
+    elif any(result.get("status") == "PASS" for _dir, result, _digest in results):
+        problems.append("no ISO reference for the PASS result(s): there is no out/SHA256SUMS "
+                        "and no --iso PATH (use --rows-only to skip the ISO hash check)")
+    for result_dir, result, _digest in results:
+        problems += evidence.validate(result_dir, result, repo=args.root, iso_hashes=iso_hashes)
+
+    expected = evidence.render_testing_md(results)
+    target = os.path.join(args.root, "TESTING.md")
+    if args.results_only:
+        pass
+    elif not os.path.exists(target):
+        problems.append("TESTING.md does not exist")
+    else:
+        actual = open(target, encoding="utf-8").read()
+        if actual != expected:
+            diff = difflib.unified_diff(
+                expected.splitlines(), actual.splitlines(),
+                "TESTING.md (generated)", "TESTING.md (committed)", lineterm="", n=0,
+            )
+            problems.append("TESTING.md differs from generated output (hand edit?):\n" + "\n".join(diff))
+
+    if problems:
+        for problem in problems:
+            print(f"verify-evidence: FAIL: {problem}", file=sys.stderr)
+        return 1
+    print(f"verify-evidence: OK ({len(results)} result(s))")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+[Desktop Entry]
+Type=Application
+Name=System Monitor
+GenericName=System Monitor
+Comment=CPU, memory, disks, network, GPUs and processes
+Exec=seclegion-sysmon
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;Monitor;
+Keywords=cpu;memory;gpu;processes;monitor;task manager;
+StartupNotify=true
+StartupWMClass=org.seclegion.Sysmon

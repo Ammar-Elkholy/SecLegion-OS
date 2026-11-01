@@ -1,0 +1,56 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# The installer, ISO only: installd (seclegion-install and the modules it imports) and the GTK
+# installer GUI. Nothing here is installed on the target system (post-packages.list does not list it).
+# The kiosk unit runs seclegion-installer-gui as the no-shell seclegion-installer user; the GUI runs
+# /usr/bin/seclegion-install through pkexec, which the polkit rule written by the install target allows.
+#
+# Both launchers are real files, not symlinks: pkexec and the polkit rule name /usr/bin/seclegion-install,
+# and a symlink would make the authorised program depend on how pkexec resolves it. The launchers run the
+# code from /usr/lib/seclegion/installer with an isolated interpreter (-I: no PYTHONPATH, no cwd on
+# sys.path); installd and the GUI add their own directories to sys.path, relative to their real location.
+#
+# seclegion-hwdetect (seclegion-hwreport for page 11, hw/gaming.toml for the gaming tier) is not in
+# depends=() because the container build resolves depends from the Arch repositories only
+# (pkgs/README.md); iso/packages/seclegion.list installs it with this package.
+pkgname=seclegion-installer
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='SecLegion OS installer: installd (seclegion-install) and the GTK installer GUI, ISO only'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('MIT')
+depends=('python' 'python-gobject' 'gtk4' 'archinstall' 'polkit' 'util-linux')
+source=(seclegion-src.tar.zst)
+sha256sums=('SKIP')  # generated for the build from tracked files (tools/pkg-source)
+
+_tree() {
+    local f
+    while IFS= read -r -d '' f; do
+        install -Dm644 "$srcdir/$1/$f" "$pkgdir/$2/$f"
+    done < <(cd "$srcdir/$1" && find . -type f ! -name '*.license' ! -name 'README.md' \
+        ! -path '*/__pycache__/*' -print0)
+}
+
+_launcher() {
+    printf '#!/bin/sh\nexec /usr/bin/python3 -I %s "$@"\n' "$2" > "$pkgdir/usr/bin/$1"
+    chmod 755 "$pkgdir/usr/bin/$1"
+}
+
+package() {
+    local lib=usr/lib/seclegion/installer
+    _tree installer/installd "$lib/installd"
+    _tree installer/ui "$lib/ui"
+    local s
+    for s in installd/seclegion-install installd/seclegion-post installd/seclegion-configure \
+        ui/seclegion-installer-gui; do
+        chmod 755 "$pkgdir/$lib/$s"
+    done
+    install -d "$pkgdir/usr/bin"
+    _launcher seclegion-install "/$lib/installd/seclegion-install"
+    _launcher seclegion-installer-gui "/$lib/ui/seclegion-installer-gui"
+    install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

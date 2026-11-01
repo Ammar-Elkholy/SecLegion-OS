@@ -1,0 +1,23 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# Opt-in virtualisation set (installer hint virt: true): libvirt + QEMU + virt-manager, the two
+# libvirt networks (default NAT, seclegion-isolated: no route out) and seclegion-virt-setup.
+# qemu-desktop, not qemu-base: virt-manager's default display is SPICE/QXL, which qemu-base lacks.
+pkgname=seclegion-virt
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='SecLegion OS virtualisation: libvirt networks (NAT + isolated), ufw rules and a setup helper'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('MIT')
+depends=('python' 'libvirt' 'qemu-desktop' 'virt-manager' 'dnsmasq' 'edk2-ovmf' 'swtpm' 'ufw')
+source=()
+
+package() {
+    install -Dm644 "$startdir/default.xml" "$pkgdir/usr/share/seclegion/virt/networks/default.xml"
+    install -Dm644 "$startdir/seclegion-isolated.xml" "$pkgdir/usr/share/seclegion/virt/networks/seclegion-isolated.xml"
+    install -Dm755 "$startdir/seclegion-virt-setup" "$pkgdir/usr/bin/seclegion-virt-setup"
+}

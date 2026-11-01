@@ -1,0 +1,195 @@
+/* SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors */
+/* SPDX-License-Identifier: MIT */
+/* SecLegion OS notifications and control centre.
+ * __HOME__ is substituted by tools/host-apply at install.
+ * Every colour is a theme token (@sl_*, sl_notif_*, sl_osd_*) from the theme
+ * engine's swaync-colors.css, which also defines the base tokens. A low-urgency
+ * popup is the volume/brightness OSD (seclegion-osd) and uses sl_osd_*. */
+@import url("file://__HOME__/.local/state/seclegion/theme/current/swaync-colors.css");
+
+* {
+  font-family: "JetBrainsMono Nerd Font", "JetBrainsMono NF", monospace;
+  font-size: 11pt;
+  outline: none;
+}
+
+/* ---- popups --------------------------------------------------------- */
+/* swaync has no popup-margin config key; the 20/50 offset is applied once on the
+ * popup window node, not on every row. */
+.floating-notifications.background {
+  background: transparent;
+  padding: 50px 20px 0 0;
+}
+
+.floating-notifications .notification-row {
+  margin: 3px 0;
+}
+
+.notification-row {
+  padding: 0;
+  background: transparent;
+}
+.notification-row:focus,
+.notification-row:hover {
+  background: transparent;
+}
+.notification-row .notification-background {
+  padding: 4px 0;
+}
+
+.notification {
+  background: @sl_notif_normal_bg;
+  color: @sl_notif_normal_fg;
+  border: 1px solid @sl_notif_normal_frame;
+  border-radius: 12px;
+  padding: 0;
+  margin: 0;
+}
+.notification.low {
+  background: @sl_osd_bg;
+  color: @sl_osd_fg;
+  border-color: @sl_osd_frame;
+}
+.notification.normal {
+  background: @sl_notif_normal_bg;
+  color: @sl_notif_normal_fg;
+  border-color: @sl_notif_normal_frame;
+}
+.notification.critical {
+  background: @sl_notif_critical_bg;
+  color: @sl_notif_critical_fg;
+  border-color: @sl_notif_critical_frame;
+}
+
+.notification .notification-default-action {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+}
+.notification .notification-default-action:hover {
+  background: alpha(@sl_text, 0.05);
+}
+.notification .notification-content .summary {
+  font-weight: bold;
+  color: inherit;
+}
+.notification .notification-content .body,
+.notification .notification-content .time {
+  font-weight: normal;
+  color: inherit;
+}
+.notification .notification-content .image { margin-right: 10px; }
+.notification .notification-content progressbar,
+.notification .notification-content progressbar trough,
+.notification .notification-content progressbar progress {
+  min-height: 8px;
+  border-radius: 4px;
+}
+.notification .notification-content progressbar trough {
+  background: @sl_osd_track;
+}
+.notification .notification-content progressbar progress {
+  background: @sl_osd_bar;
+}
+.notification.critical .notification-content progressbar progress {
+  background: @sl_notif_critical_frame;
+}
+
+.notification .notification-action {
+  border-top: 1px solid alpha(@sl_text, 0.12);
+  border-radius: 0 0 12px 12px;
+  background: transparent;
+  color: inherit;
+}
+.notification .notification-action:hover {
+  background: alpha(@sl_text, 0.08);
+}
+
+.close-button {
+  background: @sl_notif_normal_bg;
+  color: @sl_notif_normal_fg;
+  border: 1px solid @sl_notif_normal_frame;
+  border-radius: 50%;
+  min-width: 20px;
+  min-height: 20px;
+  margin: 6px;
+  padding: 0;
+}
+.close-button:hover {
+  background: @sl_notif_critical_frame;
+  color: @sl_text;
+}
+
+/* ---- control centre ------------------------------------------------- */
+.control-center {
+  background: alpha(@sl_bg, 0.94);
+  color: @sl_text;
+  border: 1px solid @sl_border_active;
+  border-radius: 12px;
+  padding: 8px;
+}
+.control-center .control-center-list { background: transparent; }
+.control-center .control-center-list-placeholder { color: @sl_muted; }
+
+.control-center .notification-row .notification-background .notification,
+.control-center .notification-group {
+  background: @sl_surface;
+  color: @sl_text;
+  border: 1px solid @sl_border_inactive;
+  border-radius: 12px;
+}
+.control-center .notification.critical { border-color: @sl_crit; }
+
+.widget-title {
+  margin: 8px 12px;
+  font-size: 13pt;
+  font-weight: bold;
+  color: @sl_accent;
+}
+.widget-title > button {
+  background: @sl_surface;
+  color: @sl_text;
+  border: 1px solid @sl_border_inactive;
+  border-radius: 8px;
+  padding: 2px 12px;
+}
+.widget-title > button:hover {
+  background: @sl_surface2;
+  border-color: @sl_accent;
+}
+
+.widget-dnd {
+  margin: 4px 12px 8px 12px;
+  color: @sl_text;
+}
+.widget-dnd > switch {
+  background: @sl_surface;
+  border: 1px solid @sl_border_inactive;
+  border-radius: 12px;
+}
+.widget-dnd > switch:checked {
+  background: @sl_accent;
+}
+.widget-dnd > switch slider {
+  background: @sl_text;
+  border-radius: 12px;
+}
+
+.widget-mpris {
+  background: @sl_surface;
+  color: @sl_text;
+  border: 1px solid @sl_border_inactive;
+  border-radius: 12px;
+  margin: 4px 12px 8px 12px;
+  padding: 8px;
+}
+.widget-mpris button {
+  background: transparent;
+  color: @sl_text;
+  border: none;
+  border-radius: 8px;
+}
+.widget-mpris button:hover { background: @sl_surface2; }
+.widget-mpris-title { font-weight: bold; }
+.widget-mpris-subtitle { color: @sl_muted; }

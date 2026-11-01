@@ -1,0 +1,91 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# NVIDIA. The family comes from hw/nvidia-table.toml (checked against NVIDIA's supportedchips.html):
+# Turing and newer -> nvidia-open (open kernel modules, prebuilt for the kernel, no DKMS);
+# older -> nouveau with NVK; a device missing from the table is treated as an unknown GPU (90-fallback).
+# Hybrid laptops keep the integrated GPU as the primary one (AQ_DRM_DEVICES lists it first) and
+# offload to the NVIDIA GPU on request (prime-run, switcheroo-control).
+# Suspend/resume: nvidia-utils ships nvidia-suspend/-resume/-hibernate.service; they save VRAM only with
+# NVreg_PreserveVideoMemoryAllocations=1, so the parameter is set on the kernel command line too (it does
+# not depend on a modprobe.d file of the installed nvidia-utils version) and the units are listed in the
+# plan's `services` for the installer to enable.
+
+[[rule]]
+id = "nvidia-open-stock"
+claims_gpu = true
+[rule.when]
+pci_class = "03"
+pci_vendor = "10de"
+nvidia = "open"
+kernel = "stock"
+[rule.add]
+packages = ["nvidia-open", "nvidia-utils", "libva-nvidia-driver"]
+kernel_params = ["nvidia-drm.modeset=1", "nvidia.NVreg_PreserveVideoMemoryAllocations=1"]
+services = ["nvidia-suspend.service", "nvidia-resume.service", "nvidia-hibernate.service"]
+
+[[rule]]
+id = "nvidia-open-lts"
+claims_gpu = true
+[rule.when]
+pci_class = "03"
+pci_vendor = "10de"
+nvidia = "open"
+kernel = "lts"
+[rule.add]
+packages = ["nvidia-open-lts", "nvidia-utils", "libva-nvidia-driver"]
+kernel_params = ["nvidia-drm.modeset=1", "nvidia.NVreg_PreserveVideoMemoryAllocations=1"]
+services = ["nvidia-suspend.service", "nvidia-resume.service", "nvidia-hibernate.service"]
+
+[[rule]]
+id = "nvidia-open-dedicated-env"
+description = "NVIDIA is the only GPU: use its GBM/GLX/VA-API stack for everything"
+[rule.when]
+pci_class = "03"
+pci_vendor = "10de"
+nvidia = "open"
+kernel = ["stock", "lts"]
+hybrid = false
+[rule.add.env]
+LIBVA_DRIVER_NAME = "nvidia"
+GBM_BACKEND = "nvidia-drm"
+__GLX_VENDOR_LIBRARY_NAME = "nvidia"
+
+[[rule]]
+id = "nvidia-nouveau"
+claims_gpu = true
+[rule.when]
+pci_class = "03"
+pci_vendor = "10de"
+nvidia = "legacy"
+[rule.add]
+packages = ["mesa", "vulkan-nouveau"]
+messages = [
+  "NVIDIA GPU {pci_id} ({nvidia_family}) is older than Turing and not supported by the open NVIDIA driver; using the open-source nouveau driver (NVK for Vulkan). Performance is lower than with the proprietary driver.",
+]
+
+[[rule]]
+id = "hybrid-offload"
+description = "Integrated GPU first; the NVIDIA GPU is used on demand"
+[rule.when]
+hybrid = true
+[rule.add]
+packages = ["switcheroo-control"]
+udev_rules = [
+  'KERNEL=="card*", KERNELS=="{igpu_addr}", SUBSYSTEM=="drm", SUBSYSTEMS=="pci", SYMLINK+="dri/seclegion-igpu"',
+  'KERNEL=="card*", KERNELS=="{dgpu_addr}", SUBSYSTEM=="drm", SUBSYSTEMS=="pci", SYMLINK+="dri/seclegion-dgpu"',
+]
+[rule.add.env]
+# udev symlinks without colons: Aquamarine splits this variable on ':'
+AQ_DRM_DEVICES = "{igpu_card}:{dgpu_card}"
+
+[[rule]]
+id = "hybrid-nvidia-prime"
+description = "prime-run for the open NVIDIA driver"
+[rule.when]
+hybrid = true
+pci_class = "03"
+pci_vendor = "10de"
+nvidia = "open"
+kernel = ["stock", "lts"]
+[rule.add]
+packages = ["nvidia-prime"]

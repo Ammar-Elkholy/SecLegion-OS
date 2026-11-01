@@ -1,0 +1,88 @@
+#!/usr/bin/env -S python3 -I
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""licence-similarity OURS THEIRS [--max N] [--ignore-keys]
+
+Reports how much of OURS also appears in THEIRS:
+  line overlap   % of OURS' normalised lines found in THEIRS
+  6-gram overlap % of OURS' token 6-grams found in THEIRS
+Blank lines, comment-only lines (//, #, /* ... */, leading *) and pure-brace
+lines are ignored. Exit 1 if either value exceeds --max (default 20), 2 on
+usage errors.
+
+--ignore-keys strips JSON object keys ("key":) before comparing, so schema
+vocabulary shared by every config of the same program (e.g. swaync's
+"positionX") does not inflate the score; only values are compared.
+Stdlib only.
+"""
+import argparse
+import re
+import sys
+
+KEY = re.compile(r'"[^"\\]*"\s*:')
+BRACES_ONLY = re.compile(r'^[\s{}\[\](),;]*$')
+COMMENT = re.compile(r'^(//|#|/\*|\*)')
+TOKEN = re.compile(r'[A-Za-z0-9_$@.-]+|[^\sA-Za-z0-9_]')
+
+
+def normalise(text, ignore_keys):
+    lines = []
+    in_block = False
+    for raw in text.splitlines():
+        line = raw.strip()
+        if in_block:
+            if '*/' in line:
+                in_block = False
+            continue
+        if line.startswith('/*'):
+            if '*/' not in line:
+                in_block = True
+            continue
+        if not line or COMMENT.match(line):
+            continue
+        if ignore_keys:
+            line = KEY.sub('', line).strip()
+        line = re.sub(r'\s+', ' ', line).lower()
+        if BRACES_ONLY.match(line):
+            continue
+        lines.append(line)
+    return lines
+
+
+def ngrams(lines, n=6):
+    toks = [t for ln in lines for t in TOKEN.findall(ln)]
+    return {tuple(toks[i:i + n]) for i in range(len(toks) - n + 1)}
+
+
+def overlap(ours, theirs):
+    if not ours:
+        return 0.0
+    return 100.0 * len(ours & theirs) / len(ours)
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(prog='licence-similarity', description=__doc__.split('\n')[1])
+    ap.add_argument('ours')
+    ap.add_argument('theirs')
+    ap.add_argument('--max', type=float, default=20.0, help='fail above this percent (default 20)')
+    ap.add_argument('--ignore-keys', action='store_true', help='strip JSON keys before comparing')
+    a = ap.parse_args(argv)
+    try:
+        with open(a.ours, encoding='utf-8', errors='replace') as f:
+            ours = normalise(f.read(), a.ignore_keys)
+        with open(a.theirs, encoding='utf-8', errors='replace') as f:
+            theirs = normalise(f.read(), a.ignore_keys)
+    except OSError as e:
+        print('licence-similarity: %s' % e, file=sys.stderr)
+        return 2
+    line_pct = overlap(set(ours), set(theirs))
+    gram_pct = overlap(ngrams(ours), ngrams(theirs))
+    print('line overlap:   %.1f%% (%d lines)' % (line_pct, len(set(ours))))
+    print('6-gram overlap: %.1f%%' % gram_pct)
+    bad = line_pct > a.max or gram_pct > a.max
+    print('%s (max %.1f%%)' % ('FAIL' if bad else 'PASS', a.max))
+    return 1 if bad else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# seclegion-rescue: snapper status and snapshot rollback for the installed system.
+#
+# rollback <N> swaps the root subvolume: it never deletes anything. Without --yes it only prints the plan.
+#   1. mount the btrfs top level (subvolid=5) privately under /run
+#   2. require snapshot N at @.snapshots/N/snapshot (a snapper snapshot of @)
+#   3. btrfs subvolume snapshot (writable) of it as @rollback-<UTC>
+#   4. rename @ to @broken-<UTC> (kept), then rename @rollback-<UTC> to @
+#   5. mount the new @ and /boot, copy its kernel to /boot, mkinitcpio -P there (rebuilds the UKI)
+# Everything mounted is unmounted again on exit. The running system stays on @broken-<UTC> until reboot.
+set -euo pipefail
+
+RUNDIR=${SECLEGION_RESCUE_RUNDIR:-/run}
+DRY=1 # rollback acts only with --yes; every other run just prints the plan
+MOUNTS=()
+DIRS=()
+
+usage() {
+    cat <<'USAGE'
+Usage: seclegion-rescue <command>
+
+Commands:
+  status                        show the snapper configs and the boot entries
+  list-snapshots                list snapshots of the root config
+  rollback [--yes] <N>          make snapshot N the root again (@ is kept as @broken-<UTC>), rebuild the UKI.
+                                Without --yes it prints what it would do and changes nothing (exit 2);
+                                with --yes: run as root, then reboot
+  --help                        show this text
+USAGE
+}
+
+die() {
+    echo "seclegion-rescue: $*" >&2
+    exit 1
+}
+
+cleanup() {
+    local i
+    for ((i = ${#MOUNTS[@]} - 1; i >= 0; i--)); do
+        umount "${MOUNTS[i]}" || echo "seclegion-rescue: could not unmount ${MOUNTS[i]}" >&2
+    done
+    for ((i = ${#DIRS[@]} - 1; i >= 0; i--)); do
+        rmdir "${DIRS[i]}" 2>/dev/null || true
+    done
+}
+
+# step: print the command, run it only with --yes
+step() {
+    echo "+ $*"
+    if [[ $DRY -eq 0 ]]; then "$@"; fi
+}
+
+# mount_tracked <mount args...> <target>: the last argument is the mount point
+mount_tracked() {
+    step mount "$@"
+    if [[ $DRY -eq 0 ]]; then MOUNTS+=("${*: -1}"); fi
+}
+
+rollback() {
+    local n=$1 dev ts top new
+    [[ $n =~ ^[1-9][0-9]*$ ]] || die "snapshot must be a positive number, not '$n'"
+    if [[ $DRY -eq 0 ]]; then
+        [[ $(id -u) -eq 0 ]] || die "rollback must run as root"
+    else
+        echo "seclegion-rescue: plan to make snapshot $n the root (nothing is changed without --yes):"
+    fi
+    dev=$(findmnt -no SOURCE /)
+    dev=${dev%%\[*}
+    [[ -n $dev ]] || die "cannot find the device of /"
+    [[ $(findmnt -no FSTYPE /) == btrfs ]] || die "/ is not btrfs"
+    ts=$(date -u +%Y%m%dT%H%M%SZ)
+    trap cleanup EXIT
+    top="$RUNDIR/seclegion-rescue-top.XXXXXX"
+    new="$RUNDIR/seclegion-rescue-new.XXXXXX"
+    if [[ $DRY -eq 0 ]]; then
+        top=$(mktemp -d "$top")
+        DIRS+=("$top")
+    fi
+    mount_tracked -o subvolid=5 "$dev" "$top"
+    if [[ $DRY -eq 0 ]]; then
+        [[ -d $top/@.snapshots/$n/snapshot ]] || die "no snapshot $n (@.snapshots/$n/snapshot)"
+        [[ -d $top/@ ]] || die "no @ subvolume at the top level"
+    fi
+    step btrfs subvolume snapshot "$top/@.snapshots/$n/snapshot" "$top/@rollback-$ts"
+    step mv "$top/@" "$top/@broken-$ts"
+    if ! step mv "$top/@rollback-$ts" "$top/@"; then
+        mv "$top/@broken-$ts" "$top/@" || true
+        die "could not put the snapshot in place; @ restored"
+    fi
+    if [[ $DRY -eq 0 ]]; then echo "seclegion-rescue: @ is now snapshot $n; the old root is kept as @broken-$ts"; fi
+    if [[ $DRY -eq 0 ]]; then
+        new=$(mktemp -d "$new")
+        DIRS+=("$new")
+    fi
+    mount_tracked -o subvol=@ "$dev" "$new"
+    mount_tracked --bind /boot "$new/boot"
+    # the restored root's kernel may differ from the one on the ESP: take the one its packages ship
+    # shellcheck disable=SC2016 # the loop runs inside the chroot's sh
+    step arch-chroot "$new" sh -c 'for d in /usr/lib/modules/*/; do [ "$(cat "$d/pkgbase" 2>/dev/null)" = linux ] && install -Dm644 "${d}vmlinuz" /boot/vmlinuz-linux; done; true'
+    step arch-chroot "$new" mkinitcpio -P ||
+        die "snapshot $n is the root now but the UKI was not rebuilt, boot may fail: from a rescue ISO run mkinitcpio -P in the new @"
+    if [[ $DRY -eq 1 ]]; then
+        echo "seclegion-rescue: nothing was changed; the old @ is kept as @broken-$ts, never deleted." \
+            "Re-run with --yes to do it" >&2
+        exit 2
+    fi
+    echo "seclegion-rescue: UKI rebuilt from snapshot $n. Reboot now to use it."
+}
+
+case "${1:-}" in
+    -h | --help | help)
+        usage
+        ;;
+    status)
+        snapper list-configs
+        bootctl list
+        ;;
+    list-snapshots)
+        snapper -c root list
+        ;;
+    rollback)
+        shift
+        if [[ ${1:-} == --yes ]]; then
+            DRY=0
+            shift
+        fi
+        [[ $# -eq 1 ]] || {
+            echo "seclegion-rescue: rollback needs one snapshot number" >&2
+            usage >&2
+            exit 64
+        }
+        rollback "$1"
+        ;;
+    *)
+        usage >&2
+        exit 64
+        ;;
+esac

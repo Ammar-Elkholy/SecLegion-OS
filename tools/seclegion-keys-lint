@@ -1,0 +1,583 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+r"""seclegion-keys-lint - do SecLegion's keybinds collide with the owner's?
+
+    seclegion-keys-lint OWNER_KEYBINDS.lua SECLEGION_KEYS.lua [--binds-json FILE]
+
+Reads the (mods, key) pair of every hl.bind call in both Lua files and prints
+one line per pair SECLEGION_KEYS.lua binds that the owner already binds (or
+that it binds twice), then `collisions=N`. Binds inside an
+`hl.define_submap("name", [..,] function() ... end)` live in that submap's own
+scope: they only collide with binds of the same submap (a plain `left` inside
+`resize` does not clash with a global `left`, and the same key twice inside one
+submap does). A define_submap whose name cannot be worked out, or whose body is
+not an inline function, is exit 2. A bind whose literal exec_cmd runs an absolute path that is not an executable file
+prints `missing-binary: ...` and also gives exit 1. Exit 0 when N is 0, 1 when N > 0,
+2 when a file cannot be read, an hl.bind key string cannot be worked out, or
+(with --binds-json) a live bind cannot be read (it never guesses a bind away).
+
+The Lua is not run: a small evaluator handles what keybinds files use -
+`local x = "..."`, `..` concatenation, + - * / % arithmetic and numeric
+`for i = a, b do ... end` loops. Normalised: modifier aliases (CTRL/CONTROL,
+ALT/MOD1, SUPER/WIN/LOGO/MOD4/META), modifier order and case, keysym case, and
+the digit and period keysyms of the us and ara layouts to their xkb keycode
+(code:10..19, code:60), so `SUPER + 1` and `SUPER + code:10` collide. A keysym
+can stand for several keycodes (parenleft is code:18 on us, code:19 on ara):
+two binds collide when any of them match. Anything the evaluator cannot
+resolve (an `hl` that is not `hl.name`, `hl.bind` not called directly, a
+method/index/call on a key part, text after the key expression, a `\u{..}`
+escape) is exit 2, never a silent pass. Variables assigned without `local`,
+and `local`s of inner blocks used outside them, are unknown.
+
+--binds-json FILE is the saved output of `hyprctl binds -j` (this tool never
+calls hyprctl). Its binds join the owner's, except ours (a description starting
+"seclegion-keys:") and binds in a submap. Keycode binds (`code:N`), which
+Hyprland 0.56 lists as key "" keycode 0, cannot be read back: any of them is
+exit 2 (`unreadable=N` on stderr).
+"""
+import json
+import os
+import re
+import sys
+
+PREFIX = "seclegion-keys:"
+MOD_ALIASES = {"SUPER": "SUPER", "WIN": "SUPER", "LOGO": "SUPER", "MOD4": "SUPER", "META": "SUPER",
+               "CTRL": "CTRL", "CONTROL": "CTRL", "ALT": "ALT", "MOD1": "ALT",
+               "SHIFT": "SHIFT", "CAPS": "CAPS", "MOD2": "MOD2", "MOD3": "MOD3", "MOD5": "MOD5"}
+MOD_BITS = [(1, "SHIFT"), (2, "CAPS"), (4, "CTRL"), (8, "ALT"), (16, "MOD2"), (32, "MOD3"),
+            (64, "SUPER"), (128, "MOD5")]
+# keysym -> the xkb keycodes it can stand for (us and ara, levels 1-2). A set, because the
+# parens sit on code:18/19 on us and swapped on ara; two binds collide when any code matches.
+KEYCODES = {}
+for _i, (_d, _shifted) in enumerate(zip("1234567890", ["exclam", "at", "numbersign", "dollar", "percent",
+                                                       "asciicircum", "ampersand", "asterisk",
+                                                       "parenleft", "parenright"])):
+    for _s in (_d, _shifted, f"arabic_{_d}"):
+        KEYCODES[_s] = {f"code:{10 + _i}"}
+KEYCODES["parenleft"] = KEYCODES["parenright"] = {"code:18", "code:19"}
+for _s in ("period", "greater", "arabic_zain"):
+    KEYCODES[_s] = {"code:60"}
+
+TOKEN = re.compile(r"""
+    (?P<ws>\s+)
+  | (?P<comment>--\[(?P<eq>=*)\[.*?\](?P=eq)\]|--[^\n]*)
+  | (?P<lstr>\[(?P<leq>=*)\[.*?\](?P=leq)\])
+  | (?P<str>"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*')
+  | (?P<num>0[xX][0-9a-fA-F]+|\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)
+  | (?P<name>[A-Za-z_][A-Za-z0-9_]*)
+  | (?P<op>\.\.\.|\.\.|==|~=|<=|>=|//|::|[-+*/%^#&~|<>=(){}\[\];:,.])
+""", re.X | re.S)
+BLOCK_OPEN = {"do", "if", "function", "repeat"}   # for/while open through their do
+BLOCK_CLOSE = {"end", "until"}
+
+
+class Unknown(Exception):
+    pass
+
+
+ESCAPES = {"a": "\a", "b": "\b", "f": "\f", "n": "\n", "r": "\r", "t": "\t", "v": "\v",
+           "\\": "\\", '"': '"', "'": "'", "\n": "\n"}
+
+
+def unescape(body, where):
+    """The value of a Lua short string body; \\u{..} and unknown escapes are exit 2."""
+    out, i = [], 0
+    while i < len(body):
+        c = body[i]
+        i += 1
+        if c != "\\":
+            out.append(c)
+            continue
+        e = body[i]
+        i += 1
+        if e in ESCAPES:
+            out.append(ESCAPES[e])
+        elif e == "x" and re.fullmatch(r"[0-9a-fA-F]{2}", body[i:i + 2]):
+            out.append(chr(int(body[i:i + 2], 16)))
+            i += 2
+        elif e.isdigit():
+            m = re.match(r"\d{1,3}", body[i - 1:])
+            if int(m.group(0)) > 255:
+                raise SystemExit(f"{where}: decimal escape too large")
+            out.append(chr(int(m.group(0))))
+            i += len(m.group(0)) - 1
+        elif e == "z":
+            while i < len(body) and body[i].isspace():
+                i += 1
+        else:
+            raise SystemExit(f"{where}: cannot evaluate the string escape \\{e}")
+    return "".join(out)
+
+
+def tokenize(text, path):
+    toks, pos, line = [], 0, 1
+    while pos < len(text):
+        m = TOKEN.match(text, pos)
+        if not m:
+            raise SystemExit(f"{path}: cannot tokenize at line {line}: {text[pos:pos + 20]!r}")
+        kind = m.lastgroup if m.lastgroup not in ("eq", "leq") else None
+        for k in ("ws", "comment", "lstr", "str", "num", "name", "op"):
+            if m.group(k) is not None:
+                kind = k
+                break
+        val = m.group(kind)
+        if kind not in ("ws", "comment"):
+            if kind == "str":
+                val = unescape(val[1:-1], f"{path}:{line}")
+            elif kind == "lstr":
+                val, kind = re.sub(r"^\[=*\[\n?|\]=*\]$", "", val), "str"
+            elif kind == "num":
+                val = int(val, 0) if re.fullmatch(r"0[xX][0-9a-fA-F]+|\d+", val) else float(val)
+            toks.append((kind, val, line))
+        line += m.group(0).count("\n")
+        pos = m.end()
+    return toks
+
+
+UNKNOWN = object()   # a name declared but not worked out (shadows any outer value)
+NO_CALL = ("(", "[", ":", ".", "{")
+
+
+class Eval:
+    """Evaluate the constant expressions of a keybinds file, collecting hl.bind keys."""
+
+    def __init__(self, toks, path):
+        self.t, self.path, self.binds = toks, path, []
+        self.execs = []   # (line, command) of every literal exec_cmd bind
+        self.submaps = []   # (name, first token, last token) of every hl.define_submap call
+        self.scopes = [{}]
+        self.reassigned = self.find_reassigned()
+
+    def is_(self, i, kind, val=None):
+        return i < len(self.t) and self.t[i][0] == kind and (val is None or self.t[i][1] == val)
+
+    def find_reassigned(self):
+        """Names assigned without `local` at statement level: their value cannot be trusted."""
+        out, stack, t = set(), [], self.t
+        for i, (kind, val, _) in enumerate(t):
+            if kind == "op" and val in ("(", "{", "["):
+                stack.append("T")
+            elif kind == "op" and val in (")", "}", "]"):
+                if stack:
+                    stack.pop()
+            elif kind == "name" and val in BLOCK_OPEN:
+                stack.append("B")
+            elif kind == "name" and val in BLOCK_CLOSE:
+                if stack:
+                    stack.pop()
+            elif kind == "op" and val == "=" and not (stack and stack[-1] == "T"):
+                j, names = i - 1, []
+                while j >= 0 and t[j][0] == "name":
+                    names.append(t[j][1])
+                    if j >= 1 and t[j - 1][0] == "op" and t[j - 1][1] == ",":
+                        j -= 2
+                    else:
+                        break
+                before = t[j - 1] if j >= 1 else None
+                if names and not (before and (before[1] in ("local", "for", ".", ":"))):
+                    out.update(names)
+        return out
+
+    def lookup(self, name):
+        for sc in reversed(self.scopes):
+            if name in sc:
+                return sc[name]
+        return UNKNOWN
+
+    def declare(self, name, val):
+        self.scopes[-1][name] = UNKNOWN if name in self.reassigned else val
+
+    # expr := concat ; concat := add ('..' concat)? ; add := mul (('+'|'-') mul)* ; ...
+    def expr(self, i):
+        return self.concat(i)
+
+    def concat(self, i):
+        v, i = self.add(i)
+        if self.is_(i, "op", ".."):
+            r, i = self.concat(i + 1)
+            return luastr(v) + luastr(r), i
+        return v, i
+
+    def add(self, i):
+        v, i = self.mul(i)
+        while self.is_(i, "op", "+") or self.is_(i, "op", "-"):
+            op = self.t[i][1]
+            r, i = self.mul(i + 1)
+            v = num(v) + num(r) if op == "+" else num(v) - num(r)
+        return v, i
+
+    def mul(self, i):
+        v, i = self.unary(i)
+        while i < len(self.t) and self.t[i][0] == "op" and self.t[i][1] in ("*", "/", "//", "%"):
+            op = self.t[i][1]
+            r, i = self.unary(i + 1)
+            a, b = num(v), num(r)
+            v = a * b if op == "*" else a / b if op == "/" else a // b if op == "//" else a % b
+        return v, i
+
+    def unary(self, i):
+        if self.is_(i, "op", "-"):
+            v, i = self.unary(i + 1)
+            return -num(v), i
+        return self.atom(i)
+
+    def atom(self, i):
+        if i >= len(self.t):
+            raise Unknown("end of file")
+        kind, val, _ = self.t[i]
+        if kind in ("str", "num"):
+            v, i = val, i + 1
+        elif kind == "op" and val == "(":
+            v, i = self.expr(i + 1)
+            if not self.is_(i, "op", ")"):
+                raise Unknown("unbalanced (")
+            i += 1
+        elif kind == "name":
+            v, i = self.lookup(val), i + 1
+            if v is UNKNOWN:
+                raise Unknown(f"{val!r}")
+        else:
+            raise Unknown(f"{val!r}")
+        nxt = self.t[i] if i < len(self.t) else None
+        if nxt and (nxt[0] == "str" or (nxt[0] == "op" and nxt[1] in NO_CALL)):
+            raise Unknown(f"{nxt[1]!r} after {val!r}")   # a call, method, index or field on it
+        return v, i
+
+    def block_end(self, i):
+        """Index of the 'end' closing the block opened just before i."""
+        depth = 1
+        while i < len(self.t):
+            kind, val, _ = self.t[i]
+            if kind == "name" and val in BLOCK_OPEN:
+                depth += 1
+            elif kind == "name" and val in BLOCK_CLOSE:
+                depth -= 1
+                if depth == 0:
+                    return i
+            i += 1
+        raise SystemExit(f"{self.path}: unbalanced block")
+
+    def scoped(self, start, stop, names=(), **values):
+        """Run start..stop in a new scope holding `names` (unknown) and `values`."""
+        self.scopes.append({n: UNKNOWN for n in names} | values)
+        try:
+            self.run(start, stop)
+        finally:
+            self.scopes.pop()
+
+    def name_list(self, i):
+        """(names, index after them) of `a, b, c` starting at i."""
+        names = []
+        while self.is_(i, "name"):
+            names.append(self.t[i][1])
+            i += 1
+            if self.is_(i, "op", ","):
+                i += 1
+            else:
+                break
+        return names, i
+
+    def run(self, i, stop):
+        t = self.t
+        while i < stop:
+            kind, val, line = t[i]
+            field = i > 0 and t[i - 1][0] == "op" and t[i - 1][1] in (".", ":")
+            if kind != "name" or (field and val != "hl"):
+                i += 1
+            elif val == "local" and self.is_(i + 1, "name", "function"):
+                i += 1   # `function` is handled next
+            elif val == "local" and self.is_(i + 1, "name") and self.is_(i + 2, "op", "="):
+                name = t[i + 1][1]
+                try:
+                    v, j = self.expr(i + 3)
+                    nxt = t[j] if j < len(t) else None
+                    if nxt and (nxt[0] in ("str", "num") or (nxt[0] == "name" and nxt[1] in ("and", "or"))
+                                or (nxt[0] == "op" and nxt[1] not in (";", ",", ")", "}", "::"))):
+                        raise Unknown("more expression")
+                except (Unknown, ArithmeticError, ValueError):
+                    v, j = UNKNOWN, i + 3
+                self.declare(name, v)
+                i = j
+            elif val == "local":
+                names, i = self.name_list(i + 1)
+                for n in names:
+                    self.declare(n, UNKNOWN)
+            elif val == "for" and self.is_(i + 1, "name") and self.is_(i + 2, "op", "="):
+                var = t[i + 1][1]
+                try:
+                    lo, j = self.expr(i + 3)
+                    if not self.is_(j, "op", ","):
+                        raise Unknown("for")
+                    hi, j = self.expr(j + 1)
+                    step = 1
+                    if self.is_(j, "op", ","):
+                        step, j = self.expr(j + 1)
+                    lo, hi, step = num(lo), num(hi), num(step)
+                except (Unknown, ArithmeticError, ValueError) as e:
+                    raise SystemExit(f"{self.path}:{line}: cannot evaluate the for loop bounds ({e})")
+                if not self.is_(j, "name", "do"):
+                    raise SystemExit(f"{self.path}:{line}: for loop without do")
+                end = self.block_end(j + 1)
+                if step == 0 or abs(hi - lo) / abs(step) > 1000:
+                    raise SystemExit(f"{self.path}:{line}: for loop runs more than 1000 times")
+                v = lo
+                while (step > 0 and v <= hi) or (step < 0 and v >= hi):
+                    self.scoped(j + 1, end, **{var: UNKNOWN if var in self.reassigned else v})
+                    v += step
+                i = end + 1
+            elif val == "for":   # generic for: its variables are unknown
+                names, j = self.name_list(i + 1)
+                while j < stop and not self.is_(j, "name", "do"):
+                    j += 1
+                end = self.block_end(j + 1)
+                self.scoped(j + 1, end, names)
+                i = end + 1
+            elif val == "function":
+                j = i + 1
+                while j < stop and not self.is_(j, "op", "("):
+                    j += 1
+                params = []
+                while j < stop and not self.is_(j, "op", ")"):
+                    if self.is_(j, "name"):
+                        params.append(t[j][1])
+                    j += 1
+                end = self.block_end(i + 1)
+                self.scoped(j + 1, end, params)
+                i = end + 1
+            elif val in ("do", "if", "repeat"):
+                end = self.block_end(i + 1)
+                self.scoped(i + 1, end)
+                i = end + 1
+            elif val in ("else", "elseif"):
+                self.scopes[-1].clear()   # the next branch of the if has its own locals
+                i += 1
+            elif val == "hl" and not field:
+                if not (self.is_(i + 1, "op", ".") and self.is_(i + 2, "name")):
+                    raise SystemExit(f"{self.path}:{line}: `hl` is not followed by .name; "
+                                     "cannot tell whether it binds a key")
+                if t[i + 2][1] == "bind":
+                    i = self.bind(i, line)
+                elif t[i + 2][1] == "define_submap":
+                    i = self.define_submap(i, line)
+                else:
+                    i += 3
+            else:
+                i += 1
+
+    def define_submap(self, i, line):
+        """Record the token range of hl.define_submap(name, [reset,] function() ... end)."""
+        if not self.is_(i + 3, "op", "("):
+            raise SystemExit(f"{self.path}:{line}: hl.define_submap is not called directly with (...); "
+                             "cannot tell which submap its binds are in")
+        try:
+            name, j = self.expr(i + 4)
+            if not isinstance(name, str) or not name:
+                raise Unknown("not a string")
+            if self.is_(j, "op", ",") and self.is_(j + 1, "str") and self.is_(j + 2, "op", ","):
+                j += 2   # the optional reset submap name
+            if not (self.is_(j, "op", ",") and self.is_(j + 1, "name", "function")):
+                raise Unknown("the body is not an inline function")
+        except (Unknown, ArithmeticError, ValueError) as e:
+            raise SystemExit(f"{self.path}:{line}: cannot work out the hl.define_submap call ({e})")
+        depth, k = 0, i + 3
+        while k < len(self.t):
+            kind, val, _ = self.t[k]
+            if kind == "op" and val in ("(", "{", "["):
+                depth += 1
+            elif kind == "op" and val in (")", "}", "]"):
+                depth -= 1
+                if depth == 0:
+                    break
+            k += 1
+        else:
+            raise SystemExit(f"{self.path}:{line}: unbalanced hl.define_submap(")
+        self.submaps.append((name, i, k))
+        return j
+
+    def scope_at(self, i):
+        """Name of the innermost submap whose define_submap call holds token i ('' = global)."""
+        hits = [(s, n) for n, s, e in self.submaps if s < i < e]
+        return max(hits)[1] if hits else ""
+
+    def bind(self, i, line):
+        if not self.is_(i + 3, "op", "("):
+            raise SystemExit(f"{self.path}:{line}: hl.bind is not called directly with (...); "
+                             "cannot tell which keys it binds")
+        try:
+            keys, j = self.expr(i + 4)
+            if not isinstance(keys, str):
+                raise Unknown("not a string")
+            if not (self.is_(j, "op", ",") or self.is_(j, "op", ")")):
+                raise Unknown(f"unexpected {self.t[j][1] if j < len(self.t) else 'end of file'!r} after the key")
+        except (Unknown, ArithmeticError, ValueError) as e:
+            raise SystemExit(f"{self.path}:{line}: cannot work out the hl.bind key string ({e})")
+        self.record_exec(j)
+        self.binds.append((normalise(keys) + (self.scope_at(i),), keys, line, self.description(j)))
+        return j
+
+    def record_exec(self, i):
+        """Remember the literal command of an hl.dsp.exec_cmd("...") in this bind call."""
+        depth = 0
+        while i < len(self.t):
+            kind, val, line = self.t[i]
+            if kind == "op" and val in ("(", "{", "["):
+                depth += 1
+            elif kind == "op" and val in (")", "}", "]"):
+                depth -= 1
+                if depth < 0:
+                    return
+            elif kind == "name" and val == "exec_cmd" and self.is_(i + 1, "op", "(") and self.is_(i + 2, "str"):
+                self.execs.append((line, self.t[i + 2][1]))
+                return
+            i += 1
+
+    def description(self, i):
+        """The description = "..." of the bind's options table, if literal."""
+        depth = 0
+        while i < len(self.t):
+            kind, val, _ = self.t[i]
+            if kind == "op" and val in ("(", "{", "["):
+                depth += 1
+            elif kind == "op" and val in (")", "}", "]"):
+                depth -= 1
+                if depth < 0:
+                    return ""
+            elif kind == "name" and val in ("description", "desc") and self.is_(i + 1, "op", "=") and self.is_(i + 2, "str"):
+                return self.t[i + 2][1]
+            i += 1
+        return ""
+
+
+def num(v):
+    if isinstance(v, (int, float)):
+        return v
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        raise Unknown(f"{v!r} is not a number")
+
+
+def luastr(v):
+    if isinstance(v, float) and v.is_integer():
+        return f"{v:.1f}"
+    return str(v)
+
+
+def normalise_key(key):
+    """The set of keys this key can stand for (a keysym may sit on different keycodes per layout)."""
+    k = key.strip().lower()
+    if k.startswith("code:"):
+        return frozenset({f"code:{int(k[5:])}" if k[5:].isdigit() else k})
+    return frozenset(KEYCODES.get(k, {k}))
+
+
+def normalise(keys):
+    parts = [p.strip() for p in keys.split("+")]
+    if len(parts) > 1 and parts[-1] == "" and parts[-2] == "":   # "SUPER + +": the plus key
+        parts = parts[:-2] + ["plus"]
+    *mods, key = parts
+    norm = set()
+    for m in mods:
+        for sub in m.split():   # "SUPER SHIFT" is a mod list too
+            norm.add(MOD_ALIASES.get(sub.upper(), sub.upper()))
+    return tuple(sorted(norm)), normalise_key(key)
+
+
+def parse_file(path, execs=None):
+    try:
+        text = open(path, encoding="utf-8").read()
+    except (OSError, ValueError) as e:
+        raise SystemExit(f"cannot read {path}: {e}")
+    ev = Eval(tokenize(text, path), path)
+    try:
+        ev.run(0, len(ev.t))
+    except RecursionError:
+        raise SystemExit(f"{path}: expression nested too deeply")
+    if execs is not None:
+        execs.extend(ev.execs)
+    return ev.binds
+
+
+def parse_binds_json(path):
+    try:
+        data = json.load(open(path, encoding="utf-8"))
+        if not isinstance(data, list):
+            raise ValueError("not a list of binds")
+    except (OSError, ValueError) as e:
+        raise SystemExit(f"cannot read {path}: {e}")
+    out, unreadable = [], 0
+    for b in data:
+        if str(b.get("description", "")).startswith(PREFIX) or b.get("submap"):
+            continue
+        mods = tuple(sorted(name for bit, name in MOD_BITS if int(b.get("modmask", 0)) & bit))
+        if b.get("key"):
+            key = normalise_key(b["key"])
+        elif int(b.get("keycode", 0)) > 0:
+            key = frozenset({f"code:{int(b['keycode'])}"})
+        else:
+            unreadable += 1
+            continue
+        out.append(((mods, key, ""), f"{'+'.join(mods)}+{b.get('key') or sorted(key)[0]}", 0, b.get("description", "")))
+    return out, unreadable
+
+
+def show(pair):
+    return " + ".join(pair[0] + ("/".join(sorted(pair[1])),)) + (f" (submap {pair[2]})" if pair[2] else "")
+
+
+def clash(a, b):
+    return a[0] == b[0] and a[2] == b[2] and bool(a[1] & b[1])
+
+
+def main(argv):
+    args, binds_json = [], None
+    it = iter(argv)
+    for a in it:
+        if a == "--binds-json":
+            binds_json = next(it, None)
+            if binds_json is None:
+                raise SystemExit(__doc__.split("\n\n")[1])
+        else:
+            args.append(a)
+    if len(args) != 2:
+        print(__doc__.split("\n\n")[1], file=sys.stderr)
+        return 2
+    owner_path, ours_path = args
+    owner = [(pair, f"{owner_path}:{line} ({raw})") for pair, raw, line, _ in parse_file(owner_path)]
+    if binds_json:
+        live, unreadable = parse_binds_json(binds_json)
+        if unreadable:
+            print(f"unreadable={unreadable}", file=sys.stderr)
+            raise SystemExit(f"{binds_json}: {unreadable} live bind(s) have key \"\" and keycode 0 "
+                             "(Hyprland lists code:N binds that way); cannot rule out a collision")
+        owner += [(pair, f"{binds_json} ({raw}{', ' + desc if desc else ''})") for pair, raw, _, desc in live]
+    seen, collisions, execs = [], 0, []
+    for pair, raw, line, _ in parse_file(ours_path, execs):
+        hit = next((where for p, where in owner if clash(p, pair)), None)
+        twice = next((l for p, l in seen if clash(p, pair)), None)
+        if hit:
+            collisions += 1
+            print(f"collision: {show(pair)}: {ours_path}:{line} ({raw}) vs {hit}")
+        elif twice:
+            collisions += 1
+            print(f"collision: {show(pair)}: {ours_path}:{line} ({raw}) is bound twice (also line {twice})")
+        seen.append((pair, line))
+    missing = 0
+    for line, cmd in execs:
+        words = cmd.split()
+        if words and words[0].startswith("/") and not os.access(words[0], os.X_OK):
+            missing += 1
+            print(f"missing-binary: {ours_path}:{line} runs {words[0]}, which is not an executable file")
+    print(f"collisions={collisions}")
+    return 1 if collisions or missing else 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except SystemExit as e:
+        if isinstance(e.code, str):
+            print(f"seclegion-keys-lint: {e.code}", file=sys.stderr)
+            sys.exit(2)
+        raise

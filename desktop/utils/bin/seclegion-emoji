@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-emoji: pick an emoji in rofi and copy it (wl-copy). Stdlib only: the list comes
+from the unicodedata names of the emoji blocks, so no extra package is needed.
+
+    seclegion-emoji           rofi picker
+    seclegion-emoji --list    print "<emoji> <name>" lines
+
+Env (tests): SL_ROFI (default "rofi -dmenu -i -p emoji"), SL_WLCOPY (default wl-copy).
+"""
+import os
+import shlex
+import subprocess
+import sys
+import unicodedata
+
+RANGES = ((0x1F300, 0x1F64F), (0x1F680, 0x1F6FF), (0x1F900, 0x1F9FF), (0x1FA70, 0x1FAFF),
+          (0x2600, 0x26FF), (0x2700, 0x27BF))
+
+
+def emoji_lines():
+    for lo, hi in RANGES:
+        for cp in range(lo, hi + 1):
+            try:
+                name = unicodedata.name(chr(cp)).lower()
+            except ValueError:
+                continue
+            yield f"{chr(cp)} {name}"
+
+
+def main(argv):
+    lines = list(emoji_lines())
+    if argv[:1] == ["--list"]:
+        print("\n".join(lines))
+        return 0
+    rofi = shlex.split(os.environ.get("SL_ROFI", "rofi -dmenu -i -p emoji"))
+    r = subprocess.run(rofi, input="\n".join(lines), capture_output=True, text=True)
+    pick = r.stdout.strip()
+    if r.returncode != 0 or not pick:
+        return 0
+    subprocess.run([os.environ.get("SL_WLCOPY", "wl-copy")], input=pick.split(" ", 1)[0], text=True)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

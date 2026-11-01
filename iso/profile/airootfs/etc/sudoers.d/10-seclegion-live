@@ -1,0 +1,4 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# The live session is full admin with no sign-in (spec A3). This is the ONLY NOPASSWD rule on the ISO.
+seclegion-live ALL=(ALL:ALL) NOPASSWD: ALL

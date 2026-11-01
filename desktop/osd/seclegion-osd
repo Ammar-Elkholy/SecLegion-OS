@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# seclegion-osd <kind> <value> [label] - one on-screen popup for our own keys.
+#   kind   volume | brightness | mic | media | any other word (generic icon)
+#   value  integer 0-100, drawn as the progress bar (clamped)
+#   label  popup title, default: the kind
+# One popup is reused for every call (tag seclegion-osd), shown for 2000 ms at
+# low urgency. It goes through the dunstify shim next to this script, which
+# turns the tag into the hint swaync replaces in place.
+set -eu
+if [ $# -lt 2 ] || [ $# -gt 3 ] || [[ ! "$2" =~ ^[0-9]+$ ]]; then
+    echo "usage: seclegion-osd <kind> <value 0-100> [label]" >&2
+    exit 2
+fi
+kind="$1" value="$2" label="${3:-$1}"
+if [ "${#value}" -gt 3 ] || [ "$((10#$value))" -gt 100 ]; then value=100; fi
+value=$((10#$value))
+case "$kind" in
+    volume) icon=audio-volume-high-symbolic ;;
+    brightness) icon=display-brightness-symbolic ;;
+    mic) icon=audio-input-microphone-symbolic ;;
+    media) icon=media-playback-start-symbolic ;;
+    *) icon=dialog-information-symbolic ;;
+esac
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec "$here/dunstify" --urgency=low --timeout=2000 --appname=SecLegion --icon="$icon" \
+    -h string:x-dunst-stack-tag:seclegion-osd -h "int:value:$value" "$label" "${value}%"

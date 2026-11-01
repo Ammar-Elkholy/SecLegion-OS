@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# seclegion-firmware: firmware updates through fwupd. Refreshes metadata, lists updates and
+# asks before installing (fwupdmgr asks for authentication itself). Meant for a terminal:
+# the launcher entry runs it in kitty. SL_FWUPDMGR: tests.
+set -u
+fw="${SL_FWUPDMGR:-fwupdmgr}"
+command -v "$fw" >/dev/null 2>&1 || { echo "fwupd is not installed" >&2; exit 1; }
+"$fw" refresh --force || true
+if "$fw" get-updates; then
+    printf '\nInstall these updates? [y/N] '
+    read -r a
+    case "$a" in y|Y) "$fw" update ;; *) echo "Nothing installed." ;; esac
+else
+    echo "No firmware updates are available."
+fi

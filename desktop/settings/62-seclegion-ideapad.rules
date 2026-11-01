@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Lenovo IdeaPad/Legion battery conservation mode (ideapad_laptop): the Settings toggle writes
+# conservation_mode as the logged-in admin, so open that one attribute to group wheel. The kernel
+# creates the attribute while the driver probes, so the rule fires on bind as well as add; TEST
+# keeps it silent on a machine whose firmware has no such file.
+ACTION=="add|bind", SUBSYSTEM=="platform", DRIVER=="ideapad_acpi", TEST=="conservation_mode", \
+  RUN+="/usr/bin/chgrp wheel /sys%p/conservation_mode", \
+  RUN+="/usr/bin/chmod 0664 /sys%p/conservation_mode"

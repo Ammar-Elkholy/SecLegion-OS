@@ -1,0 +1,3 @@
+SecLegion owner-supplied branding asset. All rights reserved by Ammar Elkholy
+until a redistribution licence for branding is chosen (see docs/branding.md).
+Not covered by the MIT licence of the code in this repository.

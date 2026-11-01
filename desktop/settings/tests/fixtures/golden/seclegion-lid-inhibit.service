@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: MIT
+# Written by SecLegion Settings (power.lid_ignore).
+[Unit]
+Description=SecLegion: keep running when the lid is closed
+
+[Service]
+ExecStart=/usr/bin/systemd-inhibit --what=handle-lid-switch --who=SecLegion --why="Lid close ignored (SecLegion Settings)" --mode=block sleep infinity
+
+[Install]
+WantedBy=default.target

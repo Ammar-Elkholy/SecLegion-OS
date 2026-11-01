@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Repo files seclegion-desktop needs (tools/pkg-source packs them into seclegion-src.tar.zst).
+desktop/hypr
+desktop/waybar
+desktop/swaync
+desktop/idle
+desktop/osd
+desktop/fm
+desktop/display
+desktop/keys-help
+tools/seclegion-host
+tools/host-lib.sh
+tools/seclegion-keys-lint
+LICENSE
+desktop/units
+desktop/utils
+desktop/capture
+desktop/welcome
+docs/dual-boot.md
+tools/seclegion-tools
+catalog

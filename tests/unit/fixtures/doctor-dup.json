@@ -1,0 +1,1 @@
+{"configerrors": "", "swaync": 2, "binds": [{"cmd": "kitty", "present": true}, {"cmd": "brave || firefox", "present": true}], "failed_units": []}

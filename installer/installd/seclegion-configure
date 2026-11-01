@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-configure: ask the install questions, write archinstall JSON."""
+import argparse
+import getpass
+import json
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import configurator as c  # noqa: E402
+import release  # noqa: E402
+
+
+def ask(prompt, default=None, secret=False):
+    shown = f" [{default}]" if default is not None and not secret else ""
+    v = (getpass.getpass if secret else input)(f"{prompt}{shown}: ")
+    return v or default
+
+
+def interactive(facts):
+    disks = [d for d in facts["lsblk"]["blockdevices"] if d.get("type") == "disk"]
+    for d in disks:
+        print(f"  {d['path']}  {d.get('model') or ''}  {int(d['size']) // c.GIB} GiB")
+    ans = {"disk": ask("Disk (path)", disks[0]["path"] if disks else None)}
+    ans["mode"] = ask("Mode erase/erase-luks/alongside", "erase")
+    ans["username"] = ask("Username")
+    ans["password"] = ask("Password", secret=True)
+    ans["hostname"] = ask("Hostname", "seclegion")
+    ans["confirm"] = ask("Type the disk model exactly to confirm")
+    return ans
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(prog="seclegion-configure")
+    ap.add_argument("--facts")
+    ap.add_argument("--gather-facts", action="store_true",
+                    help="gather live disk facts instead of reading --facts")
+    ap.add_argument("--force-install-mode", action="store_true",
+                    help="with --gather-facts: report install_mode true (dev loop in a rescue shell)")
+    ap.add_argument("--answers")
+    ap.add_argument("--out", required=True)
+    ap.add_argument("--dry-run", action="store_true")
+    a = ap.parse_args(argv)
+    bad = release.dev_violations(force_install_mode=a.force_install_mode)
+    if bad:
+        print(f"refused: release build, DEV-only switch not allowed: {', '.join(bad)}", file=sys.stderr)
+        return 2
+    if bool(a.facts) == a.gather_facts:
+        ap.error("give exactly one of --facts and --gather-facts")
+    if a.gather_facts:
+        import facts as facts_mod
+        facts = facts_mod.gather(install_mode=True if a.force_install_mode else None)
+    else:
+        with open(a.facts) as f:
+            facts = json.load(f)
+    try:
+        if a.answers:
+            with open(a.answers) as f:
+                raw = json.load(f)
+        else:
+            raw = interactive(facts)
+        answers = c.Answers.from_dict(raw)
+        config, creds = c.build_config(answers, facts)
+    except c.Refusal as r:
+        print(f"refused: {r}", file=sys.stderr)
+        return 2
+    if a.dry_run:
+        c.dry_run(config, answers, a.out)
+    else:
+        c.write(config, creds, a.out, c.post_hints(answers))
+        print(f"wrote archinstall files to {a.out}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

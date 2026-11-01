@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Waybar custom/sl-vpn: a lock while a NetworkManager vpn or wireguard connection
+# is active, hidden otherwise. One short-lived nmcli call, no resident process.
+# Quiet when nmcli is missing or NetworkManager is down: hidden JSON, exit 0.
+# SL_NMCLI: tests only.
+nmcli="${SL_NMCLI:-nmcli}"
+hidden='{"text":"","class":"hidden"}'
+names=()
+out="$("$nmcli" -t -f TYPE,NAME connection show --active 2>/dev/null)" || out=""
+while IFS= read -r line; do
+    case "$line" in
+        vpn:*|wireguard:*)
+            n="${line#*:}"
+            n="${n//\\:/:}"
+            names+=("$n")
+            ;;
+    esac
+done <<< "$out"
+if [ "${#names[@]}" -eq 0 ]; then
+    echo "$hidden"
+    exit 0
+fi
+esc() { local s="${1//\\/\\\\}"; s="${s//\"/\\\"}"; printf '%s' "$s"; }
+text="󰌾 $(esc "${names[0]}")"
+[ "${#names[@]}" -gt 1 ] && text+=" +$(( ${#names[@]} - 1 ))"
+tip=""
+for n in "${names[@]}"; do tip+="VPN: $(esc "$n")\\n"; done
+printf '{"text":"%s","tooltip":"%s","class":"active"}\n' "$text" "${tip%\\n}"

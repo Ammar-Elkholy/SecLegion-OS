@@ -1,0 +1,408 @@
+#!/usr/bin/python3 -I
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""seclegion-displayd: clear ghost monitors after an unplug (owner issue 15).
+
+On a hybrid laptop (HDMI on the NVIDIA dGPU, eDP on the AMD iGPU) Hyprland can keep a monitor whose
+DRM connector already says `disconnected`. Its workspaces stay there and focus and menus open on a
+screen nobody sees. This daemon reconciles Hyprland against the connectors:
+
+  ghost = Hyprland lists the monitor enabled, and its connector <drm_root>/card*-<NAME>/status is
+          `disconnected` (a monitor with no connector, headless or nested, is never a ghost)
+  for each ghost: move its workspaces to the focused non-ghost monitor (else the first one),
+          disable the ghost, focus the target. With no non-ghost monitor, it only logs.
+  a monitor this daemon disabled is enabled again once its connector is `connected`
+          (the runtime disable outlives the output: a re-plugged HDMI would stay dark).
+
+Reconcile runs once at start and after Hyprland socket2 monitoradded/monitorremoved events and udev
+DRM events (debounced by SETTLE seconds). No polling: reading a connector status probes it, which
+can wake the dGPU. Logs go to stderr with a "displayd:" prefix.
+
+The set of monitors this daemon disabled survives a restart: it is kept in
+$XDG_RUNTIME_DIR/seclegion/displayd.json (written atomically) together with the Hyprland instance
+signature, and loaded at start only for the same instance (a new Hyprland reads its own config, so
+an old record would enable a monitor the owner disabled). With no instance signature and no
+SL_SOCKET2 it exits 1: the unit restarts it once the session has exported the signature. A stale
+signature (Hyprland restarted, the user manager kept the old one) is not fatal: when its socket2
+refuses, the newest other instance under $XDG_RUNTIME_DIR/hypr that accepts is followed.
+
+The background (owner issue 16): seclegion-wallpaper, next to this file, paints every output once
+at start and each added output on monitoradded. It runs as a child process (it retries for up to
+3 s while awww-daemon binds the output), never waited on in the event loop; exited ones are reaped.
+
+Hooks (tests): SL_HYPRCTL (hyprctl command, split like a shell), SL_SOCKET2 (socket2 path),
+SL_DRM_ROOT (default /sys/class/drm), SL_UDEV_CMD (default: udevadm monitor --udev drm),
+SL_STATE_DIR (default $XDG_RUNTIME_DIR/seclegion), SL_WALLPAPER (wallpaper command, split like a
+shell; default: seclegion-wallpaper next to this file).
+"""
+
+import glob
+import json
+import os
+import selectors
+import shlex
+import signal
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+
+# Lua-mode forms (Hyprland 0.56.2). The legacy moveworkspacetomonitor does nothing in Lua mode.
+# DISABLE_FORM was found by tests/display/spike-disable.sh ("SPIKE ok eval"): it goes through
+# `hyprctl eval`, not dispatch; ENABLE_FORM keeps the rest of the configured monitor rule.
+MOVE_FORM = 'hl.dsp.workspace.move({{ workspace = "{ws}", monitor = "{mon}" }})'
+FOCUS_FORM = 'hl.dsp.focus({{ monitor = "{mon}" }})'
+DISABLE_FORM = 'hl.monitor({{ output = "{mon}", disabled = true }})'
+# The first runtime rule for an output replaces the configured catch-all rule, and a later rule
+# merges into it (tests/display/spike-monitor-apply.sh). So when the ghost had a scale, the disable
+# rule carries it with the preferred mode: on re-plug ENABLE_FORM merges and the screen comes back
+# at the owner's scale, not Hyprland's auto scale.
+DISABLE_SCALED_FORM = ('hl.monitor({{ output = "{mon}", mode = "preferred", scale = {scale:g}, '
+                       'disabled = true }})')
+ENABLE_FORM = 'hl.monitor({{ output = "{mon}", disabled = false }})'
+
+SETTLE = 0.5          # seconds of quiet after the last trigger before a reconcile
+RECONNECT = (0.5, 5)  # socket2 reconnect backoff: first, max (seconds)
+
+
+def log(msg):
+    print(f"displayd: {msg}", file=sys.stderr, flush=True)
+
+
+class Hypr:
+    def __init__(self, cmd):
+        self.cmd = cmd
+
+    def run(self, *args):
+        try:
+            p = subprocess.run([*self.cmd, *args], capture_output=True, text=True, check=False)
+        except OSError as e:
+            log(f"{self.cmd[0]}: {e.strerror or e}")
+            return ""
+        return p.stdout.strip()
+
+    def json(self, *args):
+        out = self.run("-j", *args)
+        try:
+            return json.loads(out)
+        except ValueError:
+            log(f"hyprctl -j {' '.join(args)}: not JSON: {out[:200]!r}")
+            return []
+
+    def dispatch(self, form):
+        reply = self.run("dispatch", form)
+        if reply != "ok":
+            log(f"dispatch {form}: {reply!r}")
+        return reply == "ok"
+
+    def eval(self, code):
+        reply = self.run("eval", code)
+        if reply != "ok":
+            log(f"eval {code}: {reply!r}")
+        return reply == "ok"
+
+
+def connector_status(drm_root, name):
+    """'connected' | 'disconnected' | None (no connector: headless, nested, unknown)."""
+    seen = []
+    for path in sorted(glob.glob(os.path.join(glob.escape(drm_root), f"card*-{glob.escape(name)}/status"))):
+        try:
+            with open(path) as f:
+                seen.append(f.read().strip())
+        except OSError:
+            continue
+    if not seen:
+        return None
+    return "connected" if "connected" in seen else seen[0]
+
+
+class State:
+    """disabled_by_us on disk: {"instance": <signature>, "disabled": [names]}."""
+
+    def __init__(self, path, instance):
+        self.path = path
+        self.instance = instance
+
+    def load(self):
+        try:
+            with open(self.path) as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            return set()
+        except (OSError, ValueError) as e:
+            log(f"state {self.path}: unreadable ({e}); starting empty")
+            return set()
+        if not isinstance(data, dict) or data.get("instance") != self.instance:
+            return set()
+        names = data.get("disabled")
+        return {n for n in names if isinstance(n, str)} if isinstance(names, list) else set()
+
+    def save(self, names):
+        d = os.path.dirname(self.path)
+        try:
+            os.makedirs(d, mode=0o700, exist_ok=True)
+            fd, tmp = tempfile.mkstemp(prefix=".displayd-", dir=d)
+            try:
+                with os.fdopen(fd, "w") as f:
+                    json.dump({"instance": self.instance, "disabled": sorted(names)}, f)
+                os.replace(tmp, self.path)
+            except BaseException:
+                os.unlink(tmp)
+                raise
+        except OSError as e:
+            log(f"state {self.path}: not saved ({e.strerror or e})")
+
+
+class Reconciler:
+    def __init__(self, hypr, drm_root, state=None):
+        self.hypr = hypr
+        self.drm_root = drm_root
+        self.state = state
+        # names this daemon disabled, to enable again on re-plug; kept across restarts
+        self.disabled_by_us = state.load() if state else set()
+        if self.disabled_by_us:
+            log(f"state: disabled earlier by this daemon: {', '.join(sorted(self.disabled_by_us))}")
+
+    def _save(self):
+        if self.state:
+            self.state.save(self.disabled_by_us)
+
+    def reconcile(self, why):
+        monitors = self.hypr.json("monitors", "all")
+        status = {m["name"]: connector_status(self.drm_root, m["name"]) for m in monitors}
+        self._reenable(monitors, status)
+        live = [m for m in monitors if not m.get("disabled")]
+        ghosts = [m["name"] for m in live if status[m["name"]] == "disconnected"]
+        if not ghosts:
+            return
+        good = [m for m in live if m["name"] not in ghosts]
+        if not good:
+            log(f"{why}: ghost {', '.join(ghosts)} but no other monitor; leaving it")
+            return
+        target = next((m for m in good if m.get("focused")), good[0])["name"]
+        workspaces = self.hypr.json("workspaces")
+        for ghost in ghosts:
+            moved = [str(w["id"]) for w in workspaces if w.get("monitor") == ghost and w["id"] > 0]
+            for ws in moved:
+                self.hypr.dispatch(MOVE_FORM.format(ws=ws, mon=target))
+            scale = next((m.get("scale") for m in live if m["name"] == ghost), None)
+            form = DISABLE_SCALED_FORM if scale else DISABLE_FORM
+            if self.hypr.eval(form.format(mon=ghost, scale=scale or 0)):
+                self.disabled_by_us.add(ghost)
+                self._save()
+            log(f"{why}: ghost {ghost} (connector disconnected): workspaces "
+                f"[{' '.join(moved)}] -> {target}, disabled")
+        self.hypr.dispatch(FOCUS_FORM.format(mon=target))
+
+    def _reenable(self, monitors, status):
+        for m in monitors:
+            name = m["name"]
+            if name in self.disabled_by_us and m.get("disabled") and status[name] == "connected":
+                if self.hypr.eval(ENABLE_FORM.format(mon=name)):
+                    self.disabled_by_us.discard(name)
+                    self._save()
+                    log(f"{name}: connector connected again, enabled")
+
+
+def parse_event(line):
+    """'monitorremovedv2>>1,HDMI-A-1,desc' -> ('monitorremovedv2', 'HDMI-A-1')."""
+    event, _, data = line.partition(">>")
+    if event.endswith("v2"):
+        fields = data.split(",", 2)
+        return event, fields[1] if len(fields) > 1 else data
+    return event, data
+
+
+WALLPAPER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seclegion-wallpaper")
+painters = []   # running seclegion-wallpaper children, reaped by reap_painters()
+
+
+def paint(output=None):
+    """Start seclegion-wallpaper for one output (every output when None); do not wait for it."""
+    cmd = shlex.split(os.environ["SL_WALLPAPER"]) if os.environ.get("SL_WALLPAPER") \
+        else [sys.executable, "-I", WALLPAPER]
+    try:
+        painters.append(subprocess.Popen([*cmd, *(["--output", output] if output else [])],
+                                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL))
+    except OSError as e:
+        log(f"wallpaper {cmd[0]}: {e.strerror or e}")
+
+
+def reap_painters():
+    painters[:] = [p for p in painters if p.poll() is None]
+
+
+def on_monitor_added(name):
+    """A monitor plugged in after login gets the background too (owner issue 16)."""
+    paint(name)
+
+
+# socket2 event -> handlers taking the monitor name; every one of them also schedules a reconcile
+HANDLERS = {
+    "monitoradded": [on_monitor_added],
+    "monitoraddedv2": [on_monitor_added],
+    "monitorremoved": [],
+    "monitorremovedv2": [],
+}
+
+
+class Daemon:
+    def __init__(self):
+        sig = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "")
+        if not sig and not os.environ.get("SL_SOCKET2"):
+            log("HYPRLAND_INSTANCE_SIGNATURE is not set (no Hyprland session yet); exiting")
+            sys.exit(1)
+        runtime = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+        self.runtime = runtime
+        self.sock_path = os.environ.get("SL_SOCKET2") or f"{runtime}/hypr/{sig}/.socket2.sock"
+        self.udev_cmd = shlex.split(
+            os.environ.get("SL_UDEV_CMD") or "udevadm monitor --udev --subsystem-match=drm")
+        state_dir = os.environ.get("SL_STATE_DIR") or f"{runtime}/seclegion"
+        self.rec = Reconciler(Hypr(shlex.split(os.environ.get("SL_HYPRCTL") or "hyprctl")),
+                              os.environ.get("SL_DRM_ROOT") or "/sys/class/drm",
+                              State(os.path.join(state_dir, "displayd.json"), sig))
+        self.sel = selectors.DefaultSelector()
+        self.sock = None
+        self.sock_buf = b""
+        self.retry_at = 0.0
+        self.backoff = RECONNECT[0]
+        self.udev = None
+        self.udev_buf = b""
+        self.pending = None   # (deadline, reason) of the next reconcile
+        self.announced = False
+
+    def schedule(self, why):
+        self.pending = (time.monotonic() + SETTLE, why)
+
+    def connect(self):
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            s.connect(self.sock_path)
+        except OSError as e:
+            s.close()
+            s = self.other_instance()
+            if s is None:
+                self.retry_at = time.monotonic() + self.backoff
+                log(f"socket2 {self.sock_path}: {e.strerror or e}; retry in {self.backoff:g} s")
+                self.backoff = min(self.backoff * 2, RECONNECT[1])
+                return
+        self.sock, self.sock_buf, self.backoff = s, b"", RECONNECT[0]
+        self.sel.register(s, selectors.EVENT_READ, self.on_socket)
+        if self.announced:
+            log("socket2 reconnected")
+            self.schedule("reconnect")
+        else:
+            self.announced = True
+            log(f"listening on {self.sock_path}")
+
+    def other_instance(self):
+        """A stale signature (Hyprland restarted under a lingering user manager): connect to the
+        newest other instance under $XDG_RUNTIME_DIR/hypr that accepts, as seclegion-wsevents does,
+        and follow it (hyprctl and the state record use its signature). None if there is none."""
+        if os.environ.get("SL_SOCKET2"):
+            return None
+        found = []
+        for path in glob.glob(os.path.join(glob.escape(self.runtime), "hypr", "*", ".socket2.sock")):
+            try:
+                found.append((os.stat(path).st_mtime, path))
+            except OSError:
+                continue
+        for _, path in sorted(found, reverse=True):
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            s.settimeout(2)   # a hung Hyprland with a full backlog must not block the scan
+            try:
+                s.connect(path)
+            except OSError:
+                s.close()   # a crashed instance leaves its socket file behind
+                continue
+            s.settimeout(None)
+            sig = os.path.basename(os.path.dirname(path))
+            os.environ["HYPRLAND_INSTANCE_SIGNATURE"] = sig
+            self.sock_path, self.rec.state.instance = path, sig
+            self.rec.disabled_by_us = self.rec.state.load()
+            log(f"following Hyprland instance {sig} (the signature in the environment is stale)")
+            self.schedule("instance")
+            return s
+        return None
+
+    def drop_socket(self):
+        self.sel.unregister(self.sock)
+        self.sock.close()
+        self.sock = None
+        self.retry_at = time.monotonic() + self.backoff
+        log("socket2 closed; reconnecting")
+
+    def on_socket(self):
+        try:
+            chunk = self.sock.recv(65536)
+        except OSError:
+            chunk = b""
+        if not chunk:
+            self.drop_socket()
+            return
+        self.sock_buf += chunk
+        *lines, self.sock_buf = self.sock_buf.split(b"\n")
+        for raw in lines:
+            event, name = parse_event(raw.decode("utf-8", "replace"))
+            if event not in HANDLERS:
+                continue
+            for handler in HANDLERS[event]:
+                handler(name)
+            self.schedule(f"{event} {name}")
+
+    def start_udev(self):
+        try:
+            self.udev = subprocess.Popen(self.udev_cmd, stdout=subprocess.PIPE, stdin=subprocess.DEVNULL)
+        except OSError as e:
+            log(f"udev monitor {self.udev_cmd[0]}: {e.strerror or e}; DRM events not watched")
+            return
+        os.set_blocking(self.udev.stdout.fileno(), False)
+        self.sel.register(self.udev.stdout, selectors.EVENT_READ, self.on_udev)
+
+    def on_udev(self):
+        data = self.udev.stdout.read()
+        if data is None:   # non-blocking: nothing to read yet
+            return
+        if not data:
+            self.sel.unregister(self.udev.stdout)
+            log(f"udev monitor exited ({self.udev.wait()}); DRM events not watched")
+            self.udev = None
+            return
+        self.udev_buf += data
+        *lines, self.udev_buf = self.udev_buf.split(b"\n")
+        for line in (raw.decode("utf-8", "replace") for raw in lines):
+            if line.startswith("UDEV") and "(drm)" in line:
+                self.schedule("udev " + " ".join(line.split()[2:3]))
+
+    def stop(self, *_):
+        if self.udev:
+            self.udev.terminate()
+            self.udev.wait()
+        sys.exit(0)
+
+    def run(self):
+        signal.signal(signal.SIGTERM, self.stop)
+        signal.signal(signal.SIGINT, self.stop)
+        self.start_udev()
+        self.rec.reconcile("start")
+        paint()
+        while True:
+            if self.sock is None and time.monotonic() >= self.retry_at:
+                self.connect()
+            reap_painters()
+            now = time.monotonic()
+            deadlines = [d for d in (self.pending and self.pending[0],
+                                     None if self.sock else self.retry_at,
+                                     now + 0.5 if painters else None) if d is not None]
+            timeout = max(0.0, min(deadlines) - now) if deadlines else None
+            for key, _ in self.sel.select(timeout):
+                key.data()
+            if self.pending and time.monotonic() >= self.pending[0]:
+                why = self.pending[1]
+                self.pending = None
+                self.rec.reconcile(why)
+
+
+if __name__ == "__main__":
+    Daemon().run()

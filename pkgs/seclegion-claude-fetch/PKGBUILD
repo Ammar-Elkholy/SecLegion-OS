@@ -1,0 +1,25 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# Fetcher for Claude Code (Anthropic's CLI). It ships NO Anthropic binary (proprietary licence): only the
+# fetch script, the pinned manifest and the package template. `seclegion-claude-fetch`, run by the user on
+# an online machine, downloads the pinned linux-x64 binary from Anthropic's release bucket, checks its
+# sha256 and installs it into /opt/claude-code with a local makepkg run.
+pkgname=seclegion-claude-fetch
+pkgver=2.1.308
+pkgrel=1
+pkgdesc='Fetcher for Claude Code (pinned version and sha256; the Anthropic binary is downloaded on your machine)'
+arch=('any')
+url='https://code.claude.com'
+license=('MIT')
+depends=('bash' 'curl' 'coreutils' 'sed' 'pacman' 'sudo')
+source=(seclegion-src.tar.zst)
+sha256sums=('SKIP')   # generated for the build
+
+package() {
+    install -Dm755 "$srcdir/tools/seclegion-vendor-fetch" "$pkgdir/usr/bin/seclegion-claude-fetch"
+    install -Dm644 "$startdir/claude.toml" "$pkgdir/usr/share/seclegion/vendor/claude.toml"
+    install -Dm644 "$startdir/claude.PKGBUILD" "$pkgdir/usr/share/seclegion/vendor/claude.PKGBUILD"
+}

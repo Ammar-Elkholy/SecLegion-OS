@@ -1,0 +1,52 @@
+{
+  "boot_entries": [
+    {
+      "id": "safe-graphics",
+      "params": [
+        "nomodeset"
+      ],
+      "title": "SecLegion OS (safe graphics)"
+    }
+  ],
+  "env": {},
+  "facts": {
+    "cpu_vendor": "AuthenticAMD",
+    "displays": [],
+    "gpus": [
+      {
+        "addr": "0000:04:00.0",
+        "boot_vga": true,
+        "class": "030000",
+        "nvidia_family": null,
+        "pci_id": "1ed5:0101"
+      }
+    ],
+    "hybrid": false,
+    "kernel": "stock",
+    "laptop": false,
+    "touchpad": false,
+    "virt": "none"
+  },
+  "kernel_params": [],
+  "messages": [],
+  "packages": [
+    "linux-firmware",
+    "sof-firmware",
+    "alsa-ucm-conf",
+    "intel-ucode",
+    "amd-ucode",
+    "mesa",
+    "vulkan-swrast"
+  ],
+  "rules_applied": [
+    "always-firmware",
+    "gpu-unknown"
+  ],
+  "schema": 1,
+  "services": [],
+  "settings": {},
+  "udev_rules": [],
+  "warnings": [
+    "Unrecognised graphics device 1ed5:0101: using generic Mesa drivers. If the desktop does not start, boot the 'safe graphics' entry."
+  ]
+}

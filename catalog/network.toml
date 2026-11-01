@@ -1,0 +1,67 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Tier-1 catalog, batch 1: network capture and plumbing. Schema and rules: catalog/README.md.
+
+[[tool]]
+name = "wireshark-cli"
+package = "wireshark-cli"
+source = "arch-extra"
+category = "network"
+purpose = "tshark, dumpcap, capinfos, editcap, mergecap: command-line packet capture and dissection."
+privileges = "cap_net_raw"
+privileges_why = "Live capture needs cap_net_raw and cap_net_admin on dumpcap (group wireshark); reading pcap files needs nothing."
+safe_test = ["tshark", "--version"]
+safe_test_expect = "TShark \\(Wireshark\\)"
+removal = "sudo pacman -Rns wireshark-cli"
+update_policy = "Follows the Arch package; updated with the system (pacman -Syu). No pinning."
+docs = "man tshark; https://www.wireshark.org/docs/man-pages/tshark.html"
+licence = "GPL-2.0-only"
+needs_internet = false
+
+[[tool]]
+name = "tcpdump"
+package = "tcpdump"
+source = "arch-extra"
+category = "network"
+purpose = "Packet capture and filtering on an interface or from a pcap file."
+privileges = "cap_net_raw"
+privileges_why = "Live capture opens a raw packet socket; run as root or grant cap_net_raw. Reading pcap files needs nothing."
+safe_test = ["tcpdump", "--version"]
+safe_test_expect = "tcpdump version"
+removal = "sudo pacman -Rns tcpdump"
+update_policy = "Follows the Arch package; updated with the system (pacman -Syu). No pinning."
+docs = "man tcpdump; https://www.tcpdump.org/manpages/tcpdump.1.html"
+licence = "BSD-3-Clause"
+needs_internet = false
+
+[[tool]]
+name = "netcat"
+package = "openbsd-netcat"
+source = "arch-extra"
+category = "network"
+purpose = "Read and write TCP/UDP/UNIX-socket connections (binary is nc); banner grabs, listeners, file transfer."
+privileges = "none"
+privileges_why = "Ports above 1023 are unprivileged; listening on a low port needs root."
+safe_test = ["nc", "-h"]
+safe_test_expect = "usage: nc"
+removal = "sudo pacman -Rns openbsd-netcat"
+update_policy = "Follows the Arch package; updated with the system (pacman -Syu). openbsd-netcat is chosen over gnu-netcat (not in the official repositories)."
+docs = "man nc"
+licence = "BSD-2-Clause AND BSD-3-Clause"
+needs_internet = false
+
+[[tool]]
+name = "socat"
+package = "socat"
+source = "arch-extra"
+category = "network"
+purpose = "Bidirectional relay between two byte streams: sockets, files, pipes, TLS, PTYs; port forwarding and pivots."
+privileges = "none"
+privileges_why = "Unprivileged on high ports and files; raw sockets and low ports need root."
+safe_test = ["socat", "-V"]
+safe_test_expect = "socat version"
+removal = "sudo pacman -Rns socat"
+update_policy = "Follows the Arch package; updated with the system (pacman -Syu). No pinning."
+docs = "man socat; http://www.dest-unreach.org/socat/doc/socat.html"
+licence = "GPL-2.0-only"
+needs_internet = false

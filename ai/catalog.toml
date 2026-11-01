@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Curated small models for the local AI runtime. No weights ship in the ISO: this file only names
+# them. Pulling needs explicit consent (seclegion-ai pull) and the pulled weights blob must match
+# `digest` (sha256 of the model layer, as in the FROM line of `ollama show --modelfile`).
+#
+# DIGESTS ARE PLACEHOLDERS (all zeros): they could not be read offline. Until a maintainer fills
+# them from a networked host (ollama pull TAG; ollama show TAG --modelfile), `pull` FAILS CLOSED
+# (digest mismatch, model removed). size_mb is the download, ram_mb the RAM to run it; both approximate.
+# No tag may end in "cloud" (cloud-backed models send prompts off-host).
+
+[[model]]
+name = "qwen2.5-1.5b"
+tag = "qwen2.5:1.5b"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+licence = "Apache-2.0"
+size_mb = 986
+ram_mb = 2048
+
+[[model]]
+name = "qwen2.5-coder-1.5b"
+tag = "qwen2.5-coder:1.5b"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+licence = "Apache-2.0"
+size_mb = 986
+ram_mb = 2048
+
+[[model]]
+name = "llama3.2-1b"
+tag = "llama3.2:1b"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+licence = "Llama-3.2-Community"
+size_mb = 1300
+ram_mb = 2560
+
+[[model]]
+name = "gemma2-2b"
+tag = "gemma2:2b"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+licence = "Gemma-Terms"
+size_mb = 1600
+ram_mb = 3072
+
+[[model]]
+name = "phi3-mini"
+tag = "phi3:mini"
+digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+licence = "MIT"
+size_mb = 2200
+ram_mb = 4096

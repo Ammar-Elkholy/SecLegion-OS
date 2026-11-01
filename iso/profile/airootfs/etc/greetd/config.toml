@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Live mode only: seclegion-live.target wants greetd.service; no other target does.
+[terminal]
+vt = 1
+
+# Logout falls back to the greeter.
+[default_session]
+command = "cage -s -- regreet"
+user = "greeter"
+
+# The live user starts straight into the desktop, with no password.
+[initial_session]
+command = "Hyprland"
+user = "seclegion-live"

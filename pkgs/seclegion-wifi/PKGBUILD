@@ -1,0 +1,32 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# The Wi-Fi panel (python package seclegion_wifi, the seclegion-wifi launcher, the desktop entry):
+# networks in range, join, forget, radio switch, in a GTK4 + libadwaita window over libnm.
+pkgname=seclegion-wifi
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='SecLegion OS Wi-Fi panel (GTK4, libnm)'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('MIT')
+depends=('python' 'python-gobject' 'gtk4' 'libadwaita' 'libnm' 'networkmanager')
+source=(seclegion-src.tar.zst)
+sha256sums=('SKIP')  # generated for the build from tracked files (tools/pkg-source)
+
+_tree() {
+    local f
+    while IFS= read -r -d '' f; do
+        install -Dm644 "$srcdir/$1/$f" "$pkgdir/$2/$f"
+    done < <(cd "$srcdir/$1" && find . -type f ! -name '*.license' ! -path '*/__pycache__/*' -print0)
+}
+
+package() {
+    _tree desktop/wifi/seclegion_wifi usr/lib/seclegion/python/seclegion_wifi
+    install -Dm755 "$srcdir/tools/seclegion-wifi" "$pkgdir/usr/bin/seclegion-wifi"
+    install -Dm644 "$srcdir/desktop/wifi/seclegion-wifi.desktop" \
+        "$pkgdir/usr/share/applications/seclegion-wifi.desktop"
+    install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

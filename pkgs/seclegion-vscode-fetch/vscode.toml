@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+#
+# Pinned vendor manifest read by seclegion-vscode-fetch and bumped by tools/vendor-bump vscode.
+# `released` is the vendor's release date of this version (tools/canary measures the lag from it).
+name = "vscode"
+version = "1.142.0"
+released = "2026-10-15"
+url = "https://update.code.visualstudio.com/1.142.0/linux-x64/stable"
+sha256 = "fcc1ccb435685adcc748287bbde524589569deedb6b4ad5560071583cbe00ae0"
+# Where the vendor publishes the hash: the update API's `sha256hash` field (latest build only, so it
+# can be cross-checked by tools/vendor-bump, not at fetch time).
+hash_source = "https://update.code.visualstudio.com/api/update/linux-x64/stable/latest"
+hash_url = ""
+signature = "none published for the tarball; trust is TLS to update.code.visualstudio.com plus the pinned sha256"

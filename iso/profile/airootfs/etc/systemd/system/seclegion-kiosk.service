@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Install-mode kiosk. Wanted only by seclegion-install.target. Runs as the no-shell, no-sudo
+# seclegion-installer user on tty1; if it ends for any reason the error screen appears.
+[Unit]
+Description=SecLegion installer kiosk (cage, installer GUI)
+After=systemd-user-sessions.service systemd-logind.service getty@tty1.service seclegion-kiosk-polkit.service
+Conflicts=getty@tty1.service
+OnFailure=seclegion-kiosk-error.service
+
+[Service]
+User=seclegion-installer
+PAMName=seclegion-kiosk
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+StandardInput=tty-fail
+StandardOutput=journal
+StandardError=journal
+UtmpIdentifier=tty1
+UtmpMode=user
+StateDirectory=seclegion-installer
+Environment=WLR_RENDERER_ALLOW_SOFTWARE=1
+ExecStart=/usr/share/seclegion/kiosk/run
+Restart=no

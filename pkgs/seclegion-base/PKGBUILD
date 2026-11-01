@@ -1,0 +1,32 @@
+# shellcheck shell=bash disable=SC2034,SC2154
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Maintainer: SecLegion OS <https://github.com/seclegion>
+#
+# Installed-system defaults: zram swap, sudo for wheel with a password (root locked, no autologin),
+# a warning when a kernel preset does not build UKIs.
+pkgname=seclegion-base
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='SecLegion OS base defaults: zram, sudo for wheel with password, UKI preset check'
+arch=('any')
+url='https://github.com/seclegion/SecLegion-OS'
+license=('MIT')
+depends=('zram-generator' 'sudo' 'bash' 'grep')
+source=()
+
+check() {
+    visudo -cf "$startdir/10-seclegion-wheel"
+    if grep -rq --exclude=PKGBUILD NOPASSWD "$startdir"; then
+        echo "check: NOPASSWD found" >&2
+        return 1
+    fi
+}
+
+package() {
+    install -Dm644 "$startdir/seclegion.conf" "$pkgdir/usr/lib/systemd/zram-generator.conf.d/seclegion.conf"
+    install -Dm440 "$startdir/10-seclegion-wheel" "$pkgdir/etc/sudoers.d/10-seclegion-wheel"
+    install -Dm644 "$startdir/95-seclegion-uki-check.hook" \
+        "$pkgdir/usr/share/libalpm/hooks/95-seclegion-uki-check.hook"
+    install -Dm755 "$startdir/seclegion-uki-check" "$pkgdir/usr/share/libalpm/scripts/seclegion-uki-check"
+}

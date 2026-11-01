@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+[Unit]
+Description=SecLegion OS: install Steam from [multilib] when online (D-H1)
+ConditionPathExists=/var/lib/seclegion/steam-pending
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/seclegion-install-steam
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=multi-user.target

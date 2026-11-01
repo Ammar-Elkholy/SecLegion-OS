@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# seclegion-reduced-motion [toggle|on|off|status]: turn Hyprland animations off or back on.
+# "on" writes $SL_STATE_DIR/reduced-motion.lua (default ~/.local/state/seclegion), which
+# seclegion-host.lua loads (guarded dofile) after the owner's config; "off" removes it. Then
+# `hyprctl reload` re-runs the config (SL_HYPRCTL, default hyprctl; skipped outside a
+# Hyprland session). Idempotent.
+set -u
+dir="${SL_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/seclegion}"
+f="$dir/reduced-motion.lua"
+hyprctl="${SL_HYPRCTL:-hyprctl}"
+notify="${SL_NOTIFY:-notify-send}"
+reload() {
+    if [ -n "${SL_HYPRCTL:-}" ] || [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then "$hyprctl" reload >/dev/null 2>&1 || true; fi
+    "$notify" -a SecLegion "Reduced motion" "$1" >/dev/null 2>&1 || true
+}
+on() {
+    mkdir -p "$dir"
+    # REUSE-IgnoreStart
+    printf -- '-- SPDX-License-Identifier: MIT\n-- written by seclegion-reduced-motion\nhl.config({ animations = { enabled = false } })\n' > "$f"
+    # REUSE-IgnoreEnd
+    reload "On: animations are off"
+}
+off() { rm -f "$f"; reload "Off: animations are back"; }
+case "${1:-toggle}" in
+    on) on ;;
+    off) off ;;
+    status) if [ -e "$f" ]; then echo on; else echo off; fi ;;
+    toggle) if [ -e "$f" ]; then off; else on; fi ;;
+    *) echo "usage: seclegion-reduced-motion [toggle|on|off|status]" >&2; exit 2 ;;
+esac

@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+[Desktop Entry]
+Type=Application
+Name=SecLegion Settings
+GenericName=Settings
+Comment=Power, display, sound, network and appearance settings for SecLegion
+Exec=seclegion-settings
+Icon=preferences-system
+Terminal=false
+Categories=Settings;System;
+Keywords=settings;preferences;power;battery;display;sound;network;theme;
+StartupNotify=true
+StartupWMClass=org.seclegion.Settings

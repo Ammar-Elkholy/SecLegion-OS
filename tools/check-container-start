@@ -1,0 +1,244 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""Fail if anything but tools/docker-build.sh starts a container.
+
+Engine-group membership is root-equivalent, so container starts must go through one
+reviewed wrapper with hard-coded image, mounts and flags (Sec R7 rule).
+
+The rule is deny-by-default: any container-engine word outside the wrapper is
+flagged unless the first thing after it (past global flags) is a read-only verb, and so
+is an engine-named shell variable in command position.
+It is a tripwire against mistakes and lazy agents, not a sandbox: a determined
+author can still build a command at run time, which is what review is for.
+
+Usage: check-container-start [ROOT]
+Exit status: 0 = clean, 1 = a forbidden container start was found.
+"""
+
+import os
+import re
+import sys
+
+ALLOWED = {"tools/docker-build.sh"}
+# Skipped only at the top of the tree. A nested build/ or evidence/ is scanned. Under the top
+# evidence/ only the *.log transcripts are skipped; every other file there is scanned.
+# Top-level tool caches hold test ids (scanner fixtures), not code.
+# Directories only: a top-level FILE named build or out is scanned. The one file exempt
+# is .git, the "gitdir: ..." pointer a worktree has instead of a directory.
+SKIP_TOP = {".git", ".venv", "build", "out", ".pytest_cache", ".ruff_cache", ".claude"}
+SKIP_TOP_FILES = {".git"}
+
+# Every name is built from pieces so this file does not match its own rules.
+_D, _P, _N, _B, _C = "dock" + "er", "pod" + "man", "nerd" + "ctl", "build" + "ah", "c" + "tr"
+_R = "ru" + "nc"
+# Low-level OCI runtimes and other container launchers.
+_LOW = ("cr" + "un", "you" + "ki", "systemd-" + "nspawn", "lxc-" + "start")
+ENGINES = (_D + "-compose", _P + "-compose", _D, _P, _N, _B, _C, _R, *_LOW)
+
+# An engine word as a command, a quoted list item, a path basename or an alias
+# target. Not tools/<engine>-build.sh, <engine>.io, a /<engine>/ directory.
+ENGINE = re.compile(r"(?<![\w$-])(?:" + "|".join(ENGINES) + r")(?![\w./-])")
+# Shell variables whose name suggests they hold an engine, quoted or not, braced or not,
+# with a ${X:-default} expansion consumed whole; also Make's $(DOCKER) and $$DOCKER.
+# Only a hit in command position (see is_var_start): $XDG_RUNTIME_DIR in a path,
+# ${WAYLAND_DISPLAY:-} and starship's $docker_context are not commands.
+_VAR_NAME = (r"\w*(?:" + "|".join(e.upper() for e in (_D, _P, _N, _B, _C))
+             + r"|ENGINE|CONTAINER|RUNTIME)\w*")
+ENGINE_VAR = re.compile(
+    r"\$\$?(?:\{" + _VAR_NAME + r"(?::?[-=+?][^}]*)?\}|\{" + _VAR_NAME
+    + r"|\(" + _VAR_NAME + r"\)|" + _VAR_NAME + ")", re.IGNORECASE)
+# A literal engine name as the default of a ${X:-...} or ${X:=...} expansion: the ENGINE
+# lookbehind excludes "-" and "=", so this makes the default visible to the same rule.
+DEFAULT_ENGINE = re.compile(r"\$\{\w+:?[-=+][\"']?(?:" + "|".join(ENGINES) + r")[\"']?\}")
+# What may sit between the start of a command and the variable: nothing, a separator
+# (; & | ( ) { ! ` and so $( too), a shell keyword, a Make recipe prefix (@ + -), then
+# prefix words: wrappers (sudo -u root, env -u X A=1, timeout -s KILL 60, nice -n 5,
+# xargs, setsid, eval, sh -c, ...), flags, a flag with its plain argument, numbers and
+# assignments. A quote opening the variable (eval "$X", sh -c '$X') is allowed last.
+_PREFIX_WORDS = ("sudo", "doas", "env", "exec", "eval", "command", "builtin", "nohup", "time",
+                 "timeout", "nice", "ionice", "chrt", "stdbuf", "setsid", "xargs", "su",
+                 "runuser", "sh", "bash", "dash", "ksh", "zsh", "run0", "systemd-run", "pkexec",
+                 "nsenter", "unshare", "flock", "watch", "strace", "taskset")
+_PREFIX = (r"-[\w-]+\s+[^\s\"'`$-][^\s\"'`]*|-\S+|\d[\w.]*|\w+=\S*|(?:"
+           + "|".join(_PREFIX_WORDS) + r")\b")
+COMMAND_POSITION = re.compile(
+    r"(?:^|[;&|(){!`]|\b(?:if|then|else|elif|do|while|until)\b)\s*[@+-]*"
+    r"(?:(?:" + _PREFIX + r")\s+)*+[\"']?$")
+# The Python SDK, a socket (curl --unix-socket drives the API), a compose file runner.
+# The socket name has no leading \b so a URL-encoded path (%2Fvar%2Frun%2F<name>.sock) matches.
+_AIO = "aio" + _D
+SDK = re.compile(
+    r"\bimport\s+" + _D + r"\b|\bfrom\s+" + _D + r"[\s.]+import\b|\bfrom\s+" + _D + r"\.\w+\s+import\b"
+    r"|\b" + _D + r"\.(?:from_env|APIClient)\b|\b(?:" + _D.title() + "|" + _P.title() + r")Client\b"
+    r"|\b" + _AIO + r"\b"
+    r"|\bcontainers\.(?:run|create|start|exec)\w*"
+    r"|\bcontainer\w*\.start\("
+    r"|http\+unix:"
+    r"|(?:" + _D + "|" + _P + r"|containerd)\.sock\b")
+# Pointing a client at another engine (an assignment to <ENGINE>_HOST or CONTAINER_HOST,
+# not a ${..:-} read or a "$..." use) and an HTTP path on the engine API ports 2375/2376.
+REMOTE = re.compile(
+    r"(?<![\w{$])(?:" + _D.upper() + "|CONTAINER" + r")_HOST\b[\"'\]]*\s*[=:]"
+    r"|:237[56]/")
+
+# Read-only verbs; "image" only with "inspect".
+READONLY = {"pull", "images", "ps", "version", "info"}
+# Global flags that take a separate argument: the next word is not the verb. Includes the
+# compose-level flags (-f -p --profile --env-file --project-directory).
+GLOBAL_ARG_FLAGS = {"-H", "--host", "--context", "-c", "--config", "-l", "--log-level",
+                    "--tlscacert", "--tlscert", "--tlskey", "-n", "--namespace",
+                    "-a", "--address", "--root", "--runroot", "--url", "--connection",
+                    "-f", "--file", "-p", "--project-name", "--profile", "--env-file",
+                    "--project-directory"}
+# The only flags known to take no argument. Any other flag before the verb might swallow
+# the verb as its argument (an engine flag taking the verb as its value), so it is not allowlisted.
+GLOBAL_NOARG_FLAGS = {"-D", "--debug", "--tlsverify", "-h", "--help"}
+SPLIT = re.compile(r"""[\s"',\[\](){};|&<>`]+""")
+
+
+def verb_after(text):
+    """The words after an engine name, past global flags: [verb, subverb] (may be short).
+
+    None when a flag is neither a known no-argument flag nor a known argument flag
+    (the verb cannot be told, so nothing may be allowlisted).
+    """
+    words = [w for w in SPLIT.split(text[:400]) if w]
+    i = 0
+    while i < len(words):
+        word = words[i]
+        if word in GLOBAL_ARG_FLAGS:
+            i += 2
+        elif word.startswith("-"):
+            if word not in GLOBAL_NOARG_FLAGS and word.split("=", 1)[0] not in GLOBAL_ARG_FLAGS:
+                return None
+            i += 1
+        else:
+            break
+    return words[i:i + 2]
+
+
+def is_readonly(verb):
+    if not verb:
+        return False
+    if verb[0] == "image":
+        return verb[1:2] == ["inspect"]
+    return verb[0] in READONLY
+
+
+START_VERBS = {"run", "create", "start", "restart", "exec", "compose", "up", "unpause", "kube",
+               "play", "pod", "service", "plugin", "build", "buildx", "container", "stack",
+               "swarm", "context", "cp", "commit", "load", "import", "machine", "system",
+               "volume", "network"}
+
+
+PRINT_LINE = re.compile(r"\s*(?:#|(?:echo|printf|log|warn|die)\b)")
+
+
+def is_var_start(text, match):
+    """An engine-like variable in command position not followed by a read-only verb."""
+    line_start = text.rfind("\n", 0, match.start()) + 1
+    rest = text[match.end():]
+    if rest[:1] == "/":
+        # a path under the variable ("$XDG_RUNTIME_DIR/hypr"); an engine basename there is the ENGINE rule's
+        return False
+    if COMMAND_POSITION.search(text[line_start:match.start()]):
+        return not is_readonly(verb_after(rest))
+    # Backstop for wrappers command position cannot see (sudo -u "$U", timeout "$T",
+    # run0, nsenter, a user's retry function, a Make variable): an engine variable
+    # anywhere, then whitespace or a quote, then an unknown flag or a starting verb.
+    if PRINT_LINE.match(text, line_start):
+        return False   # printed or commented text, not a command
+    verb = verb_after(rest)
+    return rest[:1] in (" ", "\t", '"', "'") and (verb is None or (bool(verb) and verb[0] in START_VERBS))
+
+
+def line_of(text, offset):
+    return text.count("\n", 0, offset) + 1
+
+
+def scan_text(text):
+    """Return [(line_number, line)] of forbidden container starts in one file's text."""
+    text = re.sub(r"\\\r?\n", " ", text)  # backslash continuation: join (line numbers shift)
+    raw = text.split("\n")
+    found = {}
+    for match in (*ENGINE.finditer(text), *DEFAULT_ENGINE.finditer(text)):
+        if not is_readonly(verb_after(text[match.end():])):
+            found.setdefault(line_of(text, match.start()), None)
+    for match in ENGINE_VAR.finditer(text):
+        if is_var_start(text, match):
+            found.setdefault(line_of(text, match.start()), None)
+    for match in (*SDK.finditer(text), *REMOTE.finditer(text)):
+        found.setdefault(line_of(text, match.start()), None)
+    return [(n, raw[n - 1].strip()) for n in sorted(found)]
+
+
+def markdown_code_only(text):
+    """Blank every line outside a ``` fence: prose may name the tools, code may not."""
+    out, fenced = [], False
+    for line in text.split("\n"):
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+            out.append("")
+        else:
+            out.append(line if fenced else "")
+    return "\n".join(out)
+
+
+# A package list (*.list: one package name per line, '#' comments) is data, never run: a line that is
+# only an engine's package name installs the engine, it starts nothing. Any other text is scanned.
+PACKAGE_ENTRY = re.compile(r"^[ \t]*(?:" + "|".join(ENGINES) + r")[ \t]*$", re.MULTILINE)
+
+
+def package_list_entries_blanked(text):
+    return PACKAGE_ENTRY.sub("", text)
+
+
+def scan(root):
+    """Return [(relative_path, line_number, line)] of forbidden container starts."""
+    hits = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        top = os.path.relpath(dirpath, root) == "."
+        if top:
+            dirnames[:] = [d for d in dirnames if d not in SKIP_TOP]
+            filenames = [f for f in filenames if f not in SKIP_TOP_FILES]
+        for filename in filenames:
+            path = os.path.join(dirpath, filename)
+            rel = os.path.relpath(path, root)
+            if rel in ALLOWED or filename.endswith(".pyc"):  # .pyc: compiled cache of a scanned source
+                continue
+            if rel.startswith("evidence" + os.sep) and filename.endswith(".log"):
+                continue  # a recorded VM console transcript (pacman installs the engine), never run
+            if os.path.islink(path):
+                target = os.path.basename(os.readlink(path))
+                if filename in ENGINES or target in ENGINES:
+                    hits.append((rel, 1, f"symlink to {os.readlink(path)}"))
+                continue
+            try:
+                with open(path, "rb") as handle:
+                    text = handle.read().decode("utf-8", errors="replace")
+            except OSError:
+                continue
+            if filename.endswith(".md"):
+                text = markdown_code_only(text)
+            elif filename.endswith(".list"):
+                text = package_list_entries_blanked(text)
+            hits.extend((rel, number, line) for number, line in scan_text(text))
+    return hits
+
+
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    root = argv[0] if argv else os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    hits = scan(root)
+    for rel, number, line in hits:
+        print(f"check-container-start: FORBIDDEN container start outside the wrapper: "
+              f"{rel}:{number}: {line}", file=sys.stderr)
+    if hits:
+        return 1
+    print("check-container-start: OK (container starts only in tools/docker-build.sh)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
