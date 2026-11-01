@@ -1,0 +1,20 @@
+MUTANT install_arch_os_release_symlink CAUGHT
+MUTANT install_archiso_hook CAUGHT
+MUTANT install_archiso_hook_dropin CAUGHT
+MUTANT install_empty_shadow_hash CAUGHT
+MUTANT install_getty_autologin CAUGHT
+MUTANT install_greetd_initial_session CAUGHT
+MUTANT install_live_package CAUGHT
+MUTANT install_live_polkit_rule CAUGHT
+MUTANT install_live_sudoers_file CAUGHT
+MUTANT install_live_user_group CAUGHT
+MUTANT install_live_user_passwd CAUGHT
+MUTANT install_missing_kernel_cmdline CAUGHT
+MUTANT install_nopasswd_dropin CAUGHT
+MUTANT install_nopasswd_sudoers CAUGHT
+MUTANT install_nullok CAUGHT
+MUTANT install_siglevel_never_core CAUGHT
+MUTANT install_siglevel_optional_seclegion CAUGHT
+MUTANT install_skipped_mounted_refusal CAUGHT
+MUTANT install_wrong_confirm_accepted CAUGHT
+MUTANTS 19 GREEN 0

@@ -1,0 +1,29 @@
+{
+  "actual": "each of install, live, rescue and both Safe Graphics entries booted its own mode",
+  "artifacts": {
+    "screen.png": "c6fb00029f08116d59de5e49e05035c0b1b5134dc902732a5a9b284645759009",
+    "serial.log": "8cd214b5a0e43f2bb167ed5f3cb6c9cf87085606907bb273f87475a0c4e055b8"
+  },
+  "class": "AUTO",
+  "command": "qemu-system-x86_64 -name seclegion-harness -machine q35,accel=kvm -cpu host -smp 2 -m 4096 -display none -vga std -nic none -no-reboot -drive if=pflash,format=raw,readonly=on,file=/usr/share/edk2/x64/OVMF_CODE.4m.fd -drive if=pflash,format=raw,file=evidence/M1-modes/7fe0becda986554cc45398213286843acd03430ffe2d693d6e36fe3d86b47771/20261101T034406Z/boot-install/OVMF_VARS.fd -drive file=/mnt/Dev_Lab/iso-artifacts/iso11/seclegion-2026.10.31-x86_64.iso,if=none,id=cd0,media=cdrom,readonly=on -device virtio-scsi-pci,id=scsi0 -device scsi-cd,drive=cd0,bus=scsi0.0 -chardev socket,id=ser0,fd=12,logfile=evidence/M1-modes/7fe0becda986554cc45398213286843acd03430ffe2d693d6e36fe3d86b47771/20261101T034406Z/boot-install/serial.log -serial chardev:ser0 -chardev socket,id=qmp0,fd=14 -mon chardev=qmp0,mode=control  (x5, one boot per entry)",
+  "commit": "184c34083e19aee950ea40f90401ba1b944c2654",
+  "env": {
+    "host": "Linux 7.2.11-arch1-1",
+    "kvm": true,
+    "ocr": "n/a"
+  },
+  "exit_code": 0,
+  "expected": "entries install, live, rescue, safe-install, safe-live print their own SECLEGION-MODE=<m>, chosen with QMP keys",
+  "iso_sha256": "7fe0becda986554cc45398213286843acd03430ffe2d693d6e36fe3d86b47771",
+  "schema": 1,
+  "serial_patterns": [
+    "\\[entry install\\][\\s\\S]*?SECLEGION-MODE=install",
+    "\\[entry live\\][\\s\\S]*?SECLEGION-MODE=live",
+    "\\[entry rescue\\][\\s\\S]*?SECLEGION-MODE=rescue",
+    "\\[entry safe-install\\][\\s\\S]*?SECLEGION-MODE=install",
+    "\\[entry safe-live\\][\\s\\S]*?SECLEGION-MODE=live"
+  ],
+  "status": "PASS",
+  "test_id": "M1-modes",
+  "timestamp": "2026-11-01T03:44:06Z"
+}

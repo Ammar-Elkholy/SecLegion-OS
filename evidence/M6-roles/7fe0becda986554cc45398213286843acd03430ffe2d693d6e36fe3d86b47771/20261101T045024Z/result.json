@@ -1,0 +1,28 @@
+{
+  "actual": "one Notifications service file, one polkit and one secrets provider, role binaries present",
+  "artifacts": {
+    "serial.log": "10b6f589d20ff3cffb6422a8fc4582160837d41ddff454494cc07d57186bbc21"
+  },
+  "class": "AUTO",
+  "command": "qemu-system-x86_64 -name seclegion-harness -machine q35,accel=kvm -cpu host -smp 2 -m 4096 -display none -vga std -nic none -drive if=pflash,format=raw,readonly=on,file=/usr/share/edk2/x64/OVMF_CODE.4m.fd -drive if=pflash,format=raw,file=/var/tmp/seclegion-build/vm/m6t-ahpmunnl/boot/OVMF_VARS.fd -drive file=/mnt/Dev_Lab/iso-artifacts/iso11/seclegion-2026.10.31-x86_64.iso,if=none,id=cd0,media=cdrom,readonly=on -device virtio-scsi-pci,id=scsi0 -device scsi-cd,drive=cd0,bus=scsi0.0 -drive file=/var/tmp/seclegion-build/vm/m6t-ahpmunnl/overlay.qcow2,if=none,id=d1,format=qcow2 -device scsi-hd,drive=d1,bus=scsi0.0,serial=SLTARGET,bootindex=0 -chardev socket,id=ser0,fd=12,logfile=/var/tmp/seclegion-build/vm/m6t-ahpmunnl/boot/serial.log -serial chardev:ser0 -chardev socket,id=qmp0,fd=14 -mon chardev=qmp0,mode=control",
+  "commit": "184c34083e19aee950ea40f90401ba1b944c2654",
+  "env": {
+    "host": "Linux 7.2.11-arch1-1",
+    "kvm": true,
+    "ocr": "n/a"
+  },
+  "exit_code": 0,
+  "expected": "the installed system has one owner each for notifications, polkit and secrets and one Notifications D-Bus service file; every role package is installed with its binary",
+  "iso_sha256": "7fe0becda986554cc45398213286843acd03430ffe2d693d6e36fe3d86b47771",
+  "schema": 1,
+  "serial_patterns": [
+    "Started .*(?:greetd|[Gg]reeter)",
+    "\\nM6-ROLES notifications one service file owner swaync",
+    "\\nM6-ROLES polkit one agent installed",
+    "\\nM6-ROLES secrets one provider installed",
+    "\\nM6-ROLES every role package installed binary present"
+  ],
+  "status": "PASS",
+  "test_id": "M6-roles",
+  "timestamp": "2026-11-01T04:50:24Z"
+}

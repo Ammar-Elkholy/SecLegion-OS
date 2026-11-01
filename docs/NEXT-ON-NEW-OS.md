@@ -4,8 +4,10 @@
 The work below is what is left after ISO #11. Each item can be done from the installed SecLegion OS itself.
 
 ## 1. Get the ISO and install
-1. Download the three parts from the GitHub release and join them:
-   `cat seclegion-*.iso.part-* > seclegion.iso && sha256sum -c SHA256SUMS`.
+1. Download the ISO as one file from Google Drive (public link):
+   https://drive.google.com/file/d/1GwBHFBnmCiHaOUqgsTNOkrvhYSPKD5RY/view
+   sha256 `7fe0becda986554cc45398213286843acd03430ffe2d693d6e36fe3d86b47771` (check with `sha256sum`).
+   The same ISO is in the private GitHub release `iso11-2026.10.31` as three parts; `JOIN.txt` there joins them.
 2. Flash and install by following `docs/USB-MIGRATION.md` (Windows prep, firmware, flash, live tests, install).
 3. After the first login: `git clone git@github.com:Ammar-Elkholy/SecLegion-OS.git`, check out
    `clean-room-rebuild`, run `make bootstrap` (creates `./.venv`), then `make lint` and

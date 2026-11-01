@@ -1,0 +1,31 @@
+{
+  "actual": "six entries drawn, no input, SECLEGION-MODE=install 35.1s after the menu appeared",
+  "artifacts": {
+    "screen.png": "05713dbacb00cfa92e8cad1581147b0f1349f6ee14c97d122440aff36011bd53",
+    "serial.log": "24c3037d3bee07cb9bb045fda3a26ef51cbcae574801eec23e917ead3d39ecf3"
+  },
+  "class": "AUTO",
+  "command": "qemu-system-x86_64 -name seclegion-harness -machine q35,accel=kvm -cpu host -smp 2 -m 4096 -display none -vga std -nic none -no-reboot -drive if=pflash,format=raw,readonly=on,file=/usr/share/edk2/x64/OVMF_CODE.4m.fd -drive if=pflash,format=raw,file=evidence/M1-menu/7fe0becda986554cc45398213286843acd03430ffe2d693d6e36fe3d86b47771/20261101T034208Z/OVMF_VARS.fd -drive file=/mnt/Dev_Lab/iso-artifacts/iso11/seclegion-2026.10.31-x86_64.iso,if=none,id=cd0,media=cdrom,readonly=on -device virtio-scsi-pci,id=scsi0 -device scsi-cd,drive=cd0,bus=scsi0.0 -chardev socket,id=ser0,fd=12,logfile=evidence/M1-menu/7fe0becda986554cc45398213286843acd03430ffe2d693d6e36fe3d86b47771/20261101T034208Z/serial.log -serial chardev:ser0 -chardev socket,id=qmp0,fd=14 -mon chardev=qmp0,mode=control",
+  "commit": "184c34083e19aee950ea40f90401ba1b944c2654",
+  "env": {
+    "host": "Linux 7.2.11-arch1-1",
+    "kvm": true,
+    "ocr": "OK"
+  },
+  "exit_code": 0,
+  "expected": "six titles on serial, then SECLEGION-MODE=install after >= 10s with no key pressed",
+  "iso_sha256": "7fe0becda986554cc45398213286843acd03430ffe2d693d6e36fe3d86b47771",
+  "schema": 1,
+  "serial_patterns": [
+    "Install SecLegion OS",
+    "Try SecLegion OS \\(Live\\)",
+    "Rescue",
+    "Memory Test \\(Memtest86\\+\\)",
+    "UEFI Firmware Settings",
+    "Safe Graphics",
+    "SECLEGION-MODE=install"
+  ],
+  "status": "PASS",
+  "test_id": "M1-menu",
+  "timestamp": "2026-11-01T03:42:08Z"
+}

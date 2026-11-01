@@ -1,0 +1,9 @@
+[phase install]
+refused: disk_too_small: the disk is under 20 GiB
+DL-INSTALL 2
+
+[phase after]
+0
+0
+0
+DL-AFTER 1

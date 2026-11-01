@@ -87,9 +87,13 @@ History before 2026-11-01 was wiped from GitHub on the owner's word; it is kept 
   the selftest report missing from serial, passed on re-run). `verify-evidence --iso` OK (37 results). ISO #10
   records archived to `/mnt/Dev_Lab/iso-artifacts/evidence-archive-2026-10-31/`. Unit suite 1622 passed, lint
   green. GitHub release parts: `iso11/release/` (3 parts < 2 GiB, PARTS.SHA256SUMS, JOIN.txt).
+- 2026-11-01: GitHub history wiped on the owner's word (one fresh commit 184c340, old history in the bundle).
+  All 36 VM gates re-run on ISO #11 at 184c340: PASS (M1-theme-repro needed the install cache deleted for disk
+  space, then passed). Published: GitHub release `iso11-2026.10.31` (3 parts) and a public Google Drive link
+  (one file, in `docs/NEXT-ON-NEW-OS.md`), both sha256 7fe0becd….
 
 ## Next steps (in order)
-1. Owner: publish `iso11/release/` as a GitHub release (needs `gh auth login` or the web upload), then flash
+1. Owner: download (Drive link) or use the local ISO, then flash
    and install per `docs/USB-MIGRATION.md`. The work to continue on the new install is in
    `docs/NEXT-ON-NEW-OS.md`.
 2. Remaining CP-C rows: S1-kiosk-ara, M5-gui-ocr, M5-ara.
