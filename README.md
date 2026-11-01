@@ -21,7 +21,8 @@ sudo dd if=seclegion-2026.10.31-x86_64.iso of=/dev/sdX bs=4M oflag=direct conv=f
 ```
 
 Then follow [docs/USB-MIGRATION.md](docs/USB-MIGRATION.md) (Windows prep, firmware, live checks, install).
-After installing, [docs/NEXT-ON-NEW-OS.md](docs/NEXT-ON-NEW-OS.md) lists the hardware checks and the work left.
+After installing, [docs/NEXT-ON-NEW-OS.md](docs/NEXT-ON-NEW-OS.md) lists the hardware checks and the
+work left.
 
 ## What you get
 
@@ -33,7 +34,8 @@ After installing, [docs/NEXT-ON-NEW-OS.md](docs/NEXT-ON-NEW-OS.md) lists the har
   rollback (`seclegion-rescue`), ufw on, sshd off, a first-boot wizard and hardware detection for
   hybrid AMD/NVIDIA laptops.
 - **Security tools:** a curated catalog (nmap, masscan, tcpdump, wireshark, hashcat, john, hydra,
-  impacket, responder, gobuster, ffuf, nikto, exploitdb, …); see [docs/security-tools.md](docs/security-tools.md).
+  impacket, responder, gobuster, ffuf, nikto, exploitdb, …); see
+  [docs/security-tools.md](docs/security-tools.md).
 - **Opt-in extras:** KVM/libvirt labs with NAT and isolated networks (`seclegion-virt`), local AI
   through ollama, off by default (`seclegion-ai`), gaming with multilib and Steam (`seclegion-gaming`).
   Vendor apps (Brave, VS Code, Claude) are fetched on first boot, never shipped.
@@ -66,5 +68,6 @@ See [docs/testing.md](docs/testing.md).
 
 ## Licence
 
-MIT, see [LICENSE](LICENSE). Per-file licences are tracked with REUSE ([docs/PROVENANCE.md](docs/PROVENANCE.md)).
+MIT, see [LICENSE](LICENSE). Per-file licences are tracked with REUSE
+([docs/PROVENANCE.md](docs/PROVENANCE.md)).
 The SecLegion branding images are all rights reserved until a licence is chosen.
