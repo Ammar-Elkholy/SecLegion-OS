@@ -74,19 +74,28 @@ owner's Legion, so they should be fixed before ISO #12.
    - `test_i3_matrix.py::test_partition_mode`;
    - gather-facts install mode with no network device;
    - M2-live-desktop.
-9. **G6 (1.1) Try Live has no "Install" launcher** (1.5 h). Kali has one on the desktop.
+9. **G12 [#12] Screenshot findings (D6, `out/screens-d6/`)** (1 h):
+   - Progress and Finished still show a green Next in the footer (with "Installing..."); hide it there.
+   - The progress/finished/error icons render as grey blobs: ship SecLegion symbolic icons with the
+     installer instead of relying on an icon theme. On the error page at 800x600 the icon top is clipped.
+   - A disk with no partitions still shows the empty "Or replace one partition" heading; hide it.
+   - Below 720sp the sidebar collapses, but 800x600 keeps it (800 > 720): content is narrow there.
+     Decide whether the breakpoint should be 860sp.
+   - The picked partition can sit below the fold: scroll it into view when the page opens.
+   - Tests: footer Next hidden on progress/finished; no empty group; picked row visible.
+10. **G6 (1.1) Try Live has no "Install" launcher** (1.5 h). Kali has one on the desktop.
    - Plan: a live-only rofi entry and a welcome-app button, "Install SecLegion OS". It opens a dialog
      "Restart and choose Install in the boot menu" with a Restart button. Check the GRUB default entry.
    - Test: `test_m2_static` sees the desktop file.
-10. **G8 (1.1) Arabic flips direction but the text stays English** (4 h).
+11. **G8 (1.1) Arabic flips direction but the text stays English** (4 h).
     - Plan: a gettext catalog `installer/ui/gtk/po/ar.po` with `_()` around page strings.
     - Test: the review page shows Arabic labels.
-11. **G9 (1.1) No boot splash** (3 h), although meter item U2-U4 names Plymouth. Boot shows kernel text,
+12. **G9 (1.1) No boot splash** (3 h), although meter item U2-U4 names Plymouth. Boot shows kernel text,
     and LUKS asks at a plain prompt (Omarchy themes both).
     - Plan: a `seclegion-plymouth` theme from the logo, the `plymouth` hook for the UKI, and `quiet splash`.
     - VM gate: LUKS still unlocks through serial `send()`.
 
-Before ISO #12 (G1-G5, G7, G10, G11): about 12.3 h. For 1.1 (G6, G8, G9): about 8.5 h.
+Before ISO #12 (G1-G5, G7, G10-G12): about 13.3 h. For 1.1 (G6, G8, G9): about 8.5 h.
 
 ## Checked and fine (no change)
 
