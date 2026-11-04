@@ -37,8 +37,7 @@ Encryption is the slow part: decryption can take 30+ minutes.
   - Leave the freed space as "Unallocated". Do not create a partition in it.
 - [ ] **Keep the clock in UTC** so Windows and Linux agree. In an admin terminal:
   ```
-  reg add "HKLM\System\CurrentControlSet\Control\TimeZoneInformation" ^
-      /v RealTimeIsUniversal /t REG_DWORD /d 1 /f
+  reg add HKLM\System\CurrentControlSet\Control\TimeZoneInformation /v RealTimeIsUniversal /t REG_DWORD /d 1 /f
   ```
 - [ ] **Shut down fully:**
   ```
