@@ -86,16 +86,41 @@ class AlongsidePage(Page):
 
 
 def widget(page):
-    from view_util import page_box, text_label
+    import gi
+
+    gi.require_version("Adw", "1")
+    from diskmap import DiskMap
+    from gi.repository import Adw
+    from view_util import page_box
 
     box = page_box(page.title)
+    disk = page.disk()
+    layout = Adw.PreferencesGroup(title="Disk layout",
+                                  description=(disk.get("model") or disk.get("name") or "").strip())
+    maprow = Adw.PreferencesRow(activatable=False, selectable=False, focusable=False)
+    dmap = DiskMap(disk)
+    for side in ("top", "bottom", "start", "end"):
+        getattr(dmap, f"set_margin_{side}")(10)
+    maprow.set_child(dmap)
+    layout.add(maprow)
+    box.append(layout)
+    space = Adw.PreferencesGroup(title="Free space", description="The installer uses the largest gap.")
     for line in page.preview():
-        box.append(text_label(line))
+        gap = line.endswith("will be used")
+        title = line.replace("  <- will be used", "")
+        row = Adw.ActionRow(title=title, use_markup=False,
+                            subtitle="Will be used for SecLegion OS" if gap else "")
+        space.add(row)
+    box.append(space)
     if page.unchecked():
-        box.append(text_label(page.UNCHECKED_NOTE))
+        note = Adw.PreferencesGroup()
+        note.add(Adw.ActionRow(title=page.UNCHECKED_NOTE, use_markup=False, title_lines=0))
+        box.append(note)
     r = page.refusal()
     if r:
-        box.append(text_label(f"Blocked: {r[1]}", css="error"))
+        guide = Adw.PreferencesGroup(title="Blocked", description=f"{r[1]}.")
+        guide.add_css_class("error")
         for i, step in enumerate(page.guide(), 1):
-            box.append(text_label(f"{i}. {step}"))
+            guide.add(Adw.ActionRow(title=step, use_markup=False, title_lines=0, subtitle=f"Step {i}"))
+        box.append(guide)
     return box

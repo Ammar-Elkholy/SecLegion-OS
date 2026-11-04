@@ -40,5 +40,5 @@ def widget(page):
     labels = {i: f"{g[1] / (1 << 30):.1f} GiB at {g[0] / (1 << 30):.1f} GiB"
               for i, g in enumerate(page.gaps())}
     box.append(choice_group("Free space", labels, page.gap, page.set_gap))
-    box.append(text_label("Need more room? Open the dual-boot guide on the previous page."))
+    box.append(text_label("Need more room? Open the dual-boot guide on the previous page.", "dim-label"))
     return box

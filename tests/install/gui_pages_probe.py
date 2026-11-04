@@ -238,6 +238,9 @@ def unchanged_and_types():
         if key in ("hardware", "progress"):
             m.pages[key].fragment()
         w = build_widget(page)
+        if key == "about":  # a dialog, presented on the window; it cannot be a window child
+            assert isinstance(w, Adw.AboutDialog)
+            continue
         win = Gtk.Window()
         win.set_child(w)
         win.present()
