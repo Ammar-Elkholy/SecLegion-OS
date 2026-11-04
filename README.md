@@ -20,7 +20,7 @@ Flash it (replace `/dev/sdX` with the USB stick shown by `lsblk`; everything on 
 sudo dd if=seclegion-2026.10.31-x86_64.iso of=/dev/sdX bs=4M oflag=direct conv=fsync status=progress
 ```
 
-Then follow [docs/USB-MIGRATION.md](docs/USB-MIGRATION.md) (Windows prep, firmware, live checks, install).
+Then follow [docs/AFTER-FLASH.md](docs/AFTER-FLASH.md), every step from the stick to a working install.
 After installing, [docs/NEXT-ON-NEW-OS.md](docs/NEXT-ON-NEW-OS.md) lists the hardware checks and the
 work left.
 
