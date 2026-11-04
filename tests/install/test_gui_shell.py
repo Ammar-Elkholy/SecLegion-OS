@@ -67,5 +67,8 @@ def test_gui_shell_sidebar_and_breakpoint_under_broadway(tmp_path):
     assert wide["rows"] == wide["visible"] and wide["title"]
     assert wide["row0"] == ["step-current"] and not wide["step_visible"]
     assert wide["after_next"] == [["step-done"], ["step-current"]]
+    # kiosk: no close button (closing would end cage), and no Back on the first page
+    assert wide["window_buttons"] is False
+    assert wide["back_sensitive"] is False and wide["back_after_next"] is True
     assert narrow["collapsed"] and narrow["step_visible"]
     assert narrow["step"] == f"Step 2 of {narrow['n']}"

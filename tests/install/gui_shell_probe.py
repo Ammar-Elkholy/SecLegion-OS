@@ -75,11 +75,14 @@ out["wide"] = {
     "collapsed": win.split.get_collapsed(), "sidebar_visible": win.sidebar.get_mapped(),
     "rows": len(win.sidebar.rows), "visible": len(m.visible()), "row0": classes(win.sidebar.rows[0]),
     "title": win.title_label.get_label(), "step_visible": win.step_label.get_visible(),
+    "back_sensitive": win.back.get_sensitive(),
+    "window_buttons": win.header.get_show_start_title_buttons() or win.header.get_show_end_title_buttons(),
 }
 shot(win, "shell-1280.png")
 m.next()
 win.refresh_nav()
 out["wide"]["after_next"] = [classes(win.sidebar.rows[0]), classes(win.sidebar.rows[1])]
+out["wide"]["back_after_next"] = win.back.get_sensitive()
 win.destroy()
 m, win = window(700, 700)
 m.next()

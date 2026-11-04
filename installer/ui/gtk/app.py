@@ -33,7 +33,8 @@ class InstallerWindow(Adw.ApplicationWindow):
         self.title_label.add_css_class("title")
         self.step_label = Gtk.Label(visible=False)
         self.step_label.add_css_class("dim-label")
-        header = Adw.HeaderBar()
+        # No window buttons: under the cage kiosk, closing the window would end the kiosk (error screen).
+        self.header = header = Adw.HeaderBar(show_start_title_buttons=False, show_end_title_buttons=False)
         header.set_title_widget(self.title_label)
         self.about = Gtk.Button(label="About")
         self.about.connect("clicked", lambda _b: self.show_page(model.pages["about"]))
@@ -89,7 +90,7 @@ class InstallerWindow(Adw.ApplicationWindow):
         self.nxt.set_label(getattr(page, "next_label", "Next"))
         self.nxt.set_visible(getattr(page, "show_next", True))
         self.back.set_visible(getattr(page, "show_back", True))
-        self.back.set_sensitive(not self.running)
+        self.back.set_sensitive(not self.running and (self.model.index > 0 or self.model.failed))
         self.nxt.set_sensitive(not self.running and self.model.can_next())
         self.msg.set_label("" if self.running else (self.model.error() or ""))
 
