@@ -31,8 +31,8 @@ class TiersPage(Page):
 def widget(page):
     from view_util import page_box, switch_row, text_label
 
-    box = page_box(page.title)
-    box.append(switch_row("Gaming (Steam, Proton and drivers)", page.gaming, page.set_gaming))
-    box.append(switch_row("Virtualisation (libvirt and QEMU)", page.virt, page.set_virt))
+    box = page_box(page.title, "Both are off by default. Turn on what you want installed.")
+    box.append(switch_row("Gaming", page.gaming, page.set_gaming, "Steam, Proton and drivers"))
+    box.append(switch_row("Virtualisation", page.virt, page.set_virt, "libvirt and QEMU"))
     box.append(text_label(NOTE, "dim-label"))
     return box

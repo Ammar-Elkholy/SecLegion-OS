@@ -43,12 +43,29 @@ class LanguagePage(Page):
                 "keyboard_extra": list(extra)}
 
 
+def apply_direction(lang):
+    """Arabic reads right to left: flip every widget the app draws from now on (and the open ones)."""
+    from gi.repository import Gtk
+
+    Gtk.Widget.set_default_direction(Gtk.TextDirection.RTL if lang == "ar" else Gtk.TextDirection.LTR)
+
+
 def widget(page):
+    from gi.repository import GLib
     from view_util import choice_group, page_box
 
-    box = page_box(page.title)
+    def redraw():
+        page.ctx.on_render()
+        return GLib.SOURCE_REMOVE
+
+    def pick_language(lang):
+        page.set_language(lang)
+        apply_direction(lang)
+        GLib.idle_add(redraw)  # after the toggle has finished: the page widget is about to be replaced
+
+    box = page_box(page.title, "Choose the language and the keyboard layout for the new system.")
     box.append(choice_group("Language", {k: v[0] for k, v in LANGUAGES.items()},
-                            page.language, page.set_language))
+                            page.language, pick_language))
     box.append(choice_group("Keyboard", {k: v[0] for k, v in KEYBOARDS.items()},
                             page.keyboard, page.set_keyboard))
     return box

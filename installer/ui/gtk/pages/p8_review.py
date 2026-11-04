@@ -86,15 +86,52 @@ class ReviewPage(Page):
         return {"confirm": self.typed}
 
 
+MODE_LABELS = {"erase": "Erase the whole disk", "alongside": "Alongside an existing system",
+               "partition": "Replace one partition"}
+EXTRAS = {"gaming": "Gaming", "virt": "Virtualisation"}
+
+
+def summary_rows(page):
+    """[(title, value, detail, page key to edit it on)] for the review cards: one row per answer."""
+    a = page.ctx.answers()
+    luks = bool(a.get("luks"))
+    extras = [EXTRAS.get(k, k) for k in page.ctx.hints()]
+    keyboard = a.get("keyboard", "") + "".join(f" + {k}" for k in a.get("keyboard_extra", []))
+    return [
+        ("Disk", page.expected() or "Not found", a.get("disk", ""), "disk"),
+        ("Mode", MODE_LABELS.get(a.get("mode"), a.get("mode") or "erase"), "", "disk"),
+        ("Encryption", "On (LUKS2)" if luks else "Off", "", "encryption" if luks else "disk"),
+        ("User", f"{a.get('username', '')} on {a.get('hostname', '')}", "", "user"),
+        ("Locale", f"{a.get('locale', '')}, keyboard {keyboard}", "", "language"),
+        ("Extras", ", ".join(extras) or "None", "", "tiers"),
+    ]
+
+
 def widget(page):
+    import gi
+
+    gi.require_version("Adw", "1")
+    from gi.repository import Adw, Gtk
     from view_util import entry_row, mono_view, page_box, switch_row, text_label
 
-    box = page_box(page.title)
+    box = page_box(page.title, "Check your choices. Nothing is written to the disk until you press Install.")
+    group = Adw.PreferencesGroup(title="Your choices")
+    for title, value, detail, goto in summary_rows(page):
+        row = Adw.ActionRow(title=title, subtitle=value + (f"\n{detail}" if detail else ""),
+                            use_markup=False)
+        edit = Gtk.Button(label="Edit", valign=Gtk.Align.CENTER)
+        edit.add_css_class("flat")
+        edit.connect("clicked", lambda _b, k=goto: page.ctx.goto(k))
+        row.add_suffix(edit)
+        group.add(row)
+    box.append(group)
     r = page.refusal()
     if r:
         box.append(text_label(f"Cannot install: {r.message}", "error"))
     else:
-        box.append(mono_view(page.commands()))
+        details = Gtk.Expander(label="Exact commands")
+        details.set_child(mono_view(page.commands()))
+        box.append(details)
     box.append(text_label(f"This ERASES data on the selected disk (see above). Type its name to "
                           f"confirm: {page.expected() or '?'}"))
     box.append(entry_row("Disk name", page.typed, page.set_typed))

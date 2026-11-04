@@ -21,10 +21,13 @@ class FinishedPage(Page):
 
 def widget(page):
     from gi.repository import Gtk
-    from view_util import label_box
+    from view_util import status_page
 
-    box = label_box(page.title, "SecLegion OS is installed. Remove the install medium, then reboot.")
-    btn = Gtk.Button(label="Reboot now", halign=Gtk.Align.START)
+    sp = status_page("object-select-symbolic", page.title,
+                     "SecLegion OS is installed. Remove the install medium, then reboot.")
+    btn = Gtk.Button(label="Reboot now", halign=Gtk.Align.CENTER)
+    btn.add_css_class("suggested-action")
+    btn.add_css_class("pill")
     btn.connect("clicked", lambda _b: page.reboot())
-    box.append(btn)
-    return box
+    sp.set_child(btn)
+    return sp

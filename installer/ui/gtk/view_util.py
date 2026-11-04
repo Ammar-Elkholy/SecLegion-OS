@@ -1,20 +1,52 @@
 # SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
 # SPDX-License-Identifier: MIT
-"""Thin GTK4 helpers shared by the page widgets. Needs gi; only the view imports this."""
+"""libadwaita helpers shared by the page widgets. Needs gi; only the view imports this."""
+
+import os
 
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk  # noqa: E402
+gi.require_version("Adw", "1")
+from gi.repository import Adw, Gdk, Gtk  # noqa: E402
+
+CONTENT_WIDTH = 760  # px; page content sits centred in a clamp this wide
 
 
-def page_box(title):
-    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin_top=24, margin_bottom=24,
+class _Appender:
+    """Gives the page clamp the old box API: `append` adds to the inner box, and rows (Adw.ActionRow,
+    EntryRow, SwitchRow...) appended in a run land together in one boxed-list card."""
+
+    def __init__(self, box):
+        self.box = box
+        self.cards = None  # the boxed-list that the last appended row went into
+
+    def __call__(self, widget):
+        if isinstance(widget, Gtk.ListBoxRow):
+            if self.cards is None:
+                self.cards = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+                self.cards.add_css_class("boxed-list")
+                self.box.append(self.cards)
+            self.cards.append(widget)
+            return
+        self.cards = None
+        self.box.append(widget)
+
+
+def page_box(title, subtitle=None):
+    """Adw.Clamp (760 px) around a vertical box. AdwClamp is final, so `append` is set on the instance: it
+    keeps the box API that every page uses (a caller that wants the plain box reads `.box`)."""
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18, margin_top=24, margin_bottom=24,
                   margin_start=24, margin_end=24)
-    head = Gtk.Label(label=title, xalign=0)
+    page = Adw.Clamp(maximum_size=CONTENT_WIDTH, tightening_threshold=CONTENT_WIDTH - 160, child=box)
+    page.box = box
+    page.append = _Appender(box)
+    head = Gtk.Label(label=title, xalign=0, wrap=True)
     head.add_css_class("title-1")
-    box.append(head)
-    return box
+    page.append(head)
+    if subtitle:
+        page.append(text_label(subtitle, "dim-label"))
+    return page
 
 
 def text_label(text, css=None):
@@ -30,42 +62,51 @@ def label_box(title, text):
     return box
 
 
+def status_page(icon_or_logo, title, body):
+    """Centred Adw.StatusPage. The first argument is an icon name, or a file path for a picture."""
+    page = Adw.StatusPage(title=title, description=body, hexpand=True, vexpand=True)
+    if icon_or_logo and os.path.isfile(icon_or_logo):
+        try:
+            page.set_paintable(Gdk.Texture.new_from_filename(icon_or_logo))
+        except Exception:  # an unreadable picture falls back to the plain page
+            pass
+    elif icon_or_logo:
+        page.set_icon_name(icon_or_logo)
+    return page
+
+
 def choice_group(title, options, current, on_pick, disabled=()):
     """Radio group; options {id: label}. Calls on_pick(id)."""
-    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-    box.append(Gtk.Label(label=title, xalign=0))
+    group = Adw.PreferencesGroup(title=title)
     first = None
     for key, label in options.items():
-        btn = Gtk.CheckButton(label=label)
+        btn = Gtk.CheckButton()
         if first is None:
             first = btn
         else:
             btn.set_group(first)
         btn.set_active(key == current)
-        btn.set_sensitive(key not in disabled)
         btn.connect("toggled", lambda b, k=key: b.get_active() and on_pick(k))
-        box.append(btn)
-    return box
+        row = Adw.ActionRow(title=label, sensitive=key not in disabled, activatable_widget=btn)
+        row.add_prefix(btn)
+        group.add(row)
+    return group
 
 
-def switch_row(title, active, on_toggle):
-    row = Gtk.Box(spacing=12)
-    row.append(Gtk.Label(label=title, xalign=0, hexpand=True))
-    sw = Gtk.Switch(active=active, valign=Gtk.Align.CENTER)
-    sw.connect("notify::active", lambda s, _p: on_toggle(s.get_active()))
-    row.append(sw)
+def switch_row(title, active, on_toggle, subtitle=None):
+    row = Adw.SwitchRow(title=title, active=active)
+    if subtitle:
+        row.set_subtitle(subtitle)
+    row.connect("notify::active", lambda r, _p: on_toggle(r.get_active()))
     return row
 
 
 def entry_row(title, value, on_change, secret=False):
     """Labelled text field (password-masked when secret). Calls on_change(text) on every edit."""
-    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-    box.append(Gtk.Label(label=title, xalign=0))
-    ent = Gtk.PasswordEntry(show_peek_icon=True) if secret else Gtk.Entry()
-    ent.set_text(value)
-    ent.connect("changed", lambda e: on_change(e.get_text()))
-    box.append(ent)
-    return box
+    row = Adw.PasswordEntryRow(title=title) if secret else Adw.EntryRow(title=title)
+    row.set_text(value)
+    row.connect("changed", lambda r: on_change(r.get_text()))
+    return row
 
 
 def mono_view(text, scroll=False):

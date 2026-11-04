@@ -23,9 +23,12 @@ class ErrorPage(Page):
 
 
 def widget(page):
-    from view_util import mono_view, page_box, text_label
+    from gi.repository import Adw, Gtk
+    from view_util import mono_view, status_page
 
-    box = page_box(page.title)
-    box.append(text_label("Go back to the review page to try again, or reboot and check the log."))
-    box.append(mono_view(page.text(), scroll=True))
-    return box
+    sp = status_page("dialog-error-symbolic", page.title,
+                     "Go back to the review page to try again, or reboot and check the log.")
+    details = Gtk.Expander(label="Details", expanded=True)
+    details.set_child(mono_view(page.text(), scroll=True))
+    sp.set_child(Adw.Clamp(maximum_size=640, child=details))
+    return sp

@@ -53,9 +53,8 @@ class EncryptionPage(Page):
 def widget(page):
     from view_util import entry_row, page_box, text_label
 
-    box = page_box(page.title)
-    box.append(text_label("The disk is encrypted with LUKS2. Choose a passphrase, or leave both "
-                          "fields empty to use your user password."))
+    box = page_box(page.title, "The disk is encrypted with LUKS2. Choose a passphrase, or leave both "
+                               "fields empty to use your user password.")
     hint = text_label(page.hint(), "dim-label")
 
     def on_pp(v):

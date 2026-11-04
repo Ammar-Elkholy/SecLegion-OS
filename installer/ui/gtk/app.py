@@ -27,6 +27,8 @@ class InstallerWindow(Adw.ApplicationWindow):
         self.model = model
         self.kiosk_error = kiosk_error
         model.on_change = self.refresh_nav
+        model.on_render = self.render
+        self.page_widget = None
         self.running = False
         self.sidebar = Sidebar(model)
         self.title_label = Gtk.Label()
@@ -68,7 +70,19 @@ class InstallerWindow(Adw.ApplicationWindow):
         child = self.holder.get_first_child()
         if child:
             self.holder.remove(child)
-        self.holder.append(build_widget(page))
+        self.page_widget = widget = build_widget(page)
+        if not isinstance(widget, Adw.StatusPage):  # a status page scrolls itself
+            sw = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, hexpand=True)
+            sw.set_child(widget)
+            widget = sw
+        self.holder.append(widget)
+
+    def refresh_progress(self):
+        """A new install output line: update the progress page in place (keeps Details open)."""
+        update = getattr(self.page_widget, "update", None)
+        if update and self.model.current.key == "progress":
+            update()
+        return GLib.SOURCE_REMOVE
 
     def render(self):
         self.show_page(self.kiosk_page() if self.kiosk_error else self.model.current)
@@ -114,7 +128,7 @@ class InstallerWindow(Adw.ApplicationWindow):
         self.refresh_nav()
 
         def work():
-            ok = page.run(lambda _l: GLib.idle_add(self.show_page, page))
+            ok = page.run(lambda _l: GLib.idle_add(self.refresh_progress))
             GLib.idle_add(self.install_done, ok)
 
         threading.Thread(target=work, daemon=True).start()
