@@ -19,8 +19,13 @@ History before 2026-11-01 was wiped from GitHub on the owner's word; it is kept 
 - Phase C1 merged (9a883ff): partition mode replaces one existing partition with ESP + root and keeps the
   rest. Refusals: part_mounted, part_is_esp, part_is_windows (ntfs/bitlocker/refs/exfat, MSR/recovery),
   part_unknown, part_too_small. Unit suite 1678 passed, lint green.
-- Next: D2+D3 (Adw rows, page restyle, RTL), D4 (disk page with diskmap + 3 choices), D5 About dialog,
-  D6 screenshots to the owner, C VM gate `test_partition_mode`, gather-facts gate, then ISO #12 (phase E).
+- D2-D6 merged (1a0bc03 + 909566e): Adw rows and pages, disk cards with partition maps and 3 choices,
+  mode-aware review, Adw.AboutDialog, Arabic RTL, owner screenshot set (`tests/install/gui_screens.py`,
+  opt-in `SECLEGION_SCREENS=1`). Unit suite 1713 passed, lint green.
+- Owner review of the install flow: gaps G1-G12 planned in
+  `docs/superpowers/plans/2026-11-04-install-flow-gaps.md` (owner: plan only, not implemented after D6).
+- Waiting on the owner: approval of the D6 screenshots (`out/screens-d6/`) and of the gap plan, then
+  the [#12] gaps (~13 h), then ISO #12 (phase E).
 
 ## Done
 - M0 foundation: layout, REUSE, container wrapper, QEMU harness, evidence verifier, TESTING.md.
