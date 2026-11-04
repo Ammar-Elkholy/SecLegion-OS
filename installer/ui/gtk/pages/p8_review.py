@@ -58,6 +58,26 @@ class ReviewPage(Page):
         """What the confirmation names: "partition" in partition mode, else "disk"."""
         return "partition" if self.ctx.pages["disk"].mode == "partition" else "disk"
 
+    def disk_label(self):
+        """The disk's model (or name) for the summary, whatever the mode."""
+        try:
+            disk = c.find_disk(self.answers_obj(), self.ctx.facts)
+        except c.Refusal:
+            return None
+        return (disk.get("model") or disk.get("name") or "").strip() or None
+
+    def warning(self):
+        """What Install will destroy, in the mode's own words, then what to type."""
+        exp = self.expected() or "?"
+        mode = self.ctx.pages["disk"].mode
+        if mode == "partition":
+            head = f"This DELETES everything on partition {exp}; the other partitions stay."
+        elif mode == "alongside":
+            head = "This uses the free space on the disk; the existing partitions stay."
+        else:
+            head = "This ERASES all data on the selected disk."
+        return f"{head} Type the {self.confirm_noun()} name to confirm: {exp}"
+
     def _with_name(self):
         """Answers as if the right name were typed, so real refusals show before the user types."""
         d = self.ctx.answers()
@@ -110,8 +130,9 @@ def summary_rows(page):
     extras = [EXTRAS.get(k, k) for k in page.ctx.hints()]
     keyboard = a.get("keyboard", "") + "".join(f" + {k}" for k in a.get("keyboard_extra", []))
     return [
-        ("Disk", page.expected() or "Not found", a.get("disk", ""), "disk"),
-        ("Mode", MODE_LABELS.get(a.get("mode"), a.get("mode") or "erase"), "", "disk"),
+        ("Disk", page.disk_label() or "Not found", a.get("disk", ""), "disk"),
+        ("Mode", MODE_LABELS.get(a.get("mode"), a.get("mode") or "erase"),
+         f"{page.expected()} (everything on it is deleted)" if a.get("mode") == "partition" else "", "disk"),
         ("Encryption", "On (LUKS2)" if luks else "Off", "", "encryption" if luks else "disk"),
         ("User", f"{a.get('username', '')} on {a.get('hostname', '')}", "", "user"),
         ("Locale", f"{a.get('locale', '')}, keyboard {keyboard}", "", "language"),
@@ -144,9 +165,8 @@ def widget(page):
         details = Gtk.Expander(label="Exact commands")
         details.set_child(mono_view(page.commands()))
         box.append(details)
-    box.append(text_label(f"This ERASES data on the selected disk (see above). Type its name to "
-                          f"confirm: {page.expected() or '?'}"))
-    box.append(entry_row("Disk name", page.typed, page.set_typed))
+    box.append(text_label(page.warning()))
+    box.append(entry_row(f"{page.confirm_noun().capitalize()} name", page.typed, page.set_typed))
     if page.dev_options():
         box.append(switch_row("DEV build: pass --dev (not available in release images)", page.dev,
                               page.set_dev))

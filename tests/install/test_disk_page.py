@@ -191,6 +191,21 @@ def test_disk_page_merged_answers_pass_validate_in_partition_mode(facts):
     assert r.can_next() and r.error() is None
 
 
+def test_review_rows_and_warning_name_the_partition_in_partition_mode(facts):
+    from pages import p8_review
+
+    m = pmodel(facts)
+    fill_user(m)
+    r = m.pages["review"]
+    rows = {t: (v, d) for t, v, d, _k in p8_review.summary_rows(r)}
+    assert rows["Disk"][0] == MODEL_NAME
+    assert rows["Mode"] == ("Replace one partition", "nvme0n1p5 (everything on it is deleted)")
+    assert "nvme0n1p5" in r.warning() and "disk" not in r.warning().split(".")[0].lower()
+    e = pmodel(facts, None)
+    fill_user(e)
+    assert "ERASES" in e.pages["review"].warning()
+
+
 def test_disk_page_review_still_asks_for_the_model_in_erase_mode(facts):
     m = pmodel(facts, None)
     fill_user(m)
