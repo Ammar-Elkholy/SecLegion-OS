@@ -5,6 +5,16 @@ Updated 2026-10-31 (ISO #11). Progress 81% (1.0 = 80%). Branch `clean-room-rebui
 History before 2026-11-01 was wiped from GitHub on the owner's word; it is kept in
 `/mnt/Dev_Lab/iso-artifacts/seclegion-git-history-2026-11-01.bundle`. Commit ids below refer to that bundle.
 
+## ISO #12 work (2026-11-04; plan `docs/superpowers/plans/2026-11-04-iso12-plan.md`)
+- Metal findings on ISO #11: Try Live booted stock Hyprland; the installer refused every disk with
+  "not booted in install mode"; the installer looks unbranded and cannot use a ready partition.
+- Phase A merged (860e83a): live greetd runs `seclegion-live-session` (skel copy + uwsm), and the live
+  root now installs seclegion-{dotfiles,desktop,theme,branding}. New gate M2-live-desktop. Its PASS is
+  owed by ISO #12 (expect FAIL on ISO #11). Unit suite 1630 passed; `test_displayd.py::
+  test_state_survives_restart` is flaky (failed 1 of 3 alone, unrelated).
+- Waiting on the owner's approval of the plan for phases B (install-mode detection), C (partition mode),
+  D (libadwaita redesign), E (ISO #12) and F (rest of the meter).
+
 ## Done
 - M0 foundation: layout, REUSE, container wrapper, QEMU harness, evidence verifier, TESTING.md.
 - Live-host desktop: `seclegion-host` (apply/confirm/rollback, dead-man), waybar, swaync, keys, OSD, idle, gtk/fm, lock.
