@@ -1,0 +1,102 @@
+{
+  "install_mode": true,
+  "dev_build": false,
+  "boot_medium": "/dev/sda",
+  "root_disk": null,
+  "by_id": {},
+  "lsblk": {
+    "blockdevices": [
+      {
+        "name": "nvme0n1",
+        "path": "/dev/nvme0n1",
+        "type": "disk",
+        "size": 1000204886016,
+        "log-sec": 512,
+        "model": "WD Blue SN580 1TB",
+        "vendor": null,
+        "pttype": "gpt",
+        "mountpoints": [
+          null
+        ],
+        "children": [
+          {
+            "name": "nvme0n1p1",
+            "path": "/dev/nvme0n1p1",
+            "type": "part",
+            "start": 2048,
+            "size": 272629760,
+            "fstype": "vfat",
+            "parttype": "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",
+            "mountpoints": [
+              null
+            ]
+          },
+          {
+            "name": "nvme0n1p2",
+            "path": "/dev/nvme0n1p2",
+            "type": "part",
+            "start": 534528,
+            "size": 16777216,
+            "fstype": null,
+            "parttype": "e3c9e316-0b5c-4db8-817d-f92df00215ae",
+            "mountpoints": [
+              null
+            ]
+          },
+          {
+            "name": "nvme0n1p3",
+            "path": "/dev/nvme0n1p3",
+            "type": "part",
+            "start": 567296,
+            "size": 429496729600,
+            "fstype": "ntfs",
+            "parttype": "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7",
+            "mountpoints": [
+              null
+            ]
+          },
+          {
+            "name": "nvme0n1p4",
+            "path": "/dev/nvme0n1p4",
+            "type": "part",
+            "start": 839428096,
+            "size": 1073741824,
+            "fstype": "ntfs",
+            "parttype": "de94bba4-06d1-4d40-a16a-bfd50179d6ac",
+            "mountpoints": [
+              null
+            ]
+          },
+          {
+            "name": "nvme0n1p5",
+            "path": "/dev/nvme0n1p5",
+            "type": "part",
+            "start": 841525249,
+            "size": 214748364800,
+            "fstype": "ext4",
+            "parttype": "0fc63daf-8483-4772-8e79-3d69d8477de4",
+            "mountpoints": [
+              null
+            ]
+          },
+          {
+            "name": "nvme0n1p6",
+            "path": "/dev/nvme0n1p6",
+            "type": "part",
+            "start": 1260957696,
+            "size": 10737418240,
+            "fstype": "ext4",
+            "parttype": "0fc63daf-8483-4772-8e79-3d69d8477de4",
+            "mountpoints": [
+              null
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "probes": {
+    "/dev/nvme0n1p3": "clean",
+    "/dev/nvme0n1p4": "clean"
+  }
+}
