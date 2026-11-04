@@ -50,6 +50,17 @@ class HardwarePage(Page):
 
 
 def widget(page):
-    from view_util import label_box
+    import gi
 
-    return label_box(page.title, page.text())
+    gi.require_version("Adw", "1")
+    from gi.repository import Adw, Gtk
+    from view_util import page_box
+
+    box = page_box(page.title, "What the installer found, and the drivers it will set up.")
+    group = Adw.PreferencesGroup(title="Graphics and drivers")
+    for line in page.text().splitlines():
+        row = Adw.ActionRow(title=line, use_markup=False)
+        row.add_prefix(Gtk.Image.new_from_icon_name("video-display-symbolic"))
+        group.add(row)
+    box.append(group)
+    return box

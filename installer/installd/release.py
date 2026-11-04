@@ -20,6 +20,11 @@ def is_release(env=None, marker=MARKER):
     return env.get("SECLEGION_RELEASE") == "1" or os.path.exists(marker)
 
 
+def build_label(env=None, marker=MARKER):
+    """Text for the installer's welcome page: the image has no version number yet, only a channel."""
+    return "Release build" if is_release(env, marker) else "Development build"
+
+
 def dev_violations(force_install_mode=False, dev=False, env=None, marker=MARKER, facts=False):
     """Names of the DEV-only switches in use that a release build must refuse ([] outside release mode)."""
     env = os.environ if env is None else env

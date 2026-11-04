@@ -42,6 +42,7 @@ class Model:
         self.index = 0
         self.failed = False  # install ran and failed: current page is "error"
         self.on_change = lambda: None  # the app hooks this to refresh Next
+        self.on_render = lambda: None  # the app hooks this to redraw the page (goto, language change)
         self.manual = False  # user opened page 5 from page 4
 
     @property
@@ -92,6 +93,16 @@ class Model:
 
     def back(self):
         self.index = max(0, self.index - 1)
+
+    def goto(self, key):
+        """Jump to a visible page (the review page's Edit buttons). False when `key` is not visible."""
+        keys = [p.key for p in self.visible()]
+        if key not in keys:
+            return False
+        self.failed = False
+        self.index = keys.index(key)
+        self.on_render()
+        return True
 
     def open_manual(self):
         self.manual = True

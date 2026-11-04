@@ -4,6 +4,7 @@
 
 from .base import Page
 
+TAGLINE = "A security-focused Arch Linux. Answer a few questions, review every step, then install."
 TEXT = ("Welcome to SecLegion OS. This installer asks a few questions, shows you exactly what it "
         "will do, and changes nothing on your disks until you confirm on the last page.")
 
@@ -14,6 +15,10 @@ class WelcomePage(Page):
 
 
 def widget(page):
-    from view_util import label_box
+    import release
+    from sidebar import logo_path
+    from view_util import status_page
 
-    return label_box(page.title, TEXT)
+    sp = status_page(logo_path() or "system-run-symbolic", "SecLegion OS",
+                     f"{TAGLINE}\n{release.build_label()}")
+    return sp

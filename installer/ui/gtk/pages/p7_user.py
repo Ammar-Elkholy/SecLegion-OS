@@ -55,7 +55,7 @@ class UserPage(Page):
 def widget(page):
     from view_util import entry_row, page_box
 
-    box = page_box(page.title)
+    box = page_box(page.title, "The account you will log in with, and the name of this computer.")
     box.append(entry_row("Username", page.username, page.set_username))
     box.append(entry_row("Password", page.password, page.set_password, secret=True))
     box.append(entry_row("Confirm password", page.confirm, page.set_confirm, secret=True))

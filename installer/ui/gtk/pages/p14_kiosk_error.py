@@ -25,6 +25,6 @@ class KioskErrorPage(Page):
 
 
 def widget(page):
-    from view_util import label_box
+    from view_util import status_page
 
-    return label_box(page.title, page.text())
+    return status_page("dialog-error-symbolic", page.title, page.text())

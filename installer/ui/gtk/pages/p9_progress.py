@@ -119,9 +119,49 @@ class ProgressPage(Page):
 
 
 def widget(page):
-    from view_util import mono_view, page_box, text_label
+    from gi.repository import Adw, GLib, Gtk, Pango
+    from view_util import status_page
 
-    box = page_box(page.title)
-    box.append(text_label("Installing SecLegion OS. Do not power off. This can take several minutes."))
-    box.append(mono_view("\n".join(page.lines[-200:]) or "Starting...", scroll=True))
-    return box
+    sp = status_page("system-software-install-symbolic", "Installing SecLegion OS",
+                     "Do not power off. This can take several minutes.")
+    bar = Gtk.ProgressBar()
+    step = Gtk.Label(name="progress-step", xalign=0, ellipsize=Pango.EllipsizeMode.END)
+    step.add_css_class("dim-label")
+    log = Gtk.Label(name="progress-log", xalign=0, yalign=0, wrap=True, selectable=True)
+    log.add_css_class("monospace")
+    scroller = Gtk.ScrolledWindow(min_content_height=240)
+    scroller.set_child(log)
+    details = Gtk.Expander(label="Details")
+    details.set_child(scroller)
+    col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+    for w in (bar, step, details):
+        col.append(w)
+    sp.set_child(Adw.Clamp(maximum_size=560, child=col))
+
+    def update():
+        """Called by the app for every new output line: current step, log text, bar pulse."""
+        shown = [ln for ln in page.lines if ln.strip()]
+        step.set_label(shown[-1] if shown else "Starting...")
+        log.set_label("\n".join(page.lines[-200:]) or "Starting...")
+        bar.pulse()
+        GLib.idle_add(to_end)
+
+    def to_end():
+        adj = scroller.get_vadjustment()
+        adj.set_value(adj.get_upper())
+        return GLib.SOURCE_REMOVE
+
+    shown_once = []
+
+    def tick():  # the install has no percentage, so the bar keeps moving until the page goes away
+        if bar.get_mapped():
+            shown_once.append(1)
+        if page.done or (shown_once and not bar.get_mapped()):
+            return GLib.SOURCE_REMOVE
+        bar.pulse()
+        return GLib.SOURCE_CONTINUE
+
+    sp.update = update
+    update()
+    GLib.timeout_add(250, tick)
+    return sp
