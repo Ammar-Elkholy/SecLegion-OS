@@ -68,8 +68,25 @@ def _out(argv):
         return ""
 
 
+def detect_install_mode(cmdline, target_state):
+    """True iff the kernel cmdline asks for install mode AND seclegion-install.target is up.
+
+    "activating" counts: with no network the target's multi-user.target dependencies keep it activating
+    while the kiosk (and this GUI) is already running."""
+    return "seclegion.mode=install" in cmdline.split() and target_state in ("active", "activating")
+
+
+def _read_cmdline():
+    try:
+        with open("/proc/cmdline", encoding="utf-8") as f:
+            return f.read()
+    except OSError:
+        return ""
+
+
 def gather(install_mode=None, dev_build=None):
-    """Live gathering. install_mode None = ask systemd (seclegion-install.target active).
+    """Live gathering. install_mode None = /proc/cmdline says seclegion.mode=install and systemd reports
+    seclegion-install.target active or activating (detect_install_mode).
 
     dev_build None = DEV unless release mode (release.py); release mode always reports dev_build False."""
     rel = release.is_release()
@@ -82,7 +99,9 @@ def gather(install_mode=None, dev_build=None):
             for n in sorted(os.listdir(BY_ID_DIR))
         ]
     if install_mode is None:
-        install_mode = _out(["systemctl", "is-active", "seclegion-install.target"]) == "active"
+        install_mode = detect_install_mode(
+            _read_cmdline(), _out(["systemctl", "is-active", "seclegion-install.target"])
+        )
     facts = build_facts(
         lsblk,
         pairs,
