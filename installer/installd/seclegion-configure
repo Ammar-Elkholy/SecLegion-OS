@@ -24,11 +24,17 @@ def interactive(facts):
     for d in disks:
         print(f"  {d['path']}  {d.get('model') or ''}  {int(d['size']) // c.GIB} GiB")
     ans = {"disk": ask("Disk (path)", disks[0]["path"] if disks else None)}
-    ans["mode"] = ask("Mode erase/erase-luks/alongside", "erase")
+    ans["mode"] = ask("Mode erase/erase-luks/alongside/partition", "erase")
+    if ans["mode"] == "partition":
+        disk = next((d for d in disks if d["path"] == ans["disk"]), None)
+        for path, size, why in c.partition_choices(disk, facts) if disk else []:
+            print(f"  {path}  {size // c.GIB} GiB  {why or 'selectable'}")
+        ans["partition"] = ask("Partition to replace (path)")
     ans["username"] = ask("Username")
     ans["password"] = ask("Password", secret=True)
     ans["hostname"] = ask("Hostname", "seclegion")
-    ans["confirm"] = ask("Type the disk model exactly to confirm")
+    what = "partition name (e.g. nvme0n1p5)" if ans["mode"] == "partition" else "disk model"
+    ans["confirm"] = ask(f"Type the {what} exactly to confirm")
     return ans
 
 

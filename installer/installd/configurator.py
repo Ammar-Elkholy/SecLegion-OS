@@ -29,6 +29,8 @@ _NS = uuid.UUID("5ec1e610-0000-4000-8000-000000000001")
 SUBVOLS = [("@", "/"), ("@home", "/home"), ("@log", "/var/log"),
            ("@pkg", "/var/cache/pacman/pkg"), ("@.snapshots", "/.snapshots")]
 ESP_GUID = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
+_WINDOWS_PARTTYPES = ("e3c9e316-0b5c-4db8-817d-f92df00215ae",  # Microsoft reserved (MSR)
+                      "de94bba4-06d1-4d40-a16a-bfd50179d6ac")  # Windows recovery
 _FS = {"vfat": "fat32", "ntfs": "ntfs", "ext4": "ext4", "btrfs": "btrfs",
        "xfs": "xfs", "crypto_LUKS": "crypto_LUKS", "swap": "linux-swap"}
 
@@ -48,6 +50,7 @@ class Answers:
     confirm: str = ""
     mode: str = "erase"
     luks: bool | None = None
+    partition: str | None = None
     luks_passphrase: str | None = field(default=None, repr=False)
     hostname: str = "seclegion"
     timezone: str | None = None
@@ -56,8 +59,10 @@ class Answers:
     locale: str = "en_US.UTF-8"
 
     def __post_init__(self):
-        if self.mode not in ("erase", "erase-luks", "alongside"):
-            raise Refusal("bad_mode", "mode must be erase, erase-luks or alongside")
+        if self.mode not in ("erase", "erase-luks", "alongside", "partition"):
+            raise Refusal("bad_mode", "mode must be erase, erase-luks, alongside or partition")
+        if self.mode == "partition" and not self.partition:
+            raise Refusal("bad_partition", "partition mode needs the partition to replace")
         if not re.fullmatch(r"[a-z_][a-z0-9_-]{0,31}", self.username or ""):
             raise Refusal("bad_username", "invalid username")
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9-]{0,62}", self.hostname or ""):
@@ -76,7 +81,7 @@ class Answers:
 
     @property
     def effective_mode(self):
-        return "alongside" if self.mode == "alongside" else "erase"
+        return self.mode if self.mode in ("alongside", "partition") else "erase"
 
     @property
     def passphrase(self):
@@ -103,10 +108,12 @@ def default_timezone(link="/etc/localtime"):
 #          "probes": {"/dev/sdX2": winguide.probe() result} (optional; NTFS/BitLocker partitions),
 #          "lsblk": <output of lsblk -J -b -O>}
 
-def _walk(node):
+def _walk(node, skip=None):
+    if skip and node.get("path") == skip:
+        return  # the whole subtree is left out
     yield node
     for c in node.get("children") or []:
-        yield from _walk(c)
+        yield from _walk(c, skip)
 
 
 def find_disk(answers, facts):
@@ -117,9 +124,10 @@ def find_disk(answers, facts):
     raise Refusal("no_such_disk", "chosen disk not found")
 
 
-def _mountpoints(disk):
+def _mountpoints(disk, skip=None):
+    """Mount points under disk; skip is the path of a partition whose subtree is left out."""
     out = []
-    for n in _walk(disk):
+    for n in _walk(disk, skip):
         out += [m for m in (n.get("mountpoints") or [n.get("mountpoint")]) if m]
     return out
 
@@ -150,6 +158,48 @@ def free_gaps(disk):
     return out
 
 
+def _aligned_extent(part, sec):
+    """(start, end) bytes of a partition, start aligned UP and end aligned DOWN to MiB."""
+    start = int(part["start"]) * sec
+    end = start + int(part["size"])
+    return -(-start // MIB) * MIB, end // MIB * MIB
+
+
+def _partition_refusal(part, sec):
+    """Refusal code for replacing this partition, or None. Order matters; fail closed."""
+    if _mountpoints(part):
+        return "part_mounted"
+    parttype = (part.get("parttype") or "").lower()
+    fstype = (part.get("fstype") or "").lower()
+    if parttype == ESP_GUID:
+        return "part_is_esp"
+    # exfat/refs: Windows or shared data volumes, never a partition prepared for Linux (fail closed)
+    if fstype in ("ntfs", "bitlocker", "refs", "exfat") or parttype in _WINDOWS_PARTTYPES:
+        return "part_is_windows"
+    if not parttype and not fstype:
+        return "part_unknown"
+    start, end = _aligned_extent(part, sec)
+    if end - start < MIN_DISK:
+        return "part_too_small"
+    return None
+
+
+def partition_choices(disk, facts):
+    """[(path, size bytes, refusal code or None)] for every partition of the disk, in disk order."""
+    sec = _sec(disk)
+    return [(p["path"], int(p["size"]), _partition_refusal(p, sec))
+            for p in sorted((c for c in disk.get("children") or [] if c.get("type") == "part"),
+                            key=lambda p: int(p["start"]))]
+
+
+def _chosen_partition(answers, disk):
+    """The lsblk node of the partition to replace; a direct part child of the disk only."""
+    for p in disk.get("children") or []:
+        if p.get("type") == "part" and p.get("path") == answers.partition:
+            return p
+    raise Refusal("no_such_partition", "the chosen partition is not on the chosen disk")
+
+
 def validate(answers, facts, defer_unreadable=False):
     """Refuse an unsafe plan. defer_unreadable is for the unprivileged installer GUI only: a Windows partition
     it could not read stays open there (seclegion-install re-checks it as root, never deferring)."""
@@ -157,11 +207,13 @@ def validate(answers, facts, defer_unreadable=False):
         raise Refusal("not_install_mode", "not booted in install mode")
     disk = find_disk(answers, facts)
     path = disk["path"]
+    partition = answers.effective_mode == "partition"
     if facts.get("root_disk") == path or "/" in _mountpoints(disk):
         raise Refusal("root_disk", "disk holds the running root filesystem")
     if facts.get("boot_medium") == path:
         raise Refusal("boot_medium", "disk is the boot medium")
-    if _mountpoints(disk):
+    # partition mode: the chosen partition's own mounts are reported as part_mounted below
+    if _mountpoints(disk, answers.partition if partition else None):
         raise Refusal("mounted", "disk has mounted filesystems")
     if disk.get("pttype") == "dos":
         raise Refusal("mbr_disk", "MBR (dos) disks are not supported; GPT/UEFI only")
@@ -169,13 +221,14 @@ def validate(answers, facts, defer_unreadable=False):
         who = f"{disk.get('vendor') or ''} {disk.get('model') or ''}".upper()
         if "QEMU" not in who:
             raise Refusal("dev_build_real_disk", "DEV build installs only to QEMU disks")
-    expected = (disk.get("model") or disk.get("name") or "").strip()
-    if not expected or answers.confirm != expected:
-        raise Refusal("confirm_mismatch", "typed disk name does not match")
-    if answers.effective_mode != "alongside" and int(disk.get("size") or 0) < MIN_DISK:
+    if not partition:
+        expected = (disk.get("model") or disk.get("name") or "").strip()
+        if not expected or answers.confirm != expected:
+            raise Refusal("confirm_mismatch", "typed disk name does not match")
+    if answers.effective_mode not in ("alongside", "partition") and int(disk.get("size") or 0) < MIN_DISK:
         # refuse before anything is written: a too-small disk otherwise fails late, half installed (U5 G49)
         raise Refusal("disk_too_small", "the disk is under 20 GiB")
-    if answers.effective_mode == "alongside":
+    if answers.effective_mode in ("alongside", "partition"):
         for part in disk.get("children") or []:
             probe = (facts.get("probes") or {}).get(part.get("path"))
             if probe is None and (part.get("fstype") or "").lower() in ("ntfs", "bitlocker"):
@@ -185,6 +238,14 @@ def validate(answers, facts, defer_unreadable=False):
             blocked = winguide.refusal_for(probe)
             if blocked:
                 raise Refusal(*blocked)
+    if partition:
+        chosen = _chosen_partition(answers, disk)
+        code = _partition_refusal(chosen, _sec(disk))
+        if code:
+            raise Refusal(code, f"{chosen['path']} cannot be replaced ({code})")
+        if not chosen.get("name") or answers.confirm != chosen["name"]:
+            raise Refusal("confirm_mismatch", "typed partition name does not match")
+    if answers.effective_mode == "alongside":
         gaps = free_gaps(disk)
         if not gaps or max(g[1] for g in gaps) < MIN_GAP:
             if sum(g[1] for g in gaps) >= MIN_GAP:
@@ -225,6 +286,19 @@ def build_config(answers, facts):
         parts = [_existing(p, sec) for p in sorted(
             disk.get("children") or [], key=lambda p: int(p["start"]))
             if p.get("type") == "part"]
+        wipe = False
+    elif answers.effective_mode == "partition":
+        chosen = _chosen_partition(answers, disk)
+        lo, hi = _aligned_extent(chosen, sec)
+        start, size = lo, hi - lo
+        parts = []
+        for p in sorted(disk.get("children") or [], key=lambda p: int(p["start"])):
+            if p.get("type") != "part":
+                continue
+            m = _existing(p, sec)
+            if p is chosen:
+                m["status"] = "delete"
+            parts.append(m)
         wipe = False
     else:
         start, size = MIB, (total - 2 * MIB) // MIB * MIB
@@ -273,7 +347,7 @@ def build_config(answers, facts):
 def post_hints(answers):
     """Non-secret extras for the post step (archinstall has one kb_layout only)."""
     hints = {"keyboard_extra": list(answers.keyboard_extra), "username": answers.username}
-    if answers.effective_mode == "alongside":
+    if answers.effective_mode in ("alongside", "partition"):
         hints["alongside"] = True  # seclegion-post then looks for a Windows ESP (winboot.py)
     return hints
 
@@ -298,6 +372,8 @@ def write(config, creds, outdir, hints=None):
 def summary(config, answers):
     dm = config["disk_config"]["device_modifications"][0]
     wipe = "wipe whole disk" if dm["wipe"] else "free space only"
+    if answers.effective_mode == "partition":
+        wipe = f"replace {answers.partition}"
     kb = config["locale_config"]["kb_layout"]
     if answers.keyboard_extra:
         kb += " (+" + ",".join(answers.keyboard_extra) + ")"
