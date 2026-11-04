@@ -25,6 +25,8 @@ def _free_display():
     return 60
 
 
+@pytest.mark.skipif(not os.environ.get("SECLEGION_SCREENS"),
+                    reason="3 minutes: opt in with SECLEGION_SCREENS=1 (D6 owner screenshots)")
 def test_gui_screens_render_every_page_under_broadway(tmp_path):
     broadwayd = shutil.which("gtk4-broadwayd")
     py = "/usr/bin/python3"
