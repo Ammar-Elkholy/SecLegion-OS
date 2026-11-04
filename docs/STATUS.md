@@ -12,8 +12,15 @@ History before 2026-11-01 was wiped from GitHub on the owner's word; it is kept 
   root now installs seclegion-{dotfiles,desktop,theme,branding}. New gate M2-live-desktop. Its PASS is
   owed by ISO #12 (expect FAIL on ISO #11). Unit suite 1630 passed; `test_displayd.py::
   test_state_survives_restart` is flaky (failed 1 of 3 alone, unrelated).
-- Waiting on the owner's approval of the plan for phases B (install-mode detection), C (partition mode),
-  D (libadwaita redesign), E (ISO #12) and F (rest of the meter).
+- Phase B merged (8f9b40d): `facts.detect_install_mode` reads `seclegion.mode=install` from the cmdline and
+  accepts an install target that is still activating (offline, multi-user.target never completes).
+- Phase D1 merged (e499e94): libadwaita shell (tokens CSS at USER priority, logo sidebar with step list,
+  OverlaySplitView breakpoint at 720sp, no window buttons in the kiosk, Back off on page 1).
+- Phase C1 merged (9a883ff): partition mode replaces one existing partition with ESP + root and keeps the
+  rest. Refusals: part_mounted, part_is_esp, part_is_windows (ntfs/bitlocker/refs/exfat, MSR/recovery),
+  part_unknown, part_too_small. Unit suite 1678 passed, lint green.
+- Next: D2+D3 (Adw rows, page restyle, RTL), D4 (disk page with diskmap + 3 choices), D5 About dialog,
+  D6 screenshots to the owner, C VM gate `test_partition_mode`, gather-facts gate, then ISO #12 (phase E).
 
 ## Done
 - M0 foundation: layout, REUSE, container wrapper, QEMU harness, evidence verifier, TESTING.md.
