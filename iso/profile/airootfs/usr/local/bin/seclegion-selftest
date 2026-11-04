@@ -337,6 +337,33 @@ def lock():
     }
 
 
+def desktop():
+    """Live mode only: the SecLegion desktop the live user's greetd session should have started."""
+    watch = ("Hyprland", "waybar", "hyprland-welcome")
+
+    def seen():
+        found = set()
+        for user, comm, cmd in processes():
+            if user != LIVE:
+                continue
+            found.update(w for w in watch if comm == w or comm == w[:15] or w in cmd.split(" ", 1)[0])
+        return sorted(found)
+
+    for _ in range(120):  # the session starts in parallel with this unit; give it two minutes
+        found = seen()
+        if "waybar" in found and "Hyprland" in found:
+            break
+        run(["sleep", "1"])
+    home = f"/home/{LIVE}/.config/hypr/hyprland.lua"
+    try:
+        with open(home, "rb") as mine, open("/etc/skel/.config/hypr/hyprland.lua", "rb") as skel:
+            same = mine.read() == skel.read()
+    except OSError:
+        same = False
+    return {"hyprland_lua": os.path.isfile(home), "hyprland_lua_is_skel": same,
+            "live_processes": found}
+
+
 def repos():
     sections, siglevels, servers = [], [], []
     with open("/etc/pacman.conf", encoding="utf-8") as handle:
@@ -471,6 +498,11 @@ def main():
             console.emit(section, mode=mode, **probe())
         except Exception as exc:  # noqa: BLE001 - a probe bug must show up as an error line, not a hang
             console.emit("error", mode=mode, probe=section, reason=type(exc).__name__ + ": " + str(exc)[:200])
+    if mode == "live":
+        try:
+            console.emit("desktop", mode=mode, **desktop())
+        except Exception as exc:  # noqa: BLE001
+            console.emit("error", mode=mode, probe="desktop", reason=type(exc).__name__ + ": " + str(exc)[:200])
     if todo == "kill-kiosk":
         try:
             console.emit("kiosk_error", mode=mode, **kill_kiosk())

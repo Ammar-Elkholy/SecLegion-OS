@@ -152,6 +152,16 @@ CANONICAL_SERIAL_PATTERNS = {
         _st("lock", "live", r'"locker_processes": \[\], '),
         _st("done", "live", ""),
     ],
+    "M2-live-desktop": [
+        r"SECLEGION-MODE=live",
+        _st(
+            "desktop",
+            "live",
+            r'"hyprland_lua": true, "hyprland_lua_is_skel": true, "live_processes": '
+            r'\["Hyprland", "waybar"\]',
+        ),
+        _st("done", "live", ""),
+    ],
     "M2-repos": [
         r"SECLEGION-MODE=live",
         _st(  # one line: two patterns on it would need a second repos line (matched in order)
@@ -315,6 +325,7 @@ M2_IDS = (
     "M2-kiosk-error",
     "M2-installer",
     "M2-lock",
+    "M2-live-desktop",
     "M2-repos",
     "M2-cache",
 )

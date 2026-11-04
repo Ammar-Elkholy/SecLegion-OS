@@ -412,6 +412,7 @@ LOCAL_COMMANDS = {
     "run",
     "error",
     "seclegion-selftest",
+    "seclegion-live-session",
 }
 # Reached through the dependency closure of `base`, which base.list lists.
 BASE_CLOSURE = {"pacman", "systemd", "coreutils", "sh", "bash"}
