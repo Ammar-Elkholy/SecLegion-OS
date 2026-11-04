@@ -4,3 +4,4 @@
 installer/installd
 installer/ui
 LICENSE
+desktop/theme/tokens.toml

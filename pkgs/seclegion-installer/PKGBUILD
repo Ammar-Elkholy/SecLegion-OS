@@ -23,7 +23,7 @@ pkgdesc='SecLegion OS installer: installd (seclegion-install) and the GTK instal
 arch=('any')
 url='https://github.com/seclegion/SecLegion-OS'
 license=('MIT')
-depends=('python' 'python-gobject' 'gtk4' 'archinstall' 'polkit' 'util-linux')
+depends=('python' 'python-gobject' 'gtk4' 'libadwaita' 'archinstall' 'polkit' 'util-linux')
 source=(seclegion-src.tar.zst)
 sha256sums=('SKIP')  # generated for the build from tracked files (tools/pkg-source)
 
@@ -52,5 +52,7 @@ package() {
     install -d "$pkgdir/usr/bin"
     _launcher seclegion-install "/$lib/installd/seclegion-install"
     _launcher seclegion-installer-gui "/$lib/ui/seclegion-installer-gui"
+    install -Dm644 "$srcdir/desktop/theme/tokens.toml" \
+        "$pkgdir/usr/share/seclegion/installer/tokens.toml"
     install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

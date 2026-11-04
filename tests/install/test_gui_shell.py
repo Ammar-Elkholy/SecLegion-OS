@@ -1,0 +1,71 @@
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+"""Installer window shell: theme CSS from the tokens (pure) and the sidebar/breakpoint under Broadway."""
+
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+
+import pytest
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(HERE))
+sys.path.insert(0, os.path.join(ROOT, "installer", "ui", "gtk"))
+from theme import load_css  # noqa: E402
+
+TOKENS = os.path.join(ROOT, "desktop", "theme", "tokens.toml")
+
+
+def test_gui_shell_css_comes_from_the_tokens():
+    css = load_css(TOKENS)
+    assert "@define-color accent_bg_color #00FF88;" in css
+    assert "@define-color window_bg_color #050F0E;" in css
+    assert "@define-color accent_fg_color #050F0E;" in css
+    for cls in (".step-done", ".step-current", ".step-todo"):
+        assert cls in css
+
+
+def _free_display():
+    run = os.environ.get("XDG_RUNTIME_DIR", "/nonexistent")
+    for n in range(60, 90):
+        if not os.path.exists(os.path.join(run, f"broadway{n}.socket")):
+            return n
+    return 60
+
+
+def test_gui_shell_sidebar_and_breakpoint_under_broadway(tmp_path):
+    broadwayd = shutil.which("gtk4-broadwayd")
+    py = "/usr/bin/python3"
+    if not broadwayd or not os.path.exists(py):
+        pytest.skip("gtk4-broadwayd or system python3 not available")
+    if subprocess.run([py, "-c", "import gi; gi.require_version('Gtk','4.0');"
+                       "gi.require_version('Adw','1')"], capture_output=True).returncode:
+        pytest.skip("gi GTK4/libadwaita not importable by system python3")
+    run = tmp_path / "run"
+    run.mkdir(mode=0o700)
+    n = _free_display()
+    env = {k: v for k, v in os.environ.items() if k not in ("WAYLAND_DISPLAY", "DISPLAY")}
+    env.update(XDG_RUNTIME_DIR=str(run), GDK_BACKEND="broadway", BROADWAY_DISPLAY=f":{n}")
+    daemon = subprocess.Popen([broadwayd, f":{n}"], env=env, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL)
+    try:
+        time.sleep(1)
+        r = subprocess.run([py, os.path.join(HERE, "gui_shell_probe.py")], env=env,
+                           capture_output=True, text=True, timeout=90)
+    finally:
+        daemon.terminate()
+        daemon.wait(10)
+    if "NO-DISPLAY" in r.stdout:
+        pytest.skip("Broadway display unavailable: " + r.stderr[-200:])
+    assert r.returncode == 0, r.stderr
+    got = json.loads(r.stdout.strip().splitlines()[-1])
+    wide, narrow = got["wide"], got["narrow"]
+    assert not wide["collapsed"] and wide["sidebar_visible"]
+    assert wide["rows"] == wide["visible"] and wide["title"]
+    assert wide["row0"] == ["step-current"] and not wide["step_visible"]
+    assert wide["after_next"] == [["step-done"], ["step-current"]]
+    assert narrow["collapsed"] and narrow["step_visible"]
+    assert narrow["step"] == f"Step 2 of {narrow['n']}"
