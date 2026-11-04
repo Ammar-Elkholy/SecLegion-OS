@@ -316,3 +316,8 @@ def test_disk_page_renders_under_broadway(tmp_path):
         "/dev/nvme0n1p4": False, "/dev/nvme0n1p5": True, "/dev/nvme0n1p6": False}
     assert got["picked"] == "/dev/nvme0n1p5" and got["fragment"]["mode"] == "partition"
     assert got["narrow_ok"]
+    assert got["alongside"]["key"] == "alongside" and got["alongside"]["maps"] == 1
+    assert got["alongside"]["groups"] >= 2
+    assert got["about"]["type"] == "AdwAboutDialog"
+    assert got["about"]["name"] == "SecLegion OS" and got["about"]["license"] == got["about"]["mit"]
+    assert got["about"]["site"] == "https://github.com/Ammar-Elkholy/SecLegion-OS"

@@ -39,7 +39,7 @@ class InstallerWindow(Adw.ApplicationWindow):
         self.header = header = Adw.HeaderBar(show_start_title_buttons=False, show_end_title_buttons=False)
         header.set_title_widget(self.title_label)
         self.about = Gtk.Button(label="About")
-        self.about.connect("clicked", lambda _b: self.show_page(model.pages["about"]))
+        self.about.connect("clicked", lambda _b: self.show_about())
         header.pack_end(self.about)
         header.pack_start(self.step_label)
         self.holder = Gtk.Box(vexpand=True)
@@ -65,6 +65,9 @@ class InstallerWindow(Adw.ApplicationWindow):
         bp.connect("unapply", lambda _b: self.refresh_nav())
         self.add_breakpoint(bp)
         self.render()
+
+    def show_about(self):
+        build_widget(self.model.pages["about"]).present(self)
 
     def show_page(self, page):
         child = self.holder.get_first_child()

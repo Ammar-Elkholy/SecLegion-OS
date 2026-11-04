@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Run by test_disk_page under system python3 with GDK_BACKEND=broadway: builds the disk page on the
 partitions fixture at 1280x800 and 700x700, reports which partition rows are sensitive and what a click on
-p5 does, prints JSON on the last line. DISK_SHOTS=<dir> also saves disk-1280x800.png / disk-700x700.png."""
+p5 does, prints JSON on the last line. DISK_SHOTS=<dir> also saves disk-1280.png / disk-700.png."""
 
 import json
 import os
@@ -95,11 +95,45 @@ out["fragment"] = page.fragment()
 out["next_enabled"] = win.nxt.get_sensitive()
 win.destroy()
 m, win = show(1280, 800, True)
-shot(win, "disk-1280x800.png")
+shot(win, "disk-1280.png")
 win.destroy()
 m, win = show(700, 700, True)
-shot(win, "disk-700x700.png")
+shot(win, "disk-700.png")
 rows = [w for w in walk(win.holder.get_first_child()) if w.get_name().startswith("row:")]
 out["narrow_ok"] = len(rows) == 6 and win.split.get_collapsed()
+win.destroy()
+# alongside page: the disk map, the gap, the guide, all in rows
+m = Model(facts)
+m.pages["disk"].set_disk(NVME)
+m.pages["disk"].set_mode("alongside")
+win = InstallerWindow(app, m)
+win.set_default_size(1280, 800)
+win.present()
+m.next()
+m.next()
+m.next()
+win.render()
+pump()
+root = win.holder.get_first_child()
+out["alongside"] = {"key": m.current.key, "type": type(root).__name__,
+                    "maps": sum(1 for w in walk(root) if isinstance(w, Gtk.DrawingArea)),
+                    "groups": sum(1 for w in walk(root) if isinstance(w, Adw.PreferencesGroup))}
+shot(win, "alongside-1280.png")
+win.destroy()
+# About: the header button presents an Adw.AboutDialog on the window
+m = Model(facts)
+win = InstallerWindow(app, m)
+win.set_default_size(1280, 800)
+win.present()
+pump()
+win.about.emit("clicked")
+pump(80)
+dlg = win.get_visible_dialog()
+kind = "AdwAboutDialog" if isinstance(dlg, Adw.AboutDialog) else type(dlg).__name__
+out["about"] = {"type": kind, "name": dlg.get_application_name() if dlg else None,
+                "license": int(dlg.get_license_type()) if dlg else None,
+                "mit": int(Gtk.License.MIT_X11), "version": dlg.get_version() if dlg else None,
+                "site": dlg.get_website() if dlg else None}
+shot(win, "about-1280.png")
 win.destroy()
 print(json.dumps(out))

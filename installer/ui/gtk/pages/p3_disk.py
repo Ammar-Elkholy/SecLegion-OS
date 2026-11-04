@@ -191,9 +191,10 @@ def widget(page):
     import gi
 
     gi.require_version("Gtk", "4.0")
+    gi.require_version("Adw", "1")
     from diskmap import DiskMap, human
-    from gi.repository import Gtk
-    from view_util import page_box, text_label
+    from gi.repository import Adw, Gtk
+    from view_util import page_box, switch_row, text_label
 
     box = page_box(page.title)
     guard = {"busy": False}
@@ -207,87 +208,77 @@ def widget(page):
         sync()
         page.notify()
 
-    def option(group, label, reason, name, sensitive=True):
-        row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        btn = Gtk.CheckButton(label=label)
-        btn.get_last_child().set_wrap(True)
+    def option(group, title, reason, name, sensitive=True):
+        """ActionRow with a radio prefix; a refused option is insensitive and says why as the subtitle."""
+        btn = Gtk.CheckButton()
         btn.set_name(name)
         if group is not None:
             btn.set_group(group)
         btn.set_sensitive(sensitive)
-        row.append(btn)
+        row = Adw.ActionRow(title=title, use_markup=False, sensitive=sensitive, activatable_widget=btn)
         if reason:
-            note = text_label(reason, "dim-label")
-            note.set_margin_start(28)
-            row.append(note)
+            row.set_subtitle(reason)
+            row.set_subtitle_lines(0)
+        row.add_prefix(btn)
         return row, btn
 
     for d in page.disks():
         node = page.disk_node(d["id"])
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin_top=4, margin_bottom=4)
-        card.add_css_class("card")
-        card.set_name("card:" + d["id"])
-        inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin_top=12,
-                        margin_bottom=12, margin_start=12, margin_end=12)
-        card.append(inner)
-        head = Gtk.Box(spacing=12)
-        radio = Gtk.CheckButton()
-        radio.set_name("disk:" + d["id"])
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        head = Adw.PreferencesGroup(title=d["model"] or d["path"],
+                                    description=f"{human(d['size'])} · {d['path']}")
+        head.set_name("card:" + d["id"])
+        dmap = DiskMap(node)
+        maprow = Adw.PreferencesRow(activatable=False, selectable=False, focusable=False)
+        dmap.set_margin_top(10)
+        dmap.set_margin_bottom(10)
+        dmap.set_margin_start(10)
+        dmap.set_margin_end(10)
+        maprow.set_child(dmap)
+        head.add(maprow)
+        ok = not d["problem"]
+        radio_row, radio = option(first_radio, "Install to this disk", None if ok else d["reason"],
+                                  "disk:" + d["id"], ok)
         if first_radio is None:
             first_radio = radio
-        else:
-            radio.set_group(first_radio)
-        names = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, hexpand=True)
-        title = text_label(d["model"] or d["path"])
-        title.add_css_class("heading")
-        names.append(title)
-        names.append(text_label(f"{human(d['size'])} · {d['path']}", "dim-label"))
-        head.append(radio)
-        head.append(names)
-        inner.append(head)
-        dmap = DiskMap(node)
-        inner.append(dmap)
-        entry = {"id": d["id"], "radio": radio, "map": dmap, "reveal": None}
-        if d["problem"]:
-            radio.set_sensitive(False)
-            dmap.set_sensitive(False)
-            inner.append(text_label(d["reason"], "error"))
-        else:
-            reveal = Gtk.Revealer()
-            opts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-            row, erase = option(None, "Erase this disk (everything on it is deleted)", None,
+        head.add(radio_row)
+        card.append(head)
+        entry = {"id": d["id"], "radio": radio, "map": dmap, "opts": []}
+        if ok:
+            dmap.set_sensitive(True)
+            how = Adw.PreferencesGroup(title="How to install")
+            row, erase = option(None, "Erase this disk", "Everything on it is deleted.",
                                 "erase:" + d["id"])
-            opts.append(row)
+            how.add(row)
             fo = page.free_option(d["id"])
-            label = "Use free space" + (f" ({human(max(g[1] for g in fo['gaps']))} free)"
+            title = "Use free space" + (f" ({human(max(g[1] for g in fo['gaps']))} free)"
                                          if fo["gaps"] else "")
-            row, free = option(erase, label, fo["reason"], "free:" + d["id"], fo["selectable"])
-            opts.append(row)
-            opts.append(text_label("Or replace one partition (everything else on the disk stays):",
-                                   "heading"))
+            row, free = option(erase, title, fo["reason"], "free:" + d["id"], fo["selectable"])
+            how.add(row)
+            parts = Adw.PreferencesGroup(title="Or replace one partition",
+                                         description="Everything else on the disk stays.")
             rows = {}
             for r in page.partition_rows(d["id"]):
                 kind = human(r["size"]) + (f" · {r['fstype']}" if r["fstype"] else "")
-                prow, btn = option(erase, f"{r['name']}  {kind}", r["reason"], "row:" + r["path"],
+                prow, btn = option(erase, f"{r['name']}  ·  {kind}", r["reason"], "row:" + r["path"],
                                    r["selectable"])
                 rows[r["path"]] = btn
                 btn.connect("toggled", lambda b, p=r["path"]: b.get_active() and pick(page.set_partition, p))
-                opts.append(prow)
+                parts.add(prow)
             erase.connect("toggled", lambda b: b.get_active() and pick(page.set_mode, "erase"))
             free.connect("toggled", lambda b: b.get_active() and pick(page.set_mode, "alongside"))
-            reveal.set_child(opts)
-            inner.append(reveal)
-            entry.update(reveal=reveal, erase=erase, free=free, rows=rows)
+            for g in (how, parts):
+                card.append(g)
+            entry.update(opts=[how, parts], erase=erase, free=free, rows=rows)
             radio.connect("toggled", lambda b, i=d["id"]: b.get_active() and pick(page.set_disk, i))
+        else:
+            dmap.set_sensitive(False)
         cards.append(entry)
         box.append(card)
 
-    luks_box = Gtk.Box(spacing=12)
-    luks_box.append(Gtk.Label(label="Encrypt the disk (LUKS2)", xalign=0, hexpand=True))
-    luks = Gtk.Switch(valign=Gtk.Align.CENTER)
-    luks.connect("notify::active", lambda s, _p: None if guard["busy"] else page.set_luks(s.get_active()))
-    luks_box.append(luks)
-    box.append(luks_box)
+    luks = switch_row("Encrypt the disk (LUKS2)", False,
+                      lambda on: None if guard["busy"] else page.set_luks(on))
+    box.append(luks)
     blocked = text_label("", "error")
     box.append(blocked)
 
@@ -297,10 +288,9 @@ def widget(page):
             for e in cards:
                 chosen = e["id"] == page.disk
                 e["radio"].set_active(chosen)
-                if e["reveal"] is None:
-                    continue
-                e["reveal"].set_reveal_child(chosen)
-                if not chosen:
+                for g in e["opts"]:
+                    g.set_visible(chosen)
+                if "erase" not in e or not chosen:
                     continue
                 if page.mode == "partition" and page.partition in e["rows"]:
                     e["rows"][page.partition].set_active(True)
