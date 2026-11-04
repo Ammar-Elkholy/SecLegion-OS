@@ -173,7 +173,8 @@ def _partition_refusal(part, sec):
     fstype = (part.get("fstype") or "").lower()
     if parttype == ESP_GUID:
         return "part_is_esp"
-    if fstype in ("ntfs", "bitlocker") or parttype in _WINDOWS_PARTTYPES:
+    # exfat/refs: Windows or shared data volumes, never a partition prepared for Linux (fail closed)
+    if fstype in ("ntfs", "bitlocker", "refs", "exfat") or parttype in _WINDOWS_PARTTYPES:
         return "part_is_windows"
     if not parttype and not fstype:
         return "part_unknown"

@@ -191,6 +191,13 @@ def test_bitlocker_filesystem_is_windows(legion_facts):
     refuse("part_is_windows", ans(), legion_facts)
 
 
+@pytest.mark.parametrize("fstype", ["exfat", "ReFS"])
+def test_shared_data_filesystems_are_refused(legion_facts, fstype):
+    part(legion_facts, 5)["fstype"] = fstype
+    assert partition_choices(disk(legion_facts), legion_facts)[4][2] == "part_is_windows"
+    refuse("part_is_windows", ans(), legion_facts)
+
+
 def test_refuse_partition_on_another_disk(legion_facts):
     other = copy.deepcopy(disk(legion_facts))
     other.update(name="nvme1n1", path="/dev/nvme1n1")
