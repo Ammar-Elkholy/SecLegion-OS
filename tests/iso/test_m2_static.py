@@ -311,7 +311,16 @@ def test_lists_seclegion_list_is_our_repo_only_and_not_resolved_against_arch():
     # REUSE-IgnoreEnd
     # spec A3: the installer ships on the ISO from our repo (the install kiosk runs it);
     # seclegion-hwdetect is its runtime data (hwreport for page 11, hw/gaming.toml for the gaming tier)
-    assert sorted(read_list(path)) == ["seclegion-hwdetect", "seclegion-installer", "seclegion-keyring"]
+    # and the live desktop (tests/iso/test_live_desktop_packages.py)
+    assert sorted(read_list(path)) == [
+        "seclegion-branding",
+        "seclegion-desktop",
+        "seclegion-dotfiles",
+        "seclegion-hwdetect",
+        "seclegion-installer",
+        "seclegion-keyring",
+        "seclegion-theme",
+    ]
     official = set()
     for name in ("base", "live", "desktop", "cache"):
         official |= set(read_list(LISTS / f"{name}.list"))
@@ -412,6 +421,7 @@ LOCAL_COMMANDS = {
     "run",
     "error",
     "seclegion-selftest",
+    "seclegion-live-session",
 }
 # Reached through the dependency closure of `base`, which base.list lists.
 BASE_CLOSURE = {"pacman", "systemd", "coreutils", "sh", "bash"}

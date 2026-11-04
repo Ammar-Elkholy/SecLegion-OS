@@ -95,9 +95,13 @@ qemu-guest-agent
 qt6-wayland
 rofi
 rsync
+seclegion-branding
+seclegion-desktop
+seclegion-dotfiles
 seclegion-hwdetect
 seclegion-installer
 seclegion-keyring
+seclegion-theme
 slurp
 smartmontools
 snap-pac

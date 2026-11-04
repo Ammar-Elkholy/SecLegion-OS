@@ -9,7 +9,8 @@ vt = 1
 command = "cage -s -- regreet"
 user = "greeter"
 
-# The live user starts straight into the desktop, with no password.
+# The live user starts straight into the desktop, with no password. The wrapper completes the
+# prebuilt home from /etc/skel and starts Hyprland through uwsm, as the installed system does.
 [initial_session]
-command = "Hyprland"
+command = "/usr/local/bin/seclegion-live-session"
 user = "seclegion-live"

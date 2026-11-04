@@ -9,3 +9,11 @@ seclegion-keyring
 # supplies seclegion-hwreport (installer page 11) and /usr/share/seclegion/hw/gaming.toml (gaming tier).
 seclegion-hwdetect
 seclegion-installer
+# The live desktop ("Try Live" starts the same Hyprland session as an installed system, via
+# seclegion-live-session): seclegion-dotfiles ships /etc/skel's hyprland.lua, which loads the
+# seclegion-desktop modules (/usr/share/seclegion/hypr); theme and branding supply the palette,
+# logo and wallpaper they use. Their Arch dependencies are in desktop.list/base.list.
+seclegion-dotfiles
+seclegion-desktop
+seclegion-theme
+seclegion-branding

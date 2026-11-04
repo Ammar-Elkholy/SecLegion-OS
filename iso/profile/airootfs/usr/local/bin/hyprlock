@@ -1,0 +1,7 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Live image only (airootfs; /usr/local/bin precedes /usr/bin): the live user has no password, so
+# a lock screen could never be unlocked. Whatever asks for the lock gets this refusal instead.
+echo "hyprlock: the live session cannot be locked (no password); install SecLegion OS first" >&2
+exit 1

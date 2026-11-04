@@ -26,6 +26,7 @@ file_permissions=(
   ["/home/seclegion-live/.config"]="1000:1000:750"
   ["/home/seclegion-live/.config/hypr"]="1000:1000:750"
   ["/home/seclegion-live/.config/hypr/hypridle.conf"]="1000:1000:640"
+  ["/home/seclegion-live/.config/hypr/user.lua"]="1000:1000:640"
   ["/root"]="0:0:750"
   ["/root/.gnupg"]="0:0:700"
   ["/usr/share/seclegion/kiosk/run"]="0:0:755"
@@ -34,4 +35,6 @@ file_permissions=(
   ["/usr/local/bin/Installation_guide"]="0:0:755"
   ["/usr/local/bin/livecd-sound"]="0:0:755"
   ["/usr/local/bin/seclegion-selftest"]="0:0:755"
+  ["/usr/local/bin/seclegion-live-session"]="0:0:755"
+  ["/usr/local/bin/hyprlock"]="0:0:755"
 )

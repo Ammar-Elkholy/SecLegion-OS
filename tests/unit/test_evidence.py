@@ -187,8 +187,8 @@ def test_two_runs_of_the_same_iso_coexist(tmp_path):
 
 def _selftest_log(mode, kill_kiosk=False, entry=None):
     """Serial text in the order seclegion-selftest really prints (start, state, units, privilege, isolation,
-    installer, lock, repos, cache, [kiosk marker, kiosk_error], done): every M2 pattern list must match it in
-    order."""
+    installer, lock, repos, cache, [live: desktop], [kiosk marker, kiosk_error], done): every M2 pattern
+    list must match it in order."""
     def line(section, body=""):
         return f'SECLEGION-SELFTEST {{"section": "{section}", "mode": "{mode}"{body}}}\n'
     out = f"[entry {entry}]\n" if entry else ""
@@ -210,6 +210,9 @@ def _selftest_log(mode, kill_kiosk=False, entry=None):
                          '"ssh_host_keys": [], "listening_22": false')
     out += line("cache", ', "packages": 2, "sigs": 2, "without_sig": 0, "database": true, "sync_rc": 0, '
                          '"resolve_rc": 0')
+    if mode == "live":
+        out += line("desktop", ', "hyprland_lua": true, "hyprland_lua_is_skel": true, '
+                               '"live_processes": ["Hyprland", "waybar"]')
     if kill_kiosk:
         out += "SECLEGION-KIOSK-ERROR log=/var/log/seclegion/kiosk.log\n"
         out += line("kiosk_error", ', "killed": true, "kiosk": "failed", "error_unit": "active"')
@@ -225,6 +228,7 @@ def _selftest_log(mode, kill_kiosk=False, entry=None):
      + _selftest_log("rescue", entry="rescue")),
     ("M2-kiosk-error", lambda: _selftest_log("install", kill_kiosk=True)),
     ("M2-lock", lambda: _selftest_log("live")),
+    ("M2-live-desktop", lambda: _selftest_log("live")),
     ("M2-repos", lambda: _selftest_log("live")),
     ("M2-cache", lambda: _selftest_log("live")),
 ])

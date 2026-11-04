@@ -1,0 +1,10 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# greetd's initial_session for the live user: the same desktop as an installed system.
+# The live home is prebuilt in the image (useradd never ran, so /etc/skel was never copied):
+# fill in everything it lacks, then start Hyprland through uwsm so the session units
+# (waybar, swaync, swayosd, hypridle, polkit agent) come up. -n never overwrites the
+# live-specific hypridle.conf (DPMS only) or user.lua (lock keys unbound).
+cp -a -n /etc/skel/. "$HOME"/
+exec uwsm start -- hyprland.desktop
