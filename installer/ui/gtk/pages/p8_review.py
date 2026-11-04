@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
 # SPDX-License-Identifier: MIT
 """Page 8: review. Shows the exact command list from the configurator's dry run plus a summary.
-Install is enabled only when the user has typed the disk's name (model, or name if no model) and
+Install is enabled only when the user has typed the disk's name (model, or name if no model; the
+partition's kernel name in partition mode) and
 configurator.validate passes; any Refusal is shown verbatim."""
 
 import configurator as c
@@ -39,12 +40,23 @@ class ReviewPage(Page):
         return c.Answers.from_dict(self.ctx.answers())
 
     def expected(self):
-        """The name the user must type. None when the disk cannot be resolved."""
+        """The name the user must type: the disk model (erase, alongside) or the partition's kernel name
+        (partition mode), exactly what configurator.validate compares. None when it cannot be resolved."""
         try:
-            disk = c.find_disk(self.answers_obj(), self.ctx.facts)
+            a = self.answers_obj()
+            disk = c.find_disk(a, self.ctx.facts)
         except c.Refusal:
             return None
+        if a.effective_mode == "partition":
+            for p in disk.get("children") or []:
+                if p.get("type") == "part" and p.get("path") == a.partition:
+                    return (p.get("name") or "").strip() or None
+            return None
         return (disk.get("model") or disk.get("name") or "").strip() or None
+
+    def confirm_noun(self):
+        """What the confirmation names: "partition" in partition mode, else "disk"."""
+        return "partition" if self.ctx.pages["disk"].mode == "partition" else "disk"
 
     def _with_name(self):
         """Answers as if the right name were typed, so real refusals show before the user types."""
@@ -79,7 +91,7 @@ class ReviewPage(Page):
         if r:
             return r.message
         if self.typed != exp:
-            return f"Type the disk name exactly to confirm: {exp}"
+            return f"Type the {self.confirm_noun()} name exactly to confirm: {exp}"
         return None
 
     def fragment(self):
