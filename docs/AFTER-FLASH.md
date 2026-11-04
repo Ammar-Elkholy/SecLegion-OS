@@ -35,7 +35,7 @@ Encryption is the slow part: decryption can take 30+ minutes.
   - For daily development give it **300 GiB or more** (307200 MB). Docker, VMs and ISO builds each
     need about 60 GiB.
   - Leave the freed space as "Unallocated". Do not create a partition in it.
-- [ ] **Keep the clock in UTC** so Windows and Linux agree. In an admin terminal:
+- [ ] **Keep the clock in UTC** so Windows and Linux agree. In an admin terminal (one line):
   ```
   reg add HKLM\System\CurrentControlSet\Control\TimeZoneInformation /v RealTimeIsUniversal /t REG_DWORD /d 1 /f
   ```

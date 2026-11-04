@@ -25,10 +25,9 @@ DAILY-DRIVER.md.
 3. Turn Fast Startup off (Control Panel > Power Options > "Choose what the power buttons do").
 4. Shrink C: in Disk Management. Leave at least 40 GiB unallocated; for daily development give it
    300 GiB or more (Docker images, VMs, ISO builds need ~60 GiB each).
-5. Keep Windows' clock in UTC so both systems agree (admin terminal):
+5. Keep Windows' clock in UTC so both systems agree (admin terminal, one line):
    ```
-   reg add "HKLM\System\CurrentControlSet\Control\TimeZoneInformation" /v RealTimeIsUniversal ^
-       /t REG_DWORD /d 1 /f
+   reg add HKLM\System\CurrentControlSet\Control\TimeZoneInformation /v RealTimeIsUniversal /t REG_DWORD /d 1 /f
    ```
 6. Shut down with `shutdown /s /t 0`.
 
