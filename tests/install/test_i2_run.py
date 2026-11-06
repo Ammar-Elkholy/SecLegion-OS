@@ -218,7 +218,7 @@ def _install_and_boot(mode, run, keyboard_extra=(), keep=False):
     if mode == "erase-luks":
         answers.update(luks=True, luks_passphrase=LUKS_PASSPHRASE)
     if mode == "partition":  # the third partition of make_partitioned_disk; placeholders filled in the guest
-        answers.update(partition="@PART@", confirm="@NAME@")
+        answers.update(partition="XPARTX", confirm="XNAMEX")  # typable placeholders
     secrets = [PASSWORD] + ([LUKS_PASSPHRASE] if mode == "erase-luks" else [])
     root = devloop.MOUNT
     os.makedirs(devloop.SCRATCH_ROOT, exist_ok=True)
@@ -245,8 +245,8 @@ def _install_and_boot(mode, run, keyboard_extra=(), keep=False):
             run.add("install-command", run.command)
             if mode == "partition":  # the partition's kernel name is only known inside the guest
                 out = devloop.run(
-                    vm, f"p=$(readlink -f {devloop.TARGET_BY_ID}-part3); "
-                        f"sed -i \"s#@PART@#$p#; s#@NAME@#${{p#/dev/}}#\" {root}/dev/answers.json; "
+                    vm, f"p=$(readlink -f {devloop.TARGET_BY_ID}-part3); n=$(basename $p); "
+                        f"sed -i -e 's|XPARTX|'$p'|' -e 's|XNAMEX|'$n'|' {root}/dev/answers.json; "
                         f"grep -c /dev/ {root}/dev/answers.json", "DL-PART", 60)
                 run.add("partition", out)
                 assert "DL-PART 0" in out, out[-600:]
