@@ -243,16 +243,20 @@ def _install_and_boot(mode, run, keyboard_extra=(), keep=False):
                                 target_image=target_image) as vm:
             run.command = evidence.repo_relative(vm.command, REPO)
             run.add("install-command", run.command)
+            answers_path = f"{root}/dev/answers.json"
             if mode == "partition":  # the partition's kernel name is only known inside the guest
+                answers_path = "/tmp/answers.json"  # the installer image is read-only
                 out = devloop.run(
                     vm, f"p=$(readlink -f {devloop.TARGET_BY_ID}-part3); n=$(basename $p); "
-                        f"sed -i -e 's|XPARTX|'$p'|' -e 's|XNAMEX|'$n'|' {root}/dev/answers.json; "
-                        f"grep -c /dev/ {root}/dev/answers.json", "DL-PART", 60)
+                        f"sed -e 's|XPARTX|'$p'|' -e 's|XNAMEX|'$n'|' "
+                        f"{root}/dev/answers.json > {answers_path}; "
+                        f"test $(grep -c -e XPARTX -e XNAMEX {answers_path}) = 0 "
+                        f"&& grep -q /dev/sd {answers_path}", "DL-PART", 60)
                 run.add("partition", out)
                 assert "DL-PART 0" in out, out[-600:]
             out = devloop.run(
                 vm, f"SECLEGION_POST_SKIP_MISSING=1 python {root}/installd/seclegion-install "
-                    f"--answers {root}/dev/answers.json --dev --force-install-mode",
+                    f"--answers {answers_path} --dev --force-install-mode",
                 "DL-INSTALL", 1800)
             if os.environ.get("SL_I2_LOG"):  # the whole install transcript, for debugging a failed run
                 with open(os.environ["SL_I2_LOG"], "w") as fh:
