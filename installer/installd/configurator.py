@@ -102,6 +102,13 @@ def default_timezone(link="/etc/localtime"):
     return "UTC"
 
 
+def valid_timezone(name, root="/usr/share/zoneinfo"):
+    """True for a real zoneinfo name (a file under root, no path tricks)."""
+    if not name or name.startswith("/") or ".." in name.split("/"):
+        return False
+    return os.path.isfile(os.path.join(root, name))
+
+
 # ---- facts -----------------------------------------------------------------
 # facts = {"install_mode": bool, "dev_build": bool, "boot_medium": "/dev/sdX",
 #          "root_disk": "/dev/sdY" (optional), "by_id": {"/dev/disk/by-id/x": "/dev/sdX"},
@@ -205,6 +212,8 @@ def validate(answers, facts, defer_unreadable=False):
     it could not read stays open there (seclegion-install re-checks it as root, never deferring)."""
     if not facts.get("install_mode"):
         raise Refusal("not_install_mode", "not booted in install mode")
+    if not valid_timezone(answers.timezone):
+        raise Refusal("bad_timezone", "time zone is not a zoneinfo name")
     disk = find_disk(answers, facts)
     path = disk["path"]
     partition = answers.effective_mode == "partition"

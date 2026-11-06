@@ -136,6 +136,7 @@ def summary_rows(page):
         ("Encryption", "On (LUKS2)" if luks else "Off", "", "encryption" if luks else "disk"),
         ("User", f"{a.get('username', '')} on {a.get('hostname', '')}", "", "user"),
         ("Locale", f"{a.get('locale', '')}, keyboard {keyboard}", "", "language"),
+        ("Time zone", a.get("timezone", ""), "", "timezone"),
         ("Extras", ", ".join(extras) or "None", "", "tiers"),
     ]
 

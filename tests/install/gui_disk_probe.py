@@ -72,6 +72,7 @@ def show(width, height, preselect):
     win.present()
     m.next()
     m.next()
+    m.next()  # welcome, language, time zone, then the disk page
     win.render()
     pump()
     return m, win
@@ -112,6 +113,7 @@ win.present()
 m.next()
 m.next()
 m.next()
+m.next()  # the time zone page sits between language and disk
 win.render()
 pump()
 root = win.holder.get_first_child()

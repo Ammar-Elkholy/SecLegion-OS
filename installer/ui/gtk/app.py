@@ -147,9 +147,10 @@ class InstallerWindow(Adw.ApplicationWindow):
 
 
 class InstallerApp(Adw.Application):
-    def __init__(self, facts, kiosk_error=False, log_path=None, kiosk=False):
+    def __init__(self, facts, kiosk_error=False, log_path=None, kiosk=False, refresh_facts=None):
         super().__init__(application_id="org.seclegion.Installer")
         self.facts = facts
+        self.refresh_facts = refresh_facts
         self.kiosk_error = kiosk_error
         self.kiosk = kiosk
         self.log_path = log_path
@@ -160,7 +161,7 @@ class InstallerApp(Adw.Application):
         css.load_from_string(load_css())
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css,
                                                   Gtk.STYLE_PROVIDER_PRIORITY_USER)
-        model = Model(self.facts)
+        model = Model(self.facts, refresh_facts=self.refresh_facts)
         if self.kiosk:
             model.pages["progress"].use_pkexec()
         if self.log_path:
@@ -169,5 +170,5 @@ class InstallerApp(Adw.Application):
         InstallerWindow(self, model, self.kiosk_error).present()
 
 
-def main(facts, kiosk_error=False, log_path=None, kiosk=False):
-    return InstallerApp(facts, kiosk_error, log_path, kiosk).run([])
+def main(facts, kiosk_error=False, log_path=None, kiosk=False, refresh_facts=None):
+    return InstallerApp(facts, kiosk_error, log_path, kiosk, refresh_facts).run([])

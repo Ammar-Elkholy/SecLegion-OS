@@ -145,7 +145,7 @@ def test_disk_page_partition_mode_skips_the_alongside_pages(facts):
     m = pmodel(facts)
     keys = [q.key for q in m.visible()]
     assert "alongside" not in keys and "manual" not in keys
-    assert keys[:3] == ["welcome", "language", "disk"]
+    assert keys[:4] == ["welcome", "language", "timezone", "disk"]
 
 
 def test_disk_page_unavailable_disk_gets_plain_words(facts):

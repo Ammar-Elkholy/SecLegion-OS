@@ -74,14 +74,14 @@ def test_gui_pages_a_fragments_merge_into_valid_answers():
 
 def test_gui_pages_a_navigation_skips_alongside_pages_for_erase():
     m = Model(load_facts())
-    assert [p.key for p in m.visible()][:3] == ["welcome", "language", "disk"]
+    assert [p.key for p in m.visible()][:4] == ["welcome", "language", "timezone", "disk"]
     assert "alongside" not in [p.key for p in m.visible()]
-    assert m.next() and m.next()
+    assert m.next() and m.next() and m.next()
     assert not m.next()  # disk not chosen yet
     m.pages["disk"].set_disk(VDA)
     assert m.next() and m.current.key == "encryption"  # erase defaults to LUKS
     m.pages["disk"].set_mode("alongside")
-    assert [p.key for p in m.visible()][3] == "alongside"
+    assert [p.key for p in m.visible()][4] == "alongside"
 
 
 def test_gui_pages_a_alongside_clean_shows_gap_and_allows_next():
@@ -128,7 +128,7 @@ def test_gui_pages_a_manual_page_requires_largest_gap():
     assert not p.can_next() and "largest" in p.error()
     p.set_gap(1)
     assert p.can_next() and p.fragment() == {}
-    assert [q.key for q in m.visible()][4] == "manual"
+    assert [q.key for q in m.visible()][5] == "manual"
 
 
 def test_gui_pages_a_pages_never_import_archinstall_or_write():
@@ -176,6 +176,6 @@ def test_gui_pages_a_render_under_broadway(tmp_path):
         pytest.skip("Broadway display unavailable: " + r.stderr[-200:])
     assert r.returncode == 0, r.stderr
     got = json.loads(r.stdout.strip().splitlines()[-1])
-    assert set(got) == {"welcome", "language", "disk", "alongside", "manual"}
+    assert set(got) == {"welcome", "language", "timezone", "disk", "alongside", "manual"}
     assert got["disk"] == {"disk": VDB, "mode": "alongside", "luks": False}
     assert got["language"]["keyboard"] == "us"

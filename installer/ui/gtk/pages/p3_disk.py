@@ -93,15 +93,26 @@ class DiskPage(Page):
         self.mode = "erase"
         self.partition = None  # /dev path, meaningful in partition mode only
         self._luks = None  # None = default for the mode (D11/G7: on for erase and partition)
+        self.message = ""  # why the choice was cleared (the disk changed under a retry)
 
     @property
     def luks(self):
         return self._luks if self._luks is not None else self.mode in ("erase", "partition")
 
+    def reset(self, message=""):
+        """Forget the choice (disk, mode, partition, encryption) and show `message` on the page."""
+        self.disk, self.mode, self.partition, self._luks = None, "erase", None, None
+        self.message = message
+
+    def disk_path(self, facts):
+        """The /dev path of the chosen disk in `facts` (its by-id link resolved)."""
+        return facts.get("by_id", {}).get(self.disk, self.disk)
+
     def set_disk(self, disk_id):
         if disk_id != self.disk:
             self.mode, self.partition, self._luks = "erase", None, None
         self.disk = disk_id
+        self.message = ""
 
     def set_mode(self, mode):
         self.mode = mode
@@ -197,6 +208,12 @@ def widget(page):
     from view_util import page_box, switch_row, text_label
 
     box = page_box(page.title)
+    if page.message:
+        box.append(text_label(page.message, "error"))
+    rescan = Gtk.Button(label="Rescan disks", halign=Gtk.Align.START)
+    rescan.set_name("rescan")
+    rescan.connect("clicked", lambda _b: page.ctx.rescan_disks())
+    box.append(rescan)
     guard = {"busy": False}
     cards = []
     first_radio = None
