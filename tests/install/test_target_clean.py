@@ -99,7 +99,8 @@ def test_target_clean_flags_bluetooth_and_fstrim_not_enabled(tmp_path):
         open(os.path.join(units, u), "w").close()
     probs = target_check.check(root, fx.LIVE_ONLY)
     assert "bluetooth.service not enabled" in probs and "fstrim.timer not enabled" in probs
-    for u, wants in (("bluetooth.service", "bluetooth.target.wants"), ("fstrim.timer", "timers.target.wants")):
+    for u, wants in (("bluetooth.service", "bluetooth.target.wants"),
+                     ("fstrim.timer", "timers.target.wants")):
         d = os.path.join(root, "etc/systemd/system", wants)
         os.makedirs(d, exist_ok=True)
         os.symlink(f"/usr/lib/systemd/system/{u}", os.path.join(d, u))

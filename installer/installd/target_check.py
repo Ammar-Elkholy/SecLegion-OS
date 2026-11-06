@@ -92,7 +92,8 @@ def check(root, live_only=()):
         if any(ln.startswith("initial_session") or ln == "[initial_session]" for ln in _code(_read(p))):
             probs.append(f"greetd initial_session in {rel(p)}")
 
-    for unit, wants in (("bluetooth.service", "bluetooth.target.wants"), ("fstrim.timer", "timers.target.wants")):
+    for unit, wants in (("bluetooth.service", "bluetooth.target.wants"),
+                        ("fstrim.timer", "timers.target.wants")):
         if os.path.exists(os.path.join(root, "usr/lib/systemd/system", unit)) and not os.path.lexists(
                 os.path.join(root, "etc/systemd/system", wants, unit)):
             probs.append(f"{unit} not enabled")
