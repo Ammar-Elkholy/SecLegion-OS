@@ -249,6 +249,8 @@ def _m4_log(test_id, secret=""):
            "[phase target-check]\nDL-TARGET 0\n\n")
     if test_id == "M4-alongside":
         out += "[phase ntfs]\nNTFS-SHA256-UNCHANGED " + "ab" * 32 + "\n\n"
+    if test_id == "M4-partition":
+        out += "[phase kept]\nPARTS-SHA256-UNCHANGED " + "cd" * 32 + "\n\n"
     out += ("[phase installed-boot]\nWelcome to SecLegion OS!\n[  OK  ] Started Greeter daemon.\n"
             "\nSecLegion OS 7.2.9-arch1-1 (ttyS0)\n")
     return out + secret

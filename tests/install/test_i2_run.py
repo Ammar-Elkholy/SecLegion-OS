@@ -30,6 +30,8 @@ MIB = 1 << 20
 DISK_BYTES = 60 << 30
 ESP_START, ESP_MIB = 1, 100
 NTFS_START, NTFS_MIB = 101, 32
+DATA_START, DATA_MIB = 101, 64  # partition mode: a data partition that must survive
+LINUX_FS = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
 
 
 def load_install():
@@ -120,6 +122,32 @@ def make_windows_like_disk(path, scratch):
     return NTFS_START * MIB, NTFS_MIB * MIB
 
 
+def make_partitioned_disk(path, scratch):
+    """Raw GPT image: ESP (fat32), an ext4 data partition and a large Linux partition (no filesystem) to
+    replace. Returns the (start, size) byte ranges that must stay unchanged: the ESP and the data."""
+    for tool in ("sfdisk", "mkfs.fat", "mkfs.ext4"):
+        if not shutil.which(tool):
+            pytest.skip(f"NOT RUN: {tool} missing (dosfstools / e2fsprogs / util-linux)")
+    with open(path, "wb") as fh:
+        fh.truncate(DISK_BYTES)
+    rest = DATA_START + DATA_MIB
+    script = (f"label: gpt\nstart={ESP_START * 2048}, size={ESP_MIB * 2048}, "
+              "type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B\n"
+              f"start={DATA_START * 2048}, size={DATA_MIB * 2048}, type={LINUX_FS}\n"
+              f"start={rest * 2048}, type={LINUX_FS}\n")
+    subprocess.run(["sfdisk", "--quiet", path], input=script.encode(), check=True)  # noqa: S603,S607
+    for name, start, mib, mk in (("esp", ESP_START, ESP_MIB, ["mkfs.fat", "-F", "32"]),
+                                 ("data", DATA_START, DATA_MIB, ["mkfs.ext4", "-q", "-F", "-L", "DATA"])):
+        part = os.path.join(scratch, name + ".img")
+        with open(part, "wb") as fh:
+            fh.truncate(mib * MIB)
+        subprocess.run([*mk, part], check=True, capture_output=True)  # noqa: S603
+        subprocess.run(["dd", f"if={part}", f"of={path}", "bs=1M", f"seek={start}", "conv=notrunc",  # noqa: S603,S607
+                        "status=none"], check=True)
+        os.remove(part)
+    return [(ESP_START * MIB, ESP_MIB * MIB), (DATA_START * MIB, DATA_MIB * MIB)]
+
+
 def sha256_range(path, start, size):
     h = hashlib.sha256()
     with open(path, "rb") as fh:
@@ -189,6 +217,8 @@ def _install_and_boot(mode, run, keyboard_extra=(), keep=False):
         answers["keyboard_extra"] = list(keyboard_extra)
     if mode == "erase-luks":
         answers.update(luks=True, luks_passphrase=LUKS_PASSPHRASE)
+    if mode == "partition":  # the third partition of make_partitioned_disk; placeholders filled in the guest
+        answers.update(partition="@PART@", confirm="@NAME@")
     secrets = [PASSWORD] + ([LUKS_PASSPHRASE] if mode == "erase-luks" else [])
     root = devloop.MOUNT
     os.makedirs(devloop.SCRATCH_ROOT, exist_ok=True)
@@ -199,7 +229,11 @@ def _install_and_boot(mode, run, keyboard_extra=(), keep=False):
     run.t_start = time.monotonic()
     extra = {"dev/answers.json": json.dumps(answers), "dev/live.list": live_list}
     try:
-        target_image, ntfs = None, None
+        target_image, ntfs, kept = None, None, []
+        if mode == "partition":
+            target_image = os.path.join(scratch, "target.img")
+            kept = make_partitioned_disk(target_image, scratch)
+            kept_before = [sha256_range(target_image, *r) for r in kept]
         if mode == "alongside":
             target_image = os.path.join(scratch, "target.img")
             ntfs = make_windows_like_disk(target_image, scratch)
@@ -209,6 +243,13 @@ def _install_and_boot(mode, run, keyboard_extra=(), keep=False):
                                 target_image=target_image) as vm:
             run.command = evidence.repo_relative(vm.command, REPO)
             run.add("install-command", run.command)
+            if mode == "partition":  # the partition's kernel name is only known inside the guest
+                out = devloop.run(
+                    vm, f"p=$(readlink -f {devloop.TARGET_BY_ID}-part3); "
+                        f"sed -i \"s#@PART@#$p#; s#@NAME@#${{p#/dev/}}#\" {root}/dev/answers.json; "
+                        f"grep -c /dev/ {root}/dev/answers.json", "DL-PART", 60)
+                run.add("partition", out)
+                assert "DL-PART 0" in out, out[-600:]
             out = devloop.run(
                 vm, f"SECLEGION_POST_SKIP_MISSING=1 python {root}/installd/seclegion-install "
                     f"--answers {root}/dev/answers.json --dev --force-install-mode",
@@ -251,6 +292,10 @@ def _install_and_boot(mode, run, keyboard_extra=(), keep=False):
                 "the Windows ESP changed"
             run.ntfs_sha = before
             run.add("ntfs", f"NTFS-SHA256-UNCHANGED {before}")  # only after the comparison passed
+        if mode == "partition":
+            after = [sha256_range(target_image, *r) for r in kept]
+            assert after == kept_before, "the ESP or the data partition changed"
+            run.add("kept", f"PARTS-SHA256-UNCHANGED {kept_before[1]}")  # only after the comparison passed
         target = target_image or os.path.join(scratch, "target.qcow2")
         boot_dir = os.path.join(scratch, "boot")
         os.makedirs(boot_dir)

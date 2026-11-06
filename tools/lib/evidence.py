@@ -90,6 +90,7 @@ def m4_install_patterns(mode):
         r"DL-INSTALL 0",
         r"DL-TARGET 0",
         *([r"NTFS-SHA256-UNCHANGED [0-9a-f]{64}"] if mode == "alongside" else []),
+        *([r"PARTS-SHA256-UNCHANGED [0-9a-f]{64}"] if mode == "partition" else []),
         r"\[phase installed-boot\][\s\S]*?Started .*(?:greetd|[Gg]reeter)",
         r"\nSecLegion OS \S+ \(ttyS0\)",  # the getty banner from /etc/issue: our os-release, not Arch's
     ]
@@ -197,6 +198,7 @@ CANONICAL_SERIAL_PATTERNS = {
     "M4-erase": m4_install_patterns("erase"),
     "M4-luks": m4_install_patterns("luks"),
     "M4-alongside": m4_install_patterns("alongside"),
+    "M4-partition": m4_install_patterns("partition"),
     "M4-offline": [
         r"\[phase install-command\][^\n]*\n[^\n]*-nic none",  # QEMU command of the install VM: no NIC
         r"SECLEGION-INSTALL-OK",
@@ -329,7 +331,8 @@ M2_IDS = (
     "M2-repos",
     "M2-cache",
 )
-M4_IDS = ("M4-erase", "M4-luks", "M4-alongside", "M4-offline", "M4-target-clean", "M4-mutation")
+M4_IDS = ("M4-erase", "M4-luks", "M4-alongside", "M4-partition", "M4-offline", "M4-target-clean",
+          "M4-mutation")
 # checkpoint C
 M5_M6_IDS = ("M5-fast", "M5-diskfull", "M6-greeter")
 # W3 / V2 (installed-base gates): the ids whose log must hold neither test secret.
