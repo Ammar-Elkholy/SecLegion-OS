@@ -139,7 +139,7 @@ def shoot(num, page, kind, key, size, lang="en"):
         m.install_failed()
         win.render()
     elif key == "about":
-        win.about.emit("clicked")
+        win.activate_action("win.about", None)
         pump(80)
     elif key != "kiosk_error":
         m.goto(key)

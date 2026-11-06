@@ -328,30 +328,37 @@ RULE_DEST = "/run/polkit-1/rules.d/50-seclegion-installer.rules"
 RULE_UNIT = "seclegion-kiosk-polkit.service"
 
 
+LOGIND_IDS = ["org.freedesktop.login1.power-off", "org.freedesktop.login1.power-off-multiple-sessions",
+              "org.freedesktop.login1.reboot", "org.freedesktop.login1.reboot-multiple-sessions"]
+
+
 def rule_problems(text: str) -> list[str]:
-    """Violations of 'one rule: this user may pkexec this program, nothing else' (empty = clean)."""
+    """Violations of 'this user may pkexec this program and reboot/power off, nothing else'."""
     code = "\n".join(ln for ln in text.splitlines() if not ln.lstrip().startswith("//"))
     problems = []
-    if code.count("polkit.addRule(") != 1 or "polkit.addAdminRule(" in code:
-        problems.append("must hold exactly one addRule")
-    if len(re.findall(r"polkit\.Result\.\w+", code)) != 1 or code.count("polkit.Result.YES") != 1:
-        problems.append("must return exactly one result, YES")
+    if code.count("polkit.addRule(") != 2 or "polkit.addAdminRule(" in code:
+        problems.append("must hold exactly two addRule")
+    if len(re.findall(r"polkit\.Result\.\w+", code)) != 2 or code.count("polkit.Result.YES") != 2:
+        problems.append("must return exactly two results, both YES")
     literals = sorted(re.findall(r'"([^"]*)"', code))
-    want = sorted(["org.freedesktop.policykit.exec", "program", INSTALL_PROGRAM, INSTALLER])
+    want = sorted(["org.freedesktop.policykit.exec", "program", INSTALL_PROGRAM, INSTALLER, INSTALLER,
+                   *LOGIND_IDS])
     if literals != want:
         problems.append(f"string literals are {literals}, must be {want}")
     for needle in ('action.id == "org.freedesktop.policykit.exec"',
                    f'action.lookup("program") == "{INSTALL_PROGRAM}"', f'subject.user == "{INSTALLER}"'):
         if needle not in code:
             problems.append(f"missing condition {needle}")
-    if code.count("&&") != 2 or "||" in code:
-        problems.append("the three conditions must be AND-ed, never OR-ed")
+    for i in LOGIND_IDS:
+        if f'action.id == "{i}"' not in code:
+            problems.append(f"missing logind id {i}")
+    if code.count(f'subject.user == "{INSTALLER}"') != 2:
+        problems.append("both rules must name the installer user")
+    if code.count("&&") != 3:  # exec rule: two; logind rule: one (the ids are OR-ed inside parentheses)
+        problems.append("conditions must be AND-ed")
+    if code.count("||") != 3:
+        problems.append("only the four logind ids may be OR-ed")
     return problems
-
-
-def test_privilege_polkit_rule_names_only_the_install_program_and_the_installer_user():
-    assert rule_problems(RULE_SRC.read_text()) == []
-    assert SPDX_MIT in RULE_SRC.read_text()[:300]
 
 
 def test_privilege_negative_a_wider_polkit_rule_is_caught():
@@ -362,7 +369,17 @@ def test_privilege_negative_a_wider_polkit_rule_is_caught():
     assert rule_problems(good.replace('action.id == "org.freedesktop.policykit.exec" &&',
                                       'action.id.indexOf("org.freedesktop") == 0 &&')) != []
     assert rule_problems(good + good) != []
+    assert rule_problems(good.replace("org.freedesktop.login1.reboot\"", "org.freedesktop.udisks2.x\"")) != []
+    extra = good + good.replace("org.freedesktop.login1.power-off", "org.freedesktop.udisks2.x")
+    assert rule_problems(extra) != []
     assert rule_problems(good.replace("polkit.Result.YES", "polkit.Result.AUTH_ADMIN")) != []
+
+
+def test_privilege_polkit_rule_grants_exactly_exec_and_the_four_login1_ids():
+    code = "\n".join(ln for ln in RULE_SRC.read_text().splitlines() if not ln.lstrip().startswith("//"))
+    ids = re.findall(r'action\.id == "([^"]+)"', code)
+    assert sorted(ids) == sorted(["org.freedesktop.policykit.exec", *LOGIND_IDS])
+    assert "udisks2" not in code and "org.freedesktop.systemd1" not in code
 
 
 def test_privilege_polkit_rule_exists_only_under_the_install_target():

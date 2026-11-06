@@ -13,8 +13,9 @@ import gi  # noqa: E402
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gdk, GLib, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 from model import Model  # noqa: E402
+from pages.p13_finished import power  # noqa: E402
 from sidebar import Sidebar  # noqa: E402
 from theme import load_css  # noqa: E402
 from view import build_widget  # noqa: E402
@@ -38,9 +39,19 @@ class InstallerWindow(Adw.ApplicationWindow):
         # No window buttons: under the cage kiosk, closing the window would end the kiosk (error screen).
         self.header = header = Adw.HeaderBar(show_start_title_buttons=False, show_end_title_buttons=False)
         header.set_title_widget(self.title_label)
-        self.about = Gtk.Button(label="About")
-        self.about.connect("clicked", lambda _b: self.show_about())
-        header.pack_end(self.about)
+        menu = Gio.Menu()
+        for label, action in (("Reboot", "win.reboot"), ("Power off", "win.poweroff"),
+                              ("About", "win.about")):
+            menu.append(label, action)
+        self.menu_button = Gtk.MenuButton(icon_name="open-menu-symbolic", tooltip_text="Menu",
+                                          menu_model=menu)
+        header.pack_end(self.menu_button)
+        for name, fn in (("reboot", lambda *_a: self.ask_power("reboot")),
+                         ("poweroff", lambda *_a: self.ask_power("poweroff")),
+                         ("about", lambda *_a: self.show_about())):
+            act = Gio.SimpleAction.new(name, None)
+            act.connect("activate", fn)
+            self.add_action(act)
         header.pack_start(self.step_label)
         self.holder = Gtk.Box(vexpand=True)
         bar = Gtk.Box(spacing=12, margin_top=12, margin_bottom=12, margin_start=24, margin_end=24)
@@ -65,6 +76,24 @@ class InstallerWindow(Adw.ApplicationWindow):
         bp.connect("unapply", lambda _b: self.refresh_nav())
         self.add_breakpoint(bp)
         self.render()
+
+    def ask_power(self, action):
+        """Reboot / Power off from the menu; while the install runs, ask first."""
+        if not self.running:
+            power(action)
+            return
+        dlg = Adw.AlertDialog(heading="Install still running",
+                              body="The installation is still running. "
+                              "Stopping now leaves the disk unusable.")
+        dlg.add_response("cancel", "Cancel")
+        label = "Reboot anyway" if action == "reboot" else "Power off anyway"
+        dlg.add_response("go", label)
+        dlg.set_response_appearance("go", Adw.ResponseAppearance.DESTRUCTIVE)
+        dlg.set_default_response("cancel")
+        dlg.set_close_response("cancel")
+        dlg.connect("response", lambda _d, r: power(action) if r == "go" else None)
+        self.power_dialog = dlg
+        dlg.present(self)
 
     def show_about(self):
         build_widget(self.model.pages["about"]).present(self)

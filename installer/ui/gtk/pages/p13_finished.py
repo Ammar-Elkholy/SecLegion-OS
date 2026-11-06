@@ -7,16 +7,26 @@ import subprocess
 from .base import Page
 
 REBOOT_ARGV = ["systemctl", "reboot"]
+POWEROFF_ARGV = ["systemctl", "poweroff"]
+_POWER = {"reboot": REBOOT_ARGV, "poweroff": POWEROFF_ARGV}
+
+
+def power(action, runner=subprocess.run):
+    """Reboot or power off; the header menu and the Reboot button call this, nothing else does."""
+    if action not in _POWER:
+        raise ValueError(f"unknown power action: {action!r}")
+    return runner(_POWER[action], check=False)
 
 
 class FinishedPage(Page):
     key = "finished"
     title = "Installation complete"
     show_back = False
+    show_next = False
 
     def reboot(self, runner=subprocess.run):
         """Called from the button handler only."""
-        return runner(REBOOT_ARGV, check=False)
+        return power("reboot", runner)
 
 
 def widget(page):
