@@ -22,6 +22,7 @@ from pages import (  # noqa: E402
     p13_finished,
     p14_kiosk_error,
     p15_about,
+    p16_timezone,
 )
 
 BUILDERS = {"welcome": p1_welcome.widget, "language": p2_language.widget, "disk": p3_disk.widget,
@@ -30,7 +31,7 @@ BUILDERS = {"welcome": p1_welcome.widget, "language": p2_language.widget, "disk"
             "progress": p9_progress.widget, "error": p10_error.widget,
             "hardware": p11_hardware.widget, "tiers": p12_tiers.widget,
             "finished": p13_finished.widget, "kiosk_error": p14_kiosk_error.widget,
-            "about": p15_about.widget}
+            "about": p15_about.widget, "timezone": p16_timezone.widget}
 
 
 def build_widget(page):

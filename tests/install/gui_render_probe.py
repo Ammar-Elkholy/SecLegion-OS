@@ -29,7 +29,7 @@ m.pages["disk"].set_mode("alongside")
 m.open_manual()
 m.pages["manual"].set_gap(0)
 out = {}
-for page in m.visible()[:5]:
+for page in m.visible()[:6]:
     win = Gtk.Window()
     win.set_child(build_widget(page))
     win.present()

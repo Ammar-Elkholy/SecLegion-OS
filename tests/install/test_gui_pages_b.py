@@ -266,8 +266,8 @@ def test_gui_pages_b_finished_reboots_only_on_click():
 def test_gui_pages_b_flow_order_and_kiosk_and_about():
     m = filled()
     assert [p.key for p in m.visible()] == [
-        "welcome", "language", "disk", "encryption", "user", "hardware", "tiers", "review", "progress",
-        "finished"]
+        "welcome", "language", "timezone", "disk", "encryption", "user", "hardware", "tiers", "review",
+        "progress", "finished"]
     k = m.pages["kiosk_error"]
     k.log = "/var/log/x.log"
     assert "/var/log/x.log" in k.text() and not k.can_next()

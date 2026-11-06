@@ -1,8 +1,9 @@
 # SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
 # SPDX-License-Identifier: MIT
 """Installer GUI state machine (U2/U4). Pure Python: pages are model fragments, merged into the same
-answers dict the CLI uses (configurator.Answers). Flow: welcome, language, disk, [alongside, manual],
-[encryption], user, hardware, tiers, review, progress, finished. error (10) replaces progress when the
+answers dict the CLI uses (configurator.Answers). Flow: welcome, language, timezone, disk, [alongside,
+manual], [encryption], user, hardware, tiers, review, progress, finished.
+error (10) replaces progress when the
 install fails; kiosk_error (14) and about (15) are shown on their own."""
 
 import os
@@ -25,12 +26,16 @@ from pages import (  # noqa: E402
     p13_finished,
     p14_kiosk_error,
     p15_about,
+    p16_timezone,
 )
+
+DISK_CHANGED = "The disk changed during the failed install; choose again."
 
 
 class Model:
-    def __init__(self, facts):
+    def __init__(self, facts, refresh_facts=None):
         self.facts = facts
+        self.refresh_facts = refresh_facts  # callable returning fresh facts; None = no rescan
         self.pages = {p.key: p for p in (
             p1_welcome.WelcomePage(self), p2_language.LanguagePage(self), p3_disk.DiskPage(self),
             p4_alongside.AlongsidePage(self), p5_manual.ManualPage(self),
@@ -38,7 +43,7 @@ class Model:
             p9_progress.ProgressPage(self), p10_error.ErrorPage(self),
             p11_hardware.HardwarePage(self), p12_tiers.TiersPage(self),
             p13_finished.FinishedPage(self), p14_kiosk_error.KioskErrorPage(self),
-            p15_about.AboutPage(self))}
+            p15_about.AboutPage(self), p16_timezone.TimezonePage(self))}
         self.index = 0
         self.failed = False  # install ran and failed: current page is "error"
         self.on_change = lambda: None  # the app hooks this to refresh Next
@@ -50,7 +55,7 @@ class Model:
         return self.pages["disk"].disk
 
     def visible(self):
-        keys = ["welcome", "language", "disk"]
+        keys = ["welcome", "language", "timezone", "disk"]
         if self.pages["disk"].mode == "alongside":
             keys.append("alongside")
             if self.manual:
@@ -76,7 +81,44 @@ class Model:
     def retry_from_review(self):
         """Error page Back: return to the review page, ready to run again."""
         self.failed = False
+        if self.rescan():
+            self.index = [p.key for p in self.visible()].index("disk")
+            return
         self.index = [p.key for p in self.visible()].index("review")
+
+    def _target(self, facts):
+        """What the install depends on: the chosen disk's size and (partition mode) the partition's size.
+        None when the disk or the partition is gone."""
+        disk_page = self.pages["disk"]
+        path = disk_page.disk_path(facts)
+        node = next((d for d in (facts.get("lsblk") or {}).get("blockdevices", [])
+                     if d.get("type") == "disk" and path in (d.get("path"), d.get("name"))), None)
+        if node is None:
+            return None
+        if disk_page.mode != "partition":
+            return (node.get("size"),)
+        part = next((p for p in node.get("children") or [] if p.get("path") == disk_page.partition), None)
+        return None if part is None else (node.get("size"), part.get("size"))
+
+    def rescan(self):
+        """Re-gather the facts (when refresh_facts is set). True when the chosen disk or partition is gone or
+        resized: the disk page is then reset with a message and the caller shows it."""
+        if not self.refresh_facts or not self.pages["disk"].disk:
+            if self.refresh_facts:
+                self.facts = self.refresh_facts()
+            return False
+        before = self._target(self.facts)
+        self.facts = self.refresh_facts()
+        if self._target(self.facts) == before and before is not None:
+            return False
+        self.pages["disk"].reset(DISK_CHANGED)
+        return True
+
+    def rescan_disks(self):
+        """The disk page's Rescan button: refresh and redraw."""
+        self.rescan()
+        self.on_render()
+        self.on_change()
 
     def can_next(self):
         return self.current.can_next()

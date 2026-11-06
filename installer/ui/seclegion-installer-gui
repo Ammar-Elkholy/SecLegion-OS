@@ -18,6 +18,7 @@ for sub in (os.path.join(HERE, "gtk"), os.path.join(HERE, "..", "installd")):
 
 
 def main(argv=None):
+    refresh = None  # re-gathers the facts after a failed install
     ap = argparse.ArgumentParser(prog="seclegion-installer-gui")
     ap.add_argument("--kiosk", action="store_true")
     ap.add_argument("--kiosk-error", action="store_true")
@@ -33,9 +34,11 @@ def main(argv=None):
         import facts as facts_mod
 
         facts = facts_mod.gather(install_mode=None, dev_build=None)
+        refresh = lambda: facts_mod.gather(install_mode=None, dev_build=None)  # noqa: E731
     import app
 
-    return app.main(facts, kiosk_error=a.kiosk_error, log_path=a.log, kiosk=a.kiosk)
+    return app.main(facts, kiosk_error=a.kiosk_error, log_path=a.log, kiosk=a.kiosk,
+                    refresh_facts=refresh)
 
 
 if __name__ == "__main__":

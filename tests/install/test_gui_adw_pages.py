@@ -62,7 +62,7 @@ def test_model_goto_refuses_a_hidden_page_and_stays_put():
 def test_review_summary_has_one_row_per_answer_and_each_edit_target_is_visible():
     m = filled()
     rows = p8_review.summary_rows(m.pages["review"])
-    assert [r[0] for r in rows] == ["Disk", "Mode", "Encryption", "User", "Locale", "Extras"]
+    assert [r[0] for r in rows] == ["Disk", "Mode", "Encryption", "User", "Locale", "Time zone", "Extras"]
     assert {p.key for p in m.visible()} >= {r[3] for r in rows}
     by = rows_by_title(m)
     assert by["User"][1].startswith("ammar") and by["Locale"][1]
@@ -127,9 +127,9 @@ def test_gui_adw_pages_under_broadway(tmp_path):
     assert got["rtl"] == {"ar_sidebar": "RTL", "ar_default": "RTL", "en_sidebar": "LTR",
                           "en_default": "LTR", "ar_selected_after_rerender": True}
     rv = got["review"]
-    assert rv["titles"] == ["Disk", "Mode", "Encryption", "User", "Locale", "Extras"]
-    assert rv["edit_buttons"] == 6
-    assert rv["edit_jumps"] == ["disk", "disk", "encryption", "user", "language", "tiers"]
+    assert rv["titles"] == ["Disk", "Mode", "Encryption", "User", "Locale", "Time zone", "Extras"]
+    assert rv["edit_buttons"] == 7
+    assert rv["edit_jumps"] == ["disk", "disk", "encryption", "user", "language", "timezone", "tiers"]
     assert rv["confirm_entry"] is True
     assert got["progress"] == {"type": "AdwStatusPage", "bar": True, "expander": "Details",
                                "expanded": False, "step": "line three", "log_updates": True}
