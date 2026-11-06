@@ -267,9 +267,10 @@ def widget(page):
                 parts.add(prow)
             erase.connect("toggled", lambda b: b.get_active() and pick(page.set_mode, "erase"))
             free.connect("toggled", lambda b: b.get_active() and pick(page.set_mode, "alongside"))
+            parts.set_visible(bool(rows))  # nothing to replace: no empty heading
             for g in (how, parts):
                 card.append(g)
-            entry.update(opts=[how, parts], erase=erase, free=free, rows=rows)
+            entry.update(opts=[how, parts], parts=parts, erase=erase, free=free, rows=rows)
             radio.connect("toggled", lambda b, i=d["id"]: b.get_active() and pick(page.set_disk, i))
         else:
             dmap.set_sensitive(False)
@@ -289,7 +290,7 @@ def widget(page):
                 chosen = e["id"] == page.disk
                 e["radio"].set_active(chosen)
                 for g in e["opts"]:
-                    g.set_visible(chosen)
+                    g.set_visible(chosen and (g is not e.get("parts") or bool(e["rows"])))
                 if "erase" not in e or not chosen:
                     continue
                 if page.mode == "partition" and page.partition in e["rows"]:

@@ -94,4 +94,46 @@ out["narrow"] = {
 }
 shot(win, "shell-700.png")
 win.destroy()
+
+
+def walk(w):
+    yield w
+    c = w.get_first_child()
+    while c:
+        yield from walk(c)
+        c = c.get_next_sibling()
+
+
+# header menu: one menu button with Reboot / Power off / About, and no standalone About button
+m, win = window(1280, 800)
+menu = win.menu_button.get_menu_model()
+out["menu"] = {
+    "items": [menu.get_item_attribute_value(i, "label", None).get_string()
+              for i in range(menu.get_n_items())],
+    "actions": [menu.get_item_attribute_value(i, "action", None).get_string()
+                for i in range(menu.get_n_items())],
+    "tooltip": win.menu_button.get_tooltip_text(), "icon": win.menu_button.get_icon_name(),
+    "have": [win.lookup_action(a) is not None for a in ("reboot", "poweroff", "about")],
+    "labelled_buttons": [w.get_label() for w in walk(win.header) if isinstance(w, Gtk.Button)
+                         and not isinstance(w, Gtk.MenuButton) and w.get_label()],
+}
+# Next is hidden on the progress and finished pages; the finished page also hides Back
+out["footer"] = {}
+for key in ("progress", "finished"):
+    m.goto(key)
+    pump(5)
+    out["footer"][key] = {"next": win.nxt.get_visible(), "back": win.back.get_visible()}
+m.goto("welcome")
+pump(5)
+out["footer"]["welcome"] = {"next": win.nxt.get_visible(), "back": win.back.get_visible()}
+# disk page: a disk with no partitions shows no "Or replace one partition" group
+m.goto("disk")
+pump(5)
+m.pages["disk"].set_disk(next(d["id"] for d in m.pages["disk"].disks() if d["path"] == "/dev/vda"))
+win.render()
+pump(10)
+out["disk_empty"] = [
+    w.get_visible() and w.get_mapped() for w in walk(win.holder)
+    if isinstance(w, Adw.PreferencesGroup) and w.get_title() == "Or replace one partition"]
+win.destroy()
 print(json.dumps(out))

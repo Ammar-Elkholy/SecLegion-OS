@@ -72,3 +72,35 @@ def test_gui_shell_sidebar_and_breakpoint_under_broadway(tmp_path):
     assert wide["back_sensitive"] is False and wide["back_after_next"] is True
     assert narrow["collapsed"] and narrow["step_visible"]
     assert narrow["step"] == f"Step 2 of {narrow['n']}"
+    # header: one menu button (Reboot / Power off / About), no standalone About button
+    menu = got["menu"]
+    assert menu["items"] == ["Reboot", "Power off", "About"]
+    assert menu["actions"] == ["win.reboot", "win.poweroff", "win.about"]
+    assert menu["tooltip"] == "Menu" and menu["icon"] == "open-menu-symbolic"
+    assert menu["have"] == [True, True, True] and menu["labelled_buttons"] == []
+    # no green Next on the progress and finished pages; Back is also gone on the finished page
+    foot = got["footer"]
+    assert foot["progress"]["next"] is False and foot["finished"]["next"] is False
+    assert foot["finished"]["back"] is False and foot["welcome"]["next"] is True
+    # a disk with no partitions: the replace-a-partition group is hidden (or absent)
+    assert got["disk_empty"] and not any(got["disk_empty"])
+
+
+def test_power_argv_for_reboot_and_poweroff():
+    from pages.p13_finished import POWEROFF_ARGV, REBOOT_ARGV, power
+    calls = []
+
+    def runner(argv, check):
+        calls.append((argv, check))
+
+    power("reboot", runner)
+    power("poweroff", runner)
+    assert calls == [(["systemctl", "reboot"], False), (["systemctl", "poweroff"], False)]
+    assert REBOOT_ARGV == ["systemctl", "reboot"] and POWEROFF_ARGV == ["systemctl", "poweroff"]
+
+
+def test_power_rejects_an_unknown_action():
+    from pages.p13_finished import power
+    for bad in ("halt", "", None, "reboot; id"):
+        with pytest.raises(ValueError):
+            power(bad, runner=lambda *a, **k: pytest.fail("must not run"))

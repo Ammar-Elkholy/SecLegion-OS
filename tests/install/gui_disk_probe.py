@@ -126,7 +126,7 @@ win = InstallerWindow(app, m)
 win.set_default_size(1280, 800)
 win.present()
 pump()
-win.about.emit("clicked")
+win.activate_action("win.about", None)
 pump(80)
 dlg = win.get_visible_dialog()
 kind = "AdwAboutDialog" if isinstance(dlg, Adw.AboutDialog) else type(dlg).__name__

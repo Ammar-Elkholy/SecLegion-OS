@@ -28,6 +28,7 @@ def widget(page):
 
     sp = status_page("dialog-error-symbolic", page.title,
                      "Go back to the review page to try again, or reboot and check the log.")
+    sp.add_css_class("compact")  # the large icon is clipped at 800x600
     details = Gtk.Expander(label="Details", expanded=True)
     details.set_child(mono_view(page.text(), scroll=True))
     sp.set_child(Adw.Clamp(maximum_size=640, child=details))
