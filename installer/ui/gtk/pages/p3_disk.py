@@ -92,11 +92,11 @@ class DiskPage(Page):
         self.disk = None
         self.mode = "erase"
         self.partition = None  # /dev path, meaningful in partition mode only
-        self._luks = None  # None = default for the mode (D11: on for erase)
+        self._luks = None  # None = default for the mode (D11/G7: on for erase and partition)
 
     @property
     def luks(self):
-        return self._luks if self._luks is not None else self.mode == "erase"
+        return self._luks if self._luks is not None else self.mode in ("erase", "partition")
 
     def set_disk(self, disk_id):
         if disk_id != self.disk:

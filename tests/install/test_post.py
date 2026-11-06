@@ -310,6 +310,12 @@ def test_post_enables_firstboot(tmp_path):
     assert any("enable" in c and "seclegion-firstboot.service" in c for c in cmds)
 
 
+def test_post_enables_bluetooth_and_fstrim(tmp_path):
+    """G1: bluez is installed but its unit is not enabled by the package; fstrim.timer is for the SSD."""
+    _, root, _, cmds = run_post(tmp_path)
+    assert ["systemctl", "--root", str(root), "enable", "bluetooth.service", "fstrim.timer"] in cmds
+
+
 def test_post_drops_pambase_nullok(tmp_path):
     """Arch's pambase allows an empty password (nullok); the installed system must not (target_check)."""
     root, creds = make_root(tmp_path)

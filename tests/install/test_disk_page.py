@@ -103,7 +103,7 @@ def test_disk_page_partition_mode_fragment_and_next(facts):
     assert p.fragment() == {"disk": NVME, "mode": "erase", "luks": True}  # no partition key outside it
     p.set_partition("/dev/nvme0n1p5")
     assert p.mode == "partition" and p.can_next() and p.error() is None
-    assert p.fragment() == {"disk": NVME, "mode": "partition", "luks": False,
+    assert p.fragment() == {"disk": NVME, "mode": "partition", "luks": True,  # G7: on by default
                             "partition": "/dev/nvme0n1p5"}
     p.set_mode("alongside")
     assert "partition" not in p.fragment()

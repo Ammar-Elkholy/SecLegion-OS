@@ -421,6 +421,7 @@ class Post:
         self.cmd(["systemctl", "--root", self.root, "enable", "seclegion-firstboot.service"])
         self.cmd(["systemctl", "--root", self.root, "enable", f"{ENGINE}.service"])
         self.cmd(["systemctl", "--root", self.root, "enable", "snapper-cleanup.timer"])  # NUMBER_LIMIT
+        self.cmd(["systemctl", "--root", self.root, "enable", "bluetooth.service", "fstrim.timer"])  # G1
         self.apply_hw_plan(plan)
         # ufw: enabled, default deny incoming (loaded at boot from these two files)
         self.write("etc/ufw/ufw.conf", set_key(self.read("etc/ufw/ufw.conf"), "ENABLED", "yes"))
