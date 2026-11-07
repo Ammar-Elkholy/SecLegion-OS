@@ -1,0 +1,7 @@
+# consolelayout		xlayout	xmodel		xvariant	xoptions					bcp47
+us			us	pc105+inet	-		terminate:ctrl_alt_bksp
+fr			fr	pc105		-		terminate:ctrl_alt_bksp				fr-FR,fr
+de			de	pc105		-		terminate:ctrl_alt_bksp				de-DE,de-AT,de
+de-latin1		de	pc105		-		terminate:ctrl_alt_bksp				-
+de-latin1-nodeadkeys	de	pc105		nodeadkeys	terminate:ctrl_alt_bksp				-
+ara			ara,us	pc105		-		terminate:ctrl_alt_bksp,grp:shifts_toggle,grp_led:scroll	ar-SA,ar

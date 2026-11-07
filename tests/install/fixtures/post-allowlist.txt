@@ -2,6 +2,7 @@ etc/default/ufw
 etc/greetd/config.toml
 etc/greetd/sessions/hyprland.desktop
 etc/pacman.conf
+etc/seclegion/kb-layout.lua
 etc/seclegion/keyboard-extra
 etc/systemd/system/sshd.service
 etc/systemd/system/sshd.socket

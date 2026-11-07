@@ -19,6 +19,7 @@ import re
 import uuid
 from dataclasses import dataclass, field
 
+import keymaps
 import winguide
 
 GIB = 1 << 30
@@ -59,6 +60,8 @@ class Answers:
     timezone: str | None = None
     keyboard: str = "us"
     keyboard_extra: tuple = ()
+    xkb_layout: str = "us"  # the XKB layout the user picked; `keyboard` is its console keymap
+    xkb_variant: str = ""
     locale: str = "en_US.UTF-8"
     shrink: str | None = None  # alongside: partition to shrink to make room
     shrink_size: int | None = None  # that partition's NEW size in bytes
@@ -279,6 +282,8 @@ def validate(answers, facts, defer_unreadable=False):
         raise Refusal("not_install_mode", "not booted in install mode")
     if not valid_timezone(answers.timezone):
         raise Refusal("bad_timezone", "time zone is not a zoneinfo name")
+    if not keymaps.known(answers.xkb_layout, answers.xkb_variant):
+        raise Refusal("bad_keyboard", "keyboard layout is not in the XKB list")
     disk = find_disk(answers, facts)
     path = disk["path"]
     partition = answers.effective_mode == "partition"
@@ -426,7 +431,8 @@ def build_config(answers, facts):
 
 def post_hints(answers):
     """Non-secret extras for the post step (archinstall has one kb_layout only)."""
-    hints = {"keyboard_extra": list(answers.keyboard_extra), "username": answers.username}
+    hints = {"keyboard_extra": list(answers.keyboard_extra), "username": answers.username,
+             "xkb_layout": answers.xkb_layout, "xkb_variant": answers.xkb_variant}
     if answers.effective_mode in ("alongside", "partition"):
         hints["alongside"] = True  # seclegion-post then looks for a Windows ESP (winboot.py)
     return hints
@@ -457,6 +463,8 @@ def summary(config, answers):
     kb = config["locale_config"]["kb_layout"]
     if answers.keyboard_extra:
         kb += " (+" + ",".join(answers.keyboard_extra) + ")"
+    if answers.xkb_layout != "us" or answers.xkb_variant:
+        kb += f", xkb {answers.xkb_layout}" + (f"/{answers.xkb_variant}" if answers.xkb_variant else "")
     return "\n".join([
         f"Disk:       {dm['device']} ({wipe})",
         f"Mode:       {answers.effective_mode}, LUKS2: {'yes' if answers.use_luks else 'no'}",

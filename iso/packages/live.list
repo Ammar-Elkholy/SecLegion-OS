@@ -44,3 +44,5 @@ virtualbox-guest-utils-nox
 hyperv
 # installer engine (D-R14-2): pinned to Arch extra 4.5-1; ISO only
 archinstall
+wlr-randr
+xkeyboard-config

@@ -138,6 +138,14 @@ CANONICAL_SERIAL_PATTERNS = {
         r"SECLEGION-KIOSK-ERROR log=/var/log/seclegion/kiosk\.log",
         _st("kiosk_error", "install", r'"killed": true'),
     ],
+    # tests/install/test_m2_kiosk_facts.py: the copytoram install boot's gui_facts line (install mode on,
+    # boot medium = the ISO CD-ROM, first target disk selectable); the cmdline echo proves copytoram.
+    "M2-kiosk-facts": [
+        r"seclegion\.mode=install",
+        r"copytoram",
+        _st("gui_facts", "install", r'"rc": 0, "facts": \{"install_mode": true, "boot_medium": '
+            r'"/dev/sr\d+", "disks": \[\{"path": "[^"]*", "refusal": null'),
+    ],
     "M2-installer": [
         r"\[entry install\]",
         _st("installer", "install", r'"rules_run": \["[^"]*/50-seclegion-installer\.rules"\], '
@@ -199,6 +207,16 @@ CANONICAL_SERIAL_PATTERNS = {
     "M4-luks": m4_install_patterns("luks"),
     "M4-alongside": m4_install_patterns("alongside"),
     "M4-partition": m4_install_patterns("partition"),
+    # tests/install/test_m4_shrink.py writes its own transcript (no installed-boot phase): the shrunk NTFS
+    # is checked by ntfsresize/ntfsfix and its file hash, then the target is clean.
+    "M4-shrink": [
+        r"SECLEGION-INSTALL-OK",
+        r"DL-INSTALL 0",
+        r"(?m)^CHECK-RC 0$",
+        r"(?m)^FIX-RC 0$",
+        r"DL-TARGET 0",
+        r"NTFS-FILE-SHA256-UNCHANGED [0-9a-f]{64}",
+    ],
     "M4-offline": [
         r"\[phase install-command\][^\n]*\n[^\n]*-nic none",  # QEMU command of the install VM: no NIC
         r"SECLEGION-INSTALL-OK",
@@ -325,14 +343,15 @@ M2_IDS = (
     "M2-units-rescue",
     "M2-privilege",
     "M2-kiosk-error",
+    "M2-kiosk-facts",
     "M2-installer",
     "M2-lock",
     "M2-live-desktop",
     "M2-repos",
     "M2-cache",
 )
-M4_IDS = ("M4-erase", "M4-luks", "M4-alongside", "M4-partition", "M4-offline", "M4-target-clean",
-          "M4-mutation")
+M4_IDS = ("M4-erase", "M4-luks", "M4-alongside", "M4-partition", "M4-shrink", "M4-offline",
+          "M4-target-clean", "M4-mutation")
 # checkpoint C
 M5_M6_IDS = ("M5-fast", "M5-diskfull", "M6-greeter")
 # W3 / V2 (installed-base gates): the ids whose log must hold neither test secret.

@@ -139,11 +139,13 @@ wf-recorder
 wireless-regdb
 wireplumber
 wl-clipboard
+wlr-randr
 wpa_supplicant
 xdg-desktop-portal-gtk
 xdg-desktop-portal-hyprland
 xdg-user-dirs
 xfsprogs
+xkeyboard-config
 xorg-xwayland
 yazi
 zbar

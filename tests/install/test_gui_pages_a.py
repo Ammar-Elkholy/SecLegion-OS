@@ -37,10 +37,12 @@ def test_gui_pages_a_welcome_and_language_fragments():
     m = Model(load_facts())
     assert m.can_next() and m.pages["welcome"].fragment() == {}
     lang = m.pages["language"]
-    assert lang.fragment() == {"locale": "en_US.UTF-8", "keyboard": "us", "keyboard_extra": []}
+    assert lang.fragment() == {"locale": "en_US.UTF-8", "keyboard": "us", "xkb_layout": "us",
+                               "xkb_variant": "", "keyboard_extra": []}
     lang.set_language("ar")
     lang.set_keyboard("ara")
-    assert lang.fragment() == {"locale": "ar_EG.UTF-8", "keyboard": "us", "keyboard_extra": ["ara"]}
+    assert lang.fragment() == {"locale": "ar_EG.UTF-8", "keyboard": "us", "xkb_layout": "ara",
+                               "xkb_variant": "", "keyboard_extra": ["ara"]}
     lang.set_keyboard("dvorak")
     assert not lang.can_next() and lang.error()
 

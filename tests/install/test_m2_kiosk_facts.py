@@ -29,6 +29,7 @@ from tests.lib import bootgate
 from tests.lib.bootgate import MODE_TIMEOUT, wait_for_menu
 from tests.lib.qemu import QemuVM, create_blank_disk
 
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PREFIX = "SECLEGION-SELFTEST "
 DISK_SERIALS = ("SLFACT1", "SLFACT2")
 EXTRA_ARG = " copytoram=y"
@@ -58,11 +59,7 @@ def gui_facts(serial_text):
     return None
 
 
-@pytest.mark.iso
-def test_m2_kiosk_facts_copytoram_install_boot():
-    iso = bootgate.find_iso()
-    if not iso or not os.path.isfile(iso):
-        pytest.skip("no ISO (set SECLEGION_ISO)")
+def _boot_and_read(result_dir, iso):
     root = "/var/tmp/seclegion-build/vm"  # image files only live here
     os.makedirs(root, exist_ok=True)
     scratch = tempfile.mkdtemp(prefix="m2facts-", dir=root)
@@ -75,8 +72,11 @@ def test_m2_kiosk_facts_copytoram_install_boot():
             edit_cmdline(vm, bootgate.ENTRY_INSTALL, EXTRA_ARG)
             vm.serial.wait_for(r'SECLEGION-SELFTEST \{"section": "done"', MODE_TIMEOUT)
             text = vm.serial.text()
+            command = evidence.repo_relative(vm.command, REPO)
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
+    with open(os.path.join(result_dir, "serial.log"), "w", encoding="utf-8") as fh:
+        fh.write(text)
     assert "seclegion.mode=install" in text and "copytoram" in text, "edited cmdline not seen on serial"
     got = gui_facts(text)
     assert got and got["rc"] == 0 and got["facts"], f"no gui_facts line: {got}"
@@ -86,3 +86,14 @@ def test_m2_kiosk_facts_copytoram_install_boot():
     paths = [d["path"] for d in facts["disks"]]
     assert len(paths) == 2 and all(d["refusal"] is None for d in facts["disks"]), facts
     assert facts["boot_medium"] not in paths
+    return "install_mode true, boot medium is the ISO CD-ROM, both target disks selectable", command, "n/a"
+
+
+@pytest.mark.iso
+def test_m2_kiosk_facts_copytoram_install_boot():
+    status, actual = bootgate.run_gate(
+        "M2-kiosk-facts", "the installer GUI's facts on a copytoram install boot: install mode on, "
+        "boot medium not offered as a target", _boot_and_read)
+    if status == "NOT RUN":
+        pytest.skip(f"NOT RUN: {actual}")
+    assert status == "PASS", actual
