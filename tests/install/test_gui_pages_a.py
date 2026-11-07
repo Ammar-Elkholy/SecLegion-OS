@@ -177,5 +177,6 @@ def test_gui_pages_a_render_under_broadway(tmp_path):
     assert r.returncode == 0, r.stderr
     got = json.loads(r.stdout.strip().splitlines()[-1])
     assert set(got) == {"welcome", "language", "timezone", "disk", "alongside", "manual"}
-    assert got["disk"] == {"disk": VDB, "mode": "alongside", "luks": False}
+    assert got["disk"] == {"disk": VDB, "mode": "alongside", "luks": False,
+                           "shrink": None, "shrink_size": None}
     assert got["language"]["keyboard"] == "us"
