@@ -32,6 +32,7 @@ MUST_HAVE = [
     "grub",
     "memtest86+-efi",
     "cage",
+    "wlr-randr",
     "greetd",
     "greetd-regreet",
     "hyprland",

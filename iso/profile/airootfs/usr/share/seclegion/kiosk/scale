@@ -1,0 +1,7 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Run by cage (kiosk/run): scale a HiDPI panel (wlr-randr), then become the installer GUI with the same
+# arguments. The helper never fails; if it is missing or breaks, the GUI still starts at 1x.
+/usr/bin/python3 -I /usr/lib/seclegion/installer/installd/kiosk_scale.py || true
+exec "$@"

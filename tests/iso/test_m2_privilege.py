@@ -415,7 +415,8 @@ def test_privilege_kiosk_starts_the_installer_gui_in_kiosk_mode_and_any_exit_fai
     run = live_lines((KIOSK / "run").read_text())
     cage = [ln for ln in run if ln.startswith("cage ")]
     assert len(cage) == 1
-    assert cage[0].startswith("cage -- /usr/bin/seclegion-installer-gui --kiosk --log ")
+    assert cage[0].startswith(
+        "cage -- /usr/share/seclegion/kiosk/scale /usr/bin/seclegion-installer-gui --kiosk --log ")
     assert "placeholder" not in (KIOSK / "run").read_text()
     assert not (KIOSK / "placeholder").exists()
     assert run[-1] == "exit 1"

@@ -11,6 +11,7 @@
 greetd
 greetd-regreet
 cage
+wlr-randr
 # session: compositor, lock, idle, portals, polkit agent, Xwayland
 hyprland
 hyprlock
