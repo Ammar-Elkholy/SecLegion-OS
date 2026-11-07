@@ -61,11 +61,55 @@ def probe_partitions(lsblk, probe=winguide.probe):
     return out
 
 
-def _out(argv):
+def _out(argv, run=None):
+    """stdout of argv whatever its exit code ("" if it cannot run): `systemctl is-active` exits 3 for
+    "activating", which is the normal state of seclegion-install.target on metal."""
     try:
-        return subprocess.run(argv, check=True, capture_output=True, text=True).stdout.strip()  # noqa: S603
-    except (OSError, subprocess.CalledProcessError):
+        return (run or subprocess.run)(argv, capture_output=True, text=True).stdout.strip()  # noqa: S603
+    except OSError:
         return ""
+
+
+def target_state(run=None):
+    """ActiveState of seclegion-install.target (`systemctl show` exits 0 in every state)."""
+    return _out(["systemctl", "show", "-P", "ActiveState", "seclegion-install.target"], run)
+
+
+def archiso_uuid(cmdline):
+    """The ISO filesystem UUID the kernel cmdline names (archisosearchuuid=, archisodevice=UUID=,
+    img_dev=/dev/disk/by-uuid/), else None."""
+    for tok in cmdline.split():
+        key, _, val = tok.partition("=")
+        if key == "archisosearchuuid" and val:
+            return val
+        if key == "archisodevice" and val.startswith("UUID="):
+            return val[5:]
+        if key == "img_dev" and "/by-uuid/" in val:
+            return val.rsplit("/", 1)[1]
+    return None
+
+
+def boot_disk_from_cmdline(lsblk, cmdline):
+    """Whole disk holding the ISO filesystem the cmdline names, else None. With copytoram archiso
+    unmounts /run/archiso/bootmnt, so the mount source is gone and the cmdline is the only record."""
+    uuid = archiso_uuid(cmdline)
+    if not uuid:
+        return None
+
+    def walk(node):
+        if (node.get("uuid") or "").lower() == uuid.lower() and node.get("path"):
+            return node["path"]
+        for child in node.get("children") or []:
+            found = walk(child)
+            if found:
+                return found
+        return None
+
+    for disk in lsblk.get("blockdevices", []):
+        found = walk(disk)
+        if found:
+            return parent_disk(lsblk, found)
+    return None
 
 
 def detect_install_mode(cmdline, target_state):
@@ -84,29 +128,32 @@ def _read_cmdline():
         return ""
 
 
-def gather(install_mode=None, dev_build=None):
+def gather(install_mode=None, dev_build=None, run=None):
     """Live gathering. install_mode None = /proc/cmdline says seclegion.mode=install and systemd reports
     seclegion-install.target active or activating (detect_install_mode).
 
     dev_build None = DEV unless release mode (release.py); release mode always reports dev_build False."""
     rel = release.is_release()
     dev_build = (not rel) if dev_build is None else (bool(dev_build) and not rel)
-    lsblk = json.loads(subprocess.run(LSBLK, check=True, capture_output=True, text=True).stdout)  # noqa: S603
+    run = run or subprocess.run
+    lsblk = json.loads(run(LSBLK, check=True, capture_output=True, text=True).stdout)  # noqa: S603
     pairs = []
     if os.path.isdir(BY_ID_DIR):
         pairs = [
             (os.path.join(BY_ID_DIR, n), os.path.realpath(os.path.join(BY_ID_DIR, n)))
             for n in sorted(os.listdir(BY_ID_DIR))
         ]
+    cmdline = _read_cmdline()
     if install_mode is None:
-        install_mode = detect_install_mode(
-            _read_cmdline(), _out(["systemctl", "is-active", "seclegion-install.target"])
-        )
+        install_mode = detect_install_mode(cmdline, target_state(run))
+    boot_source = _out(["findmnt", "-no", "SOURCE", BOOT_MOUNT], run)
+    if not boot_source:  # copytoram: archiso unmounted the stick; the cmdline still names its UUID
+        boot_source = boot_disk_from_cmdline(lsblk, cmdline)
     facts = build_facts(
         lsblk,
         pairs,
-        _out(["findmnt", "-no", "SOURCE", "/"]),
-        _out(["findmnt", "-no", "SOURCE", BOOT_MOUNT]),
+        _out(["findmnt", "-no", "SOURCE", "/"], run),
+        boot_source,
         install_mode,
         dev_build,
     )

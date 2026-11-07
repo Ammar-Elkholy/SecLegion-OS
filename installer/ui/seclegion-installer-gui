@@ -1,12 +1,13 @@
 #!/usr/bin/python3
 # SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
 # SPDX-License-Identifier: MIT
-"""seclegion-installer-gui [--kiosk] [--kiosk-error] [--log FILE] [--facts FILE]
+"""seclegion-installer-gui [--kiosk] [--kiosk-error] [--log FILE] [--facts FILE] [--print-facts]
 
 Starts the GTK installer. --kiosk (the install-mode cage session, user seclegion-installer) runs
 seclegion-install through pkexec instead of directly. --kiosk-error shows only the "installer could not
 start" page (used by the kiosk error unit). Facts come from installd's facts.gather unless --facts
-(tests) is given."""
+(tests) is given. --print-facts prints install_mode, boot_medium and each disk's refusal as JSON and
+exits without importing Gtk."""
 import argparse
 import json
 import os
@@ -17,6 +18,20 @@ for sub in (os.path.join(HERE, "gtk"), os.path.join(HERE, "..", "installd")):
     sys.path.insert(0, os.path.normpath(sub))
 
 
+def print_facts(facts, out=None):
+    """JSON of what the disk page decides: per disk the erase-mode refusal code (None = selectable)."""
+    from pages import p3_disk
+
+    disks = [{"path": d["path"], "refusal": d["code"],
+              "partitions": [c["path"] for c in next(
+                  (n.get("children") or [] for n in facts["lsblk"]["blockdevices"]
+                   if n["path"] == d["path"]), []) if c.get("type") == "part"]}
+             for d in p3_disk.list_disks(facts)]
+    json.dump({"install_mode": facts.get("install_mode"), "boot_medium": facts.get("boot_medium"),
+               "disks": disks}, out or sys.stdout, indent=1)
+    (out or sys.stdout).write("\n")
+
+
 def main(argv=None):
     refresh = None  # re-gathers the facts after a failed install
     ap = argparse.ArgumentParser(prog="seclegion-installer-gui")
@@ -24,6 +39,7 @@ def main(argv=None):
     ap.add_argument("--kiosk-error", action="store_true")
     ap.add_argument("--log")
     ap.add_argument("--facts", help="facts JSON instead of gathering (tests)")
+    ap.add_argument("--print-facts", action="store_true", help="print the disk facts as JSON and exit")
     a = ap.parse_args(argv)
     if a.facts:
         with open(a.facts) as f:
@@ -35,6 +51,9 @@ def main(argv=None):
 
         facts = facts_mod.gather(install_mode=None, dev_build=None)
         refresh = lambda: facts_mod.gather(install_mode=None, dev_build=None)  # noqa: E731
+    if a.print_facts:
+        print_facts(facts)
+        return 0
     import app
 
     return app.main(facts, kiosk_error=a.kiosk_error, log_path=a.log, kiosk=a.kiosk,
