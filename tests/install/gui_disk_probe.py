@@ -154,7 +154,8 @@ out["shrink"] = {"group_visible": byname["shrinkpart:/dev/nvme0n1p3"].get_mapped
                  "mode": m.pages["disk"].mode, "fragment": m.pages["disk"].fragment()}
 scale.set_value(150)
 pump(10)
-out["shrink"]["moved"] = [byname["shrinklabel:" + NVME].get_label(), m.pages["disk"].fragment()["shrink_size"]]
+out["shrink"]["moved"] = [byname["shrinklabel:" + NVME].get_label(),
+                          m.pages["disk"].fragment()["shrink_size"]]
 win.destroy()
 del cfg.shrink_choices
 # alongside page: the disk map, the gap, the guide, all in rows

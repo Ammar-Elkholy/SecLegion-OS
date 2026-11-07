@@ -186,7 +186,8 @@ def test_review_line_names_the_shrink(facts, shrink):
     p.set_shrink_space(150 * GIB)
     review = m.pages["review"]
     assert review.shrink_line() == f"Shrink {P3} (Windows) from 400 GiB to 250 GiB"
-    review.expected, review.disk_label = lambda: None, lambda: "disk"  # Answers has no shrink field on this base (parallel branch)
+    # Answers has no shrink field on this base (parallel branch): stub what needs it
+    review.expected, review.disk_label = lambda: None, lambda: "disk"
     assert review.shrink_line() in [r[2] for r in p8_review.summary_rows(review)]
     p.set_mode("alongside")
     assert review.shrink_line() == ""
