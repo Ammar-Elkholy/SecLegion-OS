@@ -85,13 +85,52 @@ def test_each_entry_sets_its_mode_and_target(cfg):
     kind, body = by_title["Safe Graphics"]
     assert kind == "submenu"
     sub = top_level_entries(body)
-    assert [t for _, t, _ in sub] == ["Install (safe graphics)", "Live (safe graphics)"]
-    for (_, _, sbody), mode in zip(sub, ("install", "live"), strict=True):
+    assert [t for _, t, _ in sub] == [
+        "Install (safe graphics)",
+        "Live (safe graphics)",
+        "Install (verbose boot)",
+    ]
+    for (_, _, sbody), mode in zip(sub[:2], ("install", "live"), strict=True):
         assert "nomodeset" in sbody
         assert f"seclegion.mode={mode} " in sbody
         assert f"systemd.unit=seclegion-{mode}.target" in sbody
     assert "fwsetup" in by_title["UEFI Firmware Settings"][1]
     assert "memtest86+" in by_title["Memory Test (Memtest86+)"][1]
+
+
+QUIET = ("quiet", "loglevel=3", "rd.udev.log_level=3", "systemd.show_status=auto")
+
+
+def linux_lines(body):
+    return [ln.split() for ln in body.splitlines() if ln.strip().startswith("linux ")]
+
+
+@pytest.mark.parametrize("cfg", GRUB_FILES, ids=lambda p: p.name)
+def test_quiet_boot_blacklist_and_verbose_entry(cfg):
+    """Boot noise: quiet on every normal entry, nouveau blacklisted on Install and Rescue, and a verbose
+    Install entry (no quiet/loglevel) in the Safe Graphics submenu. Live keeps nouveau."""
+    entries = {t: (k, b) for k, t, b in top_level_entries(cfg.read_text())}
+    for title in ("Install SecLegion OS", "Try SecLegion OS (Live)", "Rescue"):
+        (words,) = linux_lines(entries[title][1])
+        assert all(q in words for q in QUIET), title
+        # kept for the serial markers and the console the gates read
+        assert "console=ttyS0,115200" in words
+    for title in ("Install SecLegion OS", "Rescue"):
+        assert "modprobe.blacklist=nouveau" in linux_lines(entries[title][1])[0], title
+    assert "modprobe.blacklist=nouveau" not in linux_lines(entries["Try SecLegion OS (Live)"][1])[0]
+    sub = {t: b for _, t, b in top_level_entries(entries["Safe Graphics"][1])}
+    for title in ("Install (safe graphics)", "Live (safe graphics)"):
+        assert all(q in linux_lines(sub[title])[0] for q in QUIET), title
+    (verbose,) = linux_lines(sub["Install (verbose boot)"])
+    assert "quiet" not in verbose and not any(w.startswith("loglevel=") for w in verbose)
+    assert "seclegion.mode=install" in verbose and "modprobe.blacklist=nouveau" in verbose
+
+
+def test_initramfs_has_no_memdisk_hook():
+    conf = (PROFILE / "airootfs" / "etc" / "mkinitcpio.conf.d" / "archiso.conf").read_text()
+    hooks = re.search(r"^HOOKS=\((.*)\)", conf, re.MULTILINE)
+    assert hooks and "archiso" in hooks.group(1).split()
+    assert "memdisk" not in hooks.group(1).split()
 
 
 def test_serial_kept_and_theme_is_conditional():
