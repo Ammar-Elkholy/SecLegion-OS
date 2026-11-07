@@ -10,14 +10,19 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-INSTALLED_LOGO = "/usr/share/seclegion/branding/seclegion-logo.png"
-REPO_LOGO = os.path.join(HERE, "..", "..", "..", "desktop", "branding", "seclegion-logo.png")
+INSTALLED_DIR = "/usr/share/seclegion/branding"
+REPO_DIR = os.path.normpath(os.path.join(HERE, "..", "..", "..", "desktop", "branding"))
+# The picture is drawn about 96 px high, so the 512 px file is 2x or better on a HiDPI screen. The plain
+# name is the fallback (the 256 px file, or an older package that ships only one small file).
+LOGO_FILES = ("seclegion-logo-512.png", "seclegion-logo.png")
 
 
 def logo_path():
-    for p in (INSTALLED_LOGO, os.path.normpath(REPO_LOGO)):
-        if os.path.exists(p):
-            return p
+    for d in (INSTALLED_DIR, REPO_DIR):
+        for name in LOGO_FILES:
+            p = os.path.join(d, name)
+            if os.path.exists(p):
+                return p
     return None
 
 
