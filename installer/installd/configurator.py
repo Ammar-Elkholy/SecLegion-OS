@@ -12,6 +12,7 @@ uki, disk_encryption, subvolumes come from guided.html and device.py).
 The creds file holds plaintext passwords because archinstall needs them; I2
 deletes it (tmpfs, 0600) right after archinstall exits.
 """
+import copy
 import json
 import os
 import re
@@ -23,6 +24,8 @@ import winguide
 GIB = 1 << 30
 MIB = 1 << 20
 MIN_GAP = 40 * GIB
+MIN_KEEP = 20 * GIB  # smallest size an existing partition may be shrunk to
+SHRINK_FS = ("ntfs", "ext4")
 MIN_DISK = 20 * GIB  # erase: the system needs ~6 GiB; the rest is room for snapshots and updates
 ESP_SIZE = GIB
 _NS = uuid.UUID("5ec1e610-0000-4000-8000-000000000001")
@@ -57,12 +60,20 @@ class Answers:
     keyboard: str = "us"
     keyboard_extra: tuple = ()
     locale: str = "en_US.UTF-8"
+    shrink: str | None = None  # alongside: partition to shrink to make room
+    shrink_size: int | None = None  # that partition's NEW size in bytes
 
     def __post_init__(self):
         if self.mode not in ("erase", "erase-luks", "alongside", "partition"):
             raise Refusal("bad_mode", "mode must be erase, erase-luks, alongside or partition")
         if self.mode == "partition" and not self.partition:
             raise Refusal("bad_partition", "partition mode needs the partition to replace")
+        if (self.shrink is None) != (self.shrink_size is None):
+            raise Refusal("shrink_bad_size", "shrink needs both the partition and its new size")
+        if self.shrink is not None and (
+                self.mode != "alongside" or isinstance(self.shrink_size, bool)
+                or not isinstance(self.shrink_size, int)):
+            raise Refusal("shrink_bad_mode", "shrinking a partition is only valid in alongside mode")
         if not re.fullmatch(r"[a-z_][a-z0-9_-]{0,31}", self.username or ""):
             raise Refusal("bad_username", "invalid username")
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9-]{0,62}", self.hostname or ""):
@@ -199,6 +210,60 @@ def partition_choices(disk, facts):
                             key=lambda p: int(p["start"]))]
 
 
+def _shrink_code(part, disk, facts):
+    """Why this partition cannot be shrunk (a code), or None. Root re-checks 'unreadable' probes."""
+    if _mountpoints(part):
+        return "shrink_mounted"
+    if facts.get("boot_medium") == disk.get("path"):
+        return "shrink_boot_medium"
+    if (int(part["size"]) - MIN_GAP) // MIB * MIB < MIN_KEEP:
+        return "shrink_too_small"
+    if (part.get("fstype") or "").lower() == "ntfs":
+        blocked = winguide.refusal_for((facts.get("probes") or {}).get(part.get("path")))
+        if blocked and blocked[0] in ("bitlocker", "windows_hibernated"):
+            return blocked[0]
+    return None
+
+
+def shrink_choices(disk, facts):
+    """One dict per shrinkable-filesystem partition: path, name, fstype, label, size, min_size, max_size
+    (bytes) and code (None when it can be shrunk)."""
+    out = []
+    for p in sorted((c for c in disk.get("children") or [] if c.get("type") == "part"),
+                    key=lambda p: int(p["start"])):
+        fs = (p.get("fstype") or "").lower()
+        if fs not in SHRINK_FS:
+            continue
+        size = int(p["size"])
+        out.append({"path": p["path"], "name": p.get("name"), "fstype": fs, "label": p.get("label"),
+                    "size": size, "min_size": MIN_KEEP, "max_size": (size - MIN_GAP) // MIB * MIB,
+                    "code": _shrink_code(p, disk, facts)})
+    return out
+
+
+def shrunk_disk(disk, path, new_size):
+    """A deep copy of the lsblk disk node with that partition's size changed to new_size bytes."""
+    out = copy.deepcopy(disk)
+    for p in out.get("children") or []:
+        if p.get("path") == path:
+            p["size"] = int(new_size)
+            return out
+    raise Refusal("shrink_bad_partition", "the partition to shrink is not on the chosen disk")
+
+
+def _check_shrink(answers, disk, facts):
+    choice = next((ch for ch in shrink_choices(disk, facts) if ch["path"] == answers.shrink), None)
+    if choice is None:
+        raise Refusal("shrink_bad_partition",
+                      "the partition to shrink is not a shrinkable partition of the chosen disk")
+    if choice["code"]:
+        raise Refusal(choice["code"], f"{choice['path']} cannot be shrunk ({choice['code']})")
+    size = answers.shrink_size
+    if size % MIB or not choice["min_size"] <= size <= choice["max_size"]:
+        raise Refusal("shrink_bad_size", "the new size must be a whole number of MiB between "
+                                         f"{choice['min_size']} and {choice['max_size']} bytes")
+
+
 def _chosen_partition(answers, disk):
     """The lsblk node of the partition to replace; a direct part child of the disk only."""
     for p in disk.get("children") or []:
@@ -222,7 +287,8 @@ def validate(answers, facts, defer_unreadable=False):
     if facts.get("boot_medium") == path:
         raise Refusal("boot_medium", "disk is the boot medium")
     # partition mode: the chosen partition's own mounts are reported as part_mounted below
-    if _mountpoints(disk, answers.partition if partition else None):
+    skip = answers.partition if partition else answers.shrink  # its own mounts: part_/shrink_mounted
+    if _mountpoints(disk, skip):
         raise Refusal("mounted", "disk has mounted filesystems")
     if disk.get("pttype") == "dos":
         raise Refusal("mbr_disk", "MBR (dos) disks are not supported; GPT/UEFI only")
@@ -255,6 +321,9 @@ def validate(answers, facts, defer_unreadable=False):
         if not chosen.get("name") or answers.confirm != chosen["name"]:
             raise Refusal("confirm_mismatch", "typed partition name does not match")
     if answers.effective_mode == "alongside":
+        if answers.shrink:
+            _check_shrink(answers, disk, facts)
+            disk = shrunk_disk(disk, answers.shrink, answers.shrink_size)
         gaps = free_gaps(disk)
         if not gaps or max(g[1] for g in gaps) < MIN_GAP:
             if sum(g[1] for g in gaps) >= MIN_GAP:
@@ -288,6 +357,8 @@ def _existing(p, sec):
 def build_config(answers, facts):
     validate(answers, facts)
     disk = find_disk(answers, facts)
+    if answers.shrink:
+        disk = shrunk_disk(disk, answers.shrink, answers.shrink_size)
     sec = _sec(disk)
     total = int(disk["size"])
     if answers.effective_mode == "alongside":
