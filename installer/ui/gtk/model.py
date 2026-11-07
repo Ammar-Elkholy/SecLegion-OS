@@ -56,8 +56,8 @@ class Model:
 
     def visible(self):
         keys = ["welcome", "language", "timezone", "disk"]
-        if self.pages["disk"].mode == "alongside":
-            keys.append("alongside")
+        if self.pages["disk"].mode == "alongside" and not self.pages["disk"].shrink_on:
+            keys.append("alongside")  # shrinking has no free gap to preview; its choices carry the checks
             if self.manual:
                 keys.append("manual")
         if self.pages["disk"].fragment().get("luks"):
@@ -95,6 +95,10 @@ class Model:
                      if d.get("type") == "disk" and path in (d.get("path"), d.get("name"))), None)
         if node is None:
             return None
+        if disk_page.mode == "alongside" and disk_page.shrink_on:
+            part = next((p for p in node.get("children") or [] if p.get("path") == disk_page.shrink_path),
+                        None)
+            return None if part is None else (node.get("size"), part.get("size"))
         if disk_page.mode != "partition":
             return (node.get("size"),)
         part = next((p for p in node.get("children") or [] if p.get("path") == disk_page.partition), None)
