@@ -9,6 +9,7 @@ for the run and restored afterwards; archinstall copies it into the target, secl
 Passwords are never printed.
 """
 import argparse
+import dataclasses
 import json
 import os
 import shutil
@@ -21,6 +22,7 @@ sys.path.insert(0, HERE)
 import configurator as c  # noqa: E402
 import facts as facts_mod  # noqa: E402
 import release  # noqa: E402
+import shrink  # noqa: E402
 
 LIVE_CONF = "/etc/pacman.conf"
 GNUPG = "/etc/pacman.d/gnupg"
@@ -88,6 +90,12 @@ def main(argv=None):
         else:
             facts = facts_mod.gather(install_mode=True if a.force_install_mode else None, dev_build=None)
         answers = c.Answers.from_dict(json.load(open(a.answers)))
+        if answers.shrink:
+            shrink.apply(answers, facts)  # filesystem, then GPT entry; a Refusal writes nothing further
+            if not a.facts:  # the real disk now has the gap: judge and build from it, not from the plan
+                facts = facts_mod.gather(install_mode=True if a.force_install_mode else None,
+                                         dev_build=None)
+                answers = dataclasses.replace(answers, shrink=None, shrink_size=None)
         config, creds = c.build_config(answers, facts)
     except c.Refusal as r:
         print(f"refused: {r}", file=sys.stderr)
