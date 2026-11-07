@@ -91,8 +91,8 @@ def test_free_gaps_under_one_gib_are_not_rows():
 
 # ---- D2: slider math and page state -----------------------------------------------------------
 
-def test_shrink_hidden_without_configurator_support(facts):
-    assert not hasattr(c, "shrink_choices")
+def test_shrink_hidden_without_configurator_support(facts, monkeypatch):
+    monkeypatch.delattr(c, "shrink_choices")
     _m, p = page_of(facts)
     assert p.shrink_supported() is False and p.shrink_options(NVME) == []
     p.set_mode("alongside")
@@ -191,3 +191,17 @@ def test_review_line_names_the_shrink(facts, shrink):
     assert review.shrink_line() in [r[2] for r in p8_review.summary_rows(review)]
     p.set_mode("alongside")
     assert review.shrink_line() == ""
+
+
+def test_real_shrink_choices_fragment_passes_validate(facts):
+    """The page against the merged configurator: its fragment is a shrink the judge accepts."""
+    _m, p = page_of(facts)
+    p.set_shrink_mode()
+    p.set_shrink_partition(P3)
+    frag = p.fragment()
+    assert frag["shrink"] == P3 and frag["shrink_size"] % MIB == 0
+    disk = next(d for d in facts["lsblk"]["blockdevices"] if d["path"] == NVME)
+    confirm = (disk.get("model") or disk.get("name")).strip()
+    answers = c.Answers.from_dict(dict(frag, username="x", password="x", confirm=confirm))
+    c.validate(answers, facts)
+    c.build_config(answers, facts)
