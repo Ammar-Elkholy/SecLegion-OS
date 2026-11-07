@@ -2,6 +2,11 @@
 # SPDX-License-Identifier: MIT
 # Repo files seclegion-branding needs (tools/pkg-source packs them into seclegion-src.tar.zst).
 desktop/branding/seclegion-logo.png
+desktop/branding/seclegion-logo-64.png
+desktop/branding/seclegion-logo-128.png
+desktop/branding/seclegion-logo-256.png
+desktop/branding/seclegion-logo-512.png
+desktop/branding/seclegion-logo-1024.png
 LICENSES/LicenseRef-SecLegion-Branding.txt
 desktop/branding/default.png
 LICENSE

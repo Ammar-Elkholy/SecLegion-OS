@@ -55,3 +55,37 @@ def test_a_pass_whose_serial_log_shows_arch_is_rejected(tmp_path):
 def test_name_rule_for_installed_files(text, hit):
     """D-BR-2: on installed files only the product name counts; technical uses of `arch` stay."""
     assert bool(branding.NAME_RE.search(text)) is hit
+
+
+# --- logo sizes: a 64 px logo upscaled in the installer was blurry ---
+
+BRANDING = f"{REPO}/desktop/branding"
+
+
+def png_width(path):
+    with open(path, "rb") as fh:
+        head = fh.read(24)
+    assert head[:8] == b"\x89PNG\r\n\x1a\n" and head[12:16] == b"IHDR", path
+    return int.from_bytes(head[16:20], "big")
+
+
+def test_logo_files_are_sharp():
+    import glob
+
+    files = sorted(glob.glob(f"{BRANDING}/seclegion-logo*.png"))
+    assert len(files) >= 6, files
+    for f in files:
+        if f.endswith("seclegion-logo-64.png"):
+            assert png_width(f) == 64  # the explicit small size
+        else:
+            assert png_width(f) >= 128, f
+
+
+def test_installer_sidebar_picks_a_logo_of_at_least_512():
+    import ast
+
+    tree = ast.parse(open(f"{REPO}/installer/ui/gtk/sidebar.py").read())
+    names = next(ast.literal_eval(n.value) for n in tree.body
+                 if isinstance(n, ast.Assign) and n.targets[0].id == "LOGO_FILES")
+    # the first choice is what gets drawn when it exists
+    assert png_width(f"{BRANDING}/{names[0]}") >= 512

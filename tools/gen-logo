@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Ammar Elkholy and SecLegion contributors
+# SPDX-License-Identifier: MIT
+# Regenerate desktop/branding/seclegion-logo-<N>.png from the owner's original artwork (never redrawn):
+# trim the transparent margin, pad to a square, resize. seclegion-logo.png is the 256 px version.
+# Usage: tools/gen-logo [SOURCE.png]   (default /mnt/Dev_Lab/SecLegion/SecLegion_Logo_Png.png)
+set -euo pipefail
+src="${1:-/mnt/Dev_Lab/SecLegion/SecLegion_Logo_Png.png}"
+out="$(cd "$(dirname "$0")/.." && pwd)/desktop/branding"
+[ -f "$src" ] || { echo "gen-logo: no source $src" >&2; exit 1; }
+command -v magick >/dev/null || { echo "gen-logo: ImageMagick (magick) is required" >&2; exit 1; }
+tmp="$(mktemp -d)"
+trap 'rm -rf -- "$tmp"' EXIT
+magick "$src" -background none -trim +repage -gravity center -extent '%[fx:max(w,h)]x%[fx:max(w,h)]' \
+    "$tmp/square.png"
+for n in 64 128 256 512 1024; do
+    magick "$tmp/square.png" -filter Lanczos -resize "${n}x${n}" -strip \
+        -define png:exclude-chunk=all -define png:compression-level=9 "PNG32:$out/seclegion-logo-$n.png"
+done
+cp -- "$out/seclegion-logo-256.png" "$out/seclegion-logo.png"
