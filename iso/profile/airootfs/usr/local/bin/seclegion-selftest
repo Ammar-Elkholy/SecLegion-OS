@@ -11,8 +11,9 @@ console, each prefixed `SECLEGION-SELFTEST `. It reports status only: user names
 return codes, unit names, file paths. It never prints a password hash (passwd -S gives a
 status letter) and refuses to emit any line that looks like one.
 
-The credential value is the action: `report` (default) or `kill-kiosk` (also kill the
-installer kiosk and show that the error screen appears; install mode only).
+The credential value is the action: `report` (default), `kill-kiosk` (also kill the
+installer kiosk and show that the error screen appears; install mode only) or `print-facts` (also run
+`seclegion-installer-gui --print-facts` as the kiosk user and emit what the disk page decided).
 """
 
 import ctypes
@@ -479,6 +480,16 @@ def kill_kiosk():
             "error_unit": state, "log": log, "log_exists": os.path.isfile(log)}
 
 
+def print_facts():
+    """What the installer GUI sees on this boot: install mode, the boot medium and each disk's refusal."""
+    rc, out = run(["runuser", "-u", INSTALLER, "--", "/usr/bin/seclegion-installer-gui", "--print-facts"],
+                  timeout=120)
+    try:
+        return {"rc": rc, "facts": json.loads(out)}
+    except ValueError:
+        return {"rc": rc, "facts": None}
+
+
 def main():
     console = Console(OUT)
     mode = mode_of_boot()
@@ -508,6 +519,11 @@ def main():
             console.emit("kiosk_error", mode=mode, **kill_kiosk())
         except Exception as exc:  # noqa: BLE001
             console.emit("error", mode=mode, probe="kiosk_error", reason=type(exc).__name__ + ": " + str(exc)[:200])
+    if todo == "print-facts":
+        try:
+            console.emit("gui_facts", mode=mode, **print_facts())
+        except Exception as exc:  # noqa: BLE001
+            console.emit("error", mode=mode, probe="gui_facts", reason=type(exc).__name__ + ": " + str(exc)[:200])
     console.emit("done", mode=mode)
     return 0
 
