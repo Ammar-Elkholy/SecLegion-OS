@@ -103,6 +103,60 @@ shot(win, "disk-700.png")
 rows = [w for w in walk(win.holder.get_first_child()) if w.get_name().startswith("row:")]
 out["narrow_ok"] = len(rows) == 6 and win.split.get_collapsed()
 win.destroy()
+# a refused disk still shows its analysis: the reason, the map and one read-only row per partition
+refused = dict(facts, install_mode=False)
+m = Model(refused)
+win = InstallerWindow(app, m)
+win.set_default_size(1280, 800)
+win.present()
+m.next()
+m.next()
+m.next()
+win.render()
+pump()
+root = win.holder.get_first_child()
+out["refused"] = {"why": any(w.get_name() == "why:" + NVME for w in walk(root)),
+                  "maps": sum(1 for w in walk(root) if isinstance(w, Gtk.DrawingArea)),
+                  "info": sorted(w.get_name() for w in walk(root) if w.get_name().startswith("info:"))}
+win.destroy()
+# shrink option (stubbed configurator.shrink_choices: the real one is on another branch)
+import configurator as cfg  # noqa: E402
+
+
+def _stub(disk, _facts):
+    return [{"path": p["path"], "name": p["name"], "fstype": p.get("fstype"), "label": p.get("label"),
+             "size": int(p["size"]), "min_size": 120 << 30, "max_size": int(p["size"]),
+             "code": None if p["path"] == "/dev/nvme0n1p3" else "shrink_too_small"}
+            for p in disk["children"]]
+
+
+cfg.shrink_choices = _stub
+m = Model(facts)
+m.pages["disk"].set_disk(NVME)
+win = InstallerWindow(app, m)
+win.set_default_size(1280, 800)
+win.present()
+m.next()
+m.next()
+m.next()
+win.render()
+pump()
+root = win.holder.get_first_child()
+byname = {w.get_name(): w for w in walk(root) if w.get_name()}
+byname["shrink:" + NVME].set_active(True)
+pump(10)
+byname = {w.get_name(): w for w in walk(root) if w.get_name()}
+scale = byname["shrinkscale:" + NVME]
+out["shrink"] = {"group_visible": byname["shrinkpart:/dev/nvme0n1p3"].get_mapped(),
+                 "p5_sensitive": byname["shrinkpart:/dev/nvme0n1p5"].get_sensitive(),
+                 "label": byname["shrinklabel:" + NVME].get_label(),
+                 "range": [scale.get_adjustment().get_lower(), scale.get_adjustment().get_upper()],
+                 "mode": m.pages["disk"].mode, "fragment": m.pages["disk"].fragment()}
+scale.set_value(150)
+pump(10)
+out["shrink"]["moved"] = [byname["shrinklabel:" + NVME].get_label(), m.pages["disk"].fragment()["shrink_size"]]
+win.destroy()
+del cfg.shrink_choices
 # alongside page: the disk map, the gap, the guide, all in rows
 m = Model(facts)
 m.pages["disk"].set_disk(NVME)

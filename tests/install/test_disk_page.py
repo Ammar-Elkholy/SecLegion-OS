@@ -316,6 +316,15 @@ def test_disk_page_renders_under_broadway(tmp_path):
         "/dev/nvme0n1p4": False, "/dev/nvme0n1p5": True, "/dev/nvme0n1p6": False}
     assert got["picked"] == "/dev/nvme0n1p5" and got["fragment"]["mode"] == "partition"
     assert got["narrow_ok"]
+    assert got["refused"]["why"] and got["refused"]["maps"] >= 1
+    assert [n for n in got["refused"]["info"] if not n.startswith("info:free:")] == [
+        f"info:/dev/nvme0n1p{i}" for i in range(1, 7)]
+    assert any(n.startswith("info:free:") for n in got["refused"]["info"])
+    sh = got["shrink"]
+    assert sh["group_visible"] and sh["p5_sensitive"] is False and sh["range"] == [40, 280]
+    assert sh["label"] == "SecLegion: 100 GiB · Windows: 300 GiB left"
+    assert sh["fragment"]["shrink"] == "/dev/nvme0n1p3" and sh["fragment"]["mode"] == "alongside"
+    assert sh["moved"] == ["SecLegion: 150 GiB · Windows: 250 GiB left", (400 - 150) << 30]
     assert got["alongside"]["key"] == "alongside" and got["alongside"]["maps"] == 1
     assert got["alongside"]["groups"] >= 2
     assert got["about"]["type"] == "AdwAboutDialog"

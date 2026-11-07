@@ -7,7 +7,9 @@ configurator.validate passes; any Refusal is shown verbatim."""
 
 import configurator as c
 import release
+from diskmap import human
 
+from . import p3_disk
 from .base import Page
 
 DRY_DIR = "/run/seclegion-install"  # display only: the real tmp dir is created by seclegion-install
@@ -66,12 +68,28 @@ class ReviewPage(Page):
             return None
         return (disk.get("model") or disk.get("name") or "").strip() or None
 
+    def shrink_line(self):
+        """"Shrink /dev/sda2 (Windows) from 500 GiB to 400 GiB" when the answers shrink a partition."""
+        a = self.ctx.answers()
+        if not a.get("shrink"):
+            return ""
+        try:
+            disk = c.find_disk(c.Answers(disk=a["disk"], username="x", password="x"), self.ctx.facts)
+        except c.Refusal:
+            return ""
+        part = next((p for p in disk.get("children") or [] if p.get("path") == a["shrink"]), {})
+        what = p3_disk.shrink_label({"label": part.get("label"), "fstype": part.get("fstype")})
+        return (f"Shrink {a['shrink']} ({what}) from {human(int(part.get('size') or 0))} "
+                f"to {human(a['shrink_size'])}")
+
     def warning(self):
         """What Install will destroy, in the mode's own words, then what to type."""
         exp = self.expected() or "?"
         mode = self.ctx.pages["disk"].mode
         if mode == "partition":
             head = f"This DELETES everything on partition {exp}; the other partitions stay."
+        elif mode == "alongside" and self.ctx.answers().get("shrink"):
+            head = "This shrinks a partition to make room; its files stay, but back them up first."
         elif mode == "alongside":
             head = "This uses the free space on the disk; the existing partitions stay."
         else:
@@ -132,7 +150,8 @@ def summary_rows(page):
     return [
         ("Disk", page.disk_label() or "Not found", a.get("disk", ""), "disk"),
         ("Mode", MODE_LABELS.get(a.get("mode"), a.get("mode") or "erase"),
-         f"{page.expected()} (everything on it is deleted)" if a.get("mode") == "partition" else "", "disk"),
+         f"{page.expected()} (everything on it is deleted)" if a.get("mode") == "partition"
+         else page.shrink_line(), "disk"),
         ("Encryption", "On (LUKS2)" if luks else "Off", "", "encryption" if luks else "disk"),
         ("User", f"{a.get('username', '')} on {a.get('hostname', '')}", "", "user"),
         ("Locale", f"{a.get('locale', '')}, keyboard {keyboard}", "", "language"),
