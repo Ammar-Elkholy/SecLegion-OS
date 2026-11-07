@@ -185,7 +185,7 @@ def test_two_runs_of_the_same_iso_coexist(tmp_path):
     assert (root / "TESTING.md").read_text().count("| M0-boot | PASS |") == 2
 
 
-def _selftest_log(mode, kill_kiosk=False, entry=None):
+def _selftest_log(mode, kill_kiosk=False, entry=None, gui_facts=False):
     """Serial text in the order seclegion-selftest really prints (start, state, units, privilege, isolation,
     installer, lock, repos, cache, [live: desktop], [kiosk marker, kiosk_error], done): every M2 pattern
     list must match it in order."""
@@ -213,6 +213,10 @@ def _selftest_log(mode, kill_kiosk=False, entry=None):
     if mode == "live":
         out += line("desktop", ', "hyprland_lua": true, "hyprland_lua_is_skel": true, '
                                '"live_processes": ["Hyprland", "waybar"]')
+    if gui_facts:
+        out = ("BOOT_IMAGE=/vmlinuz seclegion.mode=install copytoram=y\n" + out
+               + line("gui_facts", ', "rc": 0, "facts": {"install_mode": true, "boot_medium": "/dev/sr0", '
+                                   '"disks": [{"path": "/dev/vda", "refusal": null, "partitions": []}]}'))
     if kill_kiosk:
         out += "SECLEGION-KIOSK-ERROR log=/var/log/seclegion/kiosk.log\n"
         out += line("kiosk_error", ', "killed": true, "kiosk": "failed", "error_unit": "active"')
@@ -224,6 +228,7 @@ def _selftest_log(mode, kill_kiosk=False, entry=None):
     ("M2-units-live", lambda: _selftest_log("live")),
     ("M2-units-rescue", lambda: _selftest_log("rescue")),
     ("M2-privilege", lambda: _selftest_log("live", entry="live") + _selftest_log("install", entry="install")),
+    ("M2-kiosk-facts", lambda: _selftest_log("install", gui_facts=True)),
     ("M2-installer", lambda: _selftest_log("install", entry="install") + _selftest_log("live", entry="live")
      + _selftest_log("rescue", entry="rescue")),
     ("M2-kiosk-error", lambda: _selftest_log("install", kill_kiosk=True)),
@@ -249,6 +254,9 @@ def _m4_log(test_id, secret=""):
            "[phase target-check]\nDL-TARGET 0\n\n")
     if test_id == "M4-alongside":
         out += "[phase ntfs]\nNTFS-SHA256-UNCHANGED " + "ab" * 32 + "\n\n"
+    if test_id == "M4-shrink":  # test_m4_shrink.py: its own transcript, no installed boot
+        return ("[phase shrink]\nSECLEGION-INSTALL-OK\nDL-INSTALL 0\nCHECK-RC 0\nFIX-RC 0\nDL-TARGET 0\n"
+                "NTFS-FILE-SHA256-UNCHANGED " + "ef" * 32 + "\n" + secret)
     if test_id == "M4-partition":
         out += "[phase kept]\nPARTS-SHA256-UNCHANGED " + "cd" * 32 + "\n\n"
     out += ("[phase installed-boot]\nWelcome to SecLegion OS!\n[  OK  ] Started Greeter daemon.\n"
