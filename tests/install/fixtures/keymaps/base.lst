@@ -1,0 +1,21 @@
+! model
+  pc105           Generic 105-key PC (intl.)
+
+! layout
+  us              English (US)
+  gb              English (UK)
+  de              German
+  fr              French
+  es              Spanish
+  ara             Arabic
+  ru              Russian
+  zz9             Zed Test
+
+! variant
+  intl            us: English (US, intl., with dead keys)
+  nodeadkeys      de: German (no dead keys)
+  oss             fr: French (alt.)
+  azerty          ara: Arabic (AZERTY)
+
+! option
+  grp             Switching to another layout

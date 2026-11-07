@@ -19,6 +19,7 @@ import sys
 
 import gaming
 import hwplan
+import keymaps
 import release
 import virt
 import winboot
@@ -88,15 +89,44 @@ HW_UDEV = "etc/udev/rules.d/61-seclegion-gpu.rules"
 HW_PACKAGES = "var/lib/seclegion/hw-packages"  # what the plan installed; target_check reads it
 
 
-def greetd_config(extra):
-    """greetd config.toml; the greeter's cage gets the us+extra layouts and Alt+Shift when extras exist."""
+def xkb_for(hints):
+    """(layouts, variants) the installed system types with, or None for plain "us". The chosen layout
+    (keymaps.xkb_spec) wins; older hints carry only keyboard_extra ("us" plus the extras)."""
+    layout, variant = hints.get("xkb_layout") or "us", hints.get("xkb_variant") or ""
+    if layout != "us" or variant:
+        spec = keymaps.xkb_spec(layout, variant)
+    elif hints.get("keyboard_extra"):
+        spec = (",".join(["us", *hints["keyboard_extra"]]), "")
+    else:
+        return None
+    if not re.fullmatch(r"[A-Za-z0-9_,:-]+", spec[0]) or not re.fullmatch(r"[A-Za-z0-9_,:-]*", spec[1]):
+        raise PostError("bad keyboard layout name")
+    return spec
+
+
+def greetd_config(spec):
+    """greetd config.toml; the greeter's cage gets the layouts (and Alt+Shift when there are two)."""
     xkb = ""
-    if extra:
-        layouts = ",".join(["us", *extra])
-        if not re.fullmatch(r"[a-z0-9_,:-]+", layouts):
-            raise PostError("bad keyboard layout name")
-        xkb = f" XKB_DEFAULT_LAYOUT={layouts} XKB_DEFAULT_OPTIONS=grp:alt_shift_toggle"
+    if spec:
+        layouts, variants = spec
+        xkb = f" XKB_DEFAULT_LAYOUT={layouts}"
+        if variants:
+            xkb += f" XKB_DEFAULT_VARIANT={variants}"
+        if "," in layouts:
+            xkb += f" XKB_DEFAULT_OPTIONS={keymaps.TOGGLE}"
     return GREETD_CONFIG.format(command=GREETER_CMD.format(xkb=xkb))
+
+
+def kb_layout_lua(spec):
+    """/etc/seclegion/kb-layout.lua: the Hyprland input table (seclegion-host.lua loads it)."""
+    layouts, variants = spec
+    fields = [f'kb_layout = "{layouts}"']
+    if variants:
+        fields.append(f'kb_variant = "{variants}"')
+    if "," in layouts:
+        fields.append(f'kb_options = "{keymaps.TOGGLE}"')
+    return ("-- Written by seclegion-post from the installer's keyboard choice.\n"
+            "hl.config({ input = { " + ", ".join(fields) + " } })\n")
 
 
 # sshd@ + sshd-unix-local.socket: systemd-ssh-generator's local AF_UNIX socket would start sshd@
@@ -413,7 +443,8 @@ class Post:
             self.cmd(["systemctl", "--root", self.root, "enable", STEAM_UNIT])
         self.snapper_config()
         extra = self.hints.get("keyboard_extra") or []
-        self.write("etc/greetd/config.toml", greetd_config(extra))
+        spec = xkb_for(self.hints)
+        self.write("etc/greetd/config.toml", greetd_config(spec))
         self.write("etc/greetd/regreet.toml", REGREET_TOML)
         self.write("etc/greetd/regreet.css", REGREET_CSS)
         self.write("etc/greetd/sessions/hyprland.desktop", SESSION_FILE)
@@ -450,9 +481,10 @@ class Post:
         self.kernel_cmdline([*plan["kernel_params"], *([DEV_CMDLINE] if self.hints.get("dev") else [])])
         if win:
             self.windows_entry(win[1])
+        if spec:
+            # desktop/hypr/seclegion-host.lua loads this; seclegion-firstboot leaves an existing file alone.
+            self.write("etc/seclegion/kb-layout.lua", kb_layout_lua(spec))
         if extra:
-            # seclegion-firstboot turns this into /etc/seclegion/kb-layout.lua ("us" + extras), which
-            # desktop/hypr/seclegion-host.lua loads.
             self.write("etc/seclegion/keyboard-extra", ",".join(extra) + "\n")
         self.scrub()
 

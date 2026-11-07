@@ -46,6 +46,8 @@ def layout(root):
 
 def write_layout(root):
     path = os.path.join(root, KB_LUA)
+    if os.path.exists(path):  # seclegion-post wrote it from the installer's keyboard choice
+        return
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
         f.write(
