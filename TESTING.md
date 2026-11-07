@@ -7,44 +7,47 @@ Every row is one `result.json`. `PASS` is only ever written by a test that ran;
 `NOT RUN` means it did not. Evidence class: AUTO (VM, automatic), PROBE (VM, probe
 copy), HW-MANUAL (real hardware, signed attestation).
 
-Totals: 36 PASS, 1 FAIL, 0 NOT RUN
+Totals: 38 PASS, 2 FAIL, 0 NOT RUN
 
 | Test | Status | Class | ISO sha256 | Commit | Run (UTC) | Artifacts | result.json sha256 |
 |---|---|---|---|---|---|---|---|
-| M0-boot | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T03:40:19Z | 2 | `3d7dd0228361` |
-| M1-branding | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T03:49:50Z | 2 | `4a0cd6b54634` |
-| M1-fwsetup | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T03:49:29Z | 2 | `5fc7ba2b6d55` |
-| M1-memtest | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T03:48:06Z | 2 | `1af08dc9eaaf` |
-| M1-menu | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T03:42:08Z | 2 | `725ecc6241aa` |
-| M1-modes | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T03:44:06Z | 2 | `442fcf8de1dd` |
-| M1-theme-repro | FAIL | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T03:52:13Z | 0 | `24df77142885` |
-| M1-theme-repro | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T05:11:55Z | 1 | `b1fa7ca2d97d` |
-| M11-rollback | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:32:57Z | 1 | `1ef231f829b1` |
-| M12-desktop-units | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:36:23Z | 1 | `5beb8bc12e0d` |
-| M2-cache | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:01:50Z | 2 | `9e690b2dfe4a` |
-| M2-installer | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:01:37Z | 2 | `a77fbb0e6737` |
-| M2-kiosk-error | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T03:59:58Z | 2 | `cc673d8e319f` |
-| M2-lock | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:01:42Z | 2 | `281608b3af32` |
-| M2-privilege | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T03:59:19Z | 2 | `6797626fe9c2` |
-| M2-repos | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:01:47Z | 2 | `6efd592c4b1d` |
-| M2-units-install | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T03:52:39Z | 2 | `fbb86b6242a2` |
-| M2-units-live | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T03:54:54Z | 2 | `8de6973dad40` |
-| M2-units-rescue | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T03:57:13Z | 2 | `0a52bd79d13b` |
-| M4-alongside | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:25:47Z | 1 | `794f9e737af7` |
-| M4-erase | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:10:22Z | 1 | `f828f54af9d7` |
-| M4-luks | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:17:22Z | 1 | `dd3c73910a10` |
-| M4-mutation | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:39:45Z | 1 | `7cc38af68d26` |
-| M4-offline | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:37:58Z | 1 | `26ba4a2942a3` |
-| M4-target-clean | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:38:57Z | 1 | `ff329a2c3fc7` |
-| M5-diskfull | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:47:56Z | 1 | `4fc1d7364b2d` |
-| M5-fast | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:40:30Z | 2 | `74fce37ca231` |
-| M6-branding | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:53:46Z | 1 | `b6555d5deb20` |
-| M6-browsers | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:55:12Z | 1 | `9e50115d4b8b` |
-| M6-greeter | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:59:49Z | 2 | `e9248c0c6afb` |
-| M6-roles | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:50:24Z | 1 | `73f09620f610` |
-| M6-single-session | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:52:03Z | 1 | `63aea047793d` |
-| M7a-defaults | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:56:51Z | 1 | `d904e0385006` |
-| M7a-docker-ufw | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:58:11Z | 1 | `5f043c85ae5c` |
-| S2-host-repo | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T04:01:53Z | 2 | `5d2ef5a6a890` |
-| S6-userlua | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T05:07:58Z | 1 | `059cbb150e54` |
-| S7-result | PASS | AUTO | `7fe0becda986` | `184c34083e19` | 2026-11-01T05:09:43Z | 1 | `2ba09272ca29` |
+| M0-boot | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:26:10Z | 2 | `58bcd734f8c1` |
+| M1-branding | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:40:09Z | 2 | `f6000504ec1e` |
+| M1-fwsetup | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:39:33Z | 2 | `4d68d72099f3` |
+| M1-memtest | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:38:21Z | 2 | `169f24652224` |
+| M1-menu | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:32:37Z | 2 | `b175417cf275` |
+| M1-modes | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:34:54Z | 2 | `7960e07eb5a7` |
+| M1-theme-repro | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:42:24Z | 1 | `98759bed1475` |
+| M11-rollback | PASS | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T22:53:11Z | 1 | `cccd10879c00` |
+| M12-desktop-units | PASS | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T23:00:58Z | 1 | `84bea3b7a200` |
+| M2-cache | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:50:24Z | 2 | `4f0f59b89dc4` |
+| M2-installer | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:50:04Z | 2 | `ce674cd221ce` |
+| M2-kiosk-error | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:48:39Z | 2 | `f582b90dbd47` |
+| M2-live-desktop | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:50:14Z | 2 | `f740a9686e08` |
+| M2-lock | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:50:09Z | 2 | `98e0d3c61b3d` |
+| M2-privilege | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:48:11Z | 2 | `9d1b28ddff78` |
+| M2-repos | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:50:19Z | 2 | `30cdc0fcaeb1` |
+| M2-units-install | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:42:51Z | 2 | `6cdc8c6ff820` |
+| M2-units-live | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:44:53Z | 2 | `a664a047a01e` |
+| M2-units-rescue | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:46:47Z | 2 | `24f406bcb0af` |
+| M4-alongside | PASS | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T22:43:20Z | 1 | `e77a0e8cbaed` |
+| M4-erase | PASS | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T22:28:17Z | 1 | `9c67381ccfdc` |
+| M4-luks | PASS | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T22:35:10Z | 1 | `9b594e3ec3a9` |
+| M4-mutation | PASS | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T23:02:05Z | 1 | `42005778b33b` |
+| M4-offline | PASS | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T23:01:58Z | 1 | `c1fe32967cdb` |
+| M4-partition | FAIL | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T22:50:29Z | 1 | `ec0e4aaa4655` |
+| M4-partition | FAIL | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:21:57Z | 1 | `2e4cd935934b` |
+| M4-partition | PASS | AUTO | `df39ea406ae6` | `ac815910729e` | 2026-11-06T23:53:37Z | 1 | `04b9db03379b` |
+| M4-target-clean | PASS | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T23:02:02Z | 1 | `a9954ff3329f` |
+| M5-diskfull | PASS | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T23:09:11Z | 1 | `c5f5b389b1ec` |
+| M5-fast | PASS | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T23:02:08Z | 2 | `ed1b558a5e5a` |
+| M6-branding | PASS | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T23:14:43Z | 1 | `b545593f8889` |
+| M6-browsers | PASS | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T23:16:28Z | 1 | `8b2aee37a0bc` |
+| M6-greeter | PASS | AUTO | `df39ea406ae6` | `ac815910729e` | 2026-11-07T00:00:58Z | 2 | `9639618fa1e4` |
+| M6-roles | PASS | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T23:11:27Z | 1 | `26a7153776fc` |
+| M6-single-session | PASS | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T23:13:20Z | 1 | `1342635b873f` |
+| M7a-defaults | PASS | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T23:17:28Z | 1 | `944a8563f9fd` |
+| M7a-docker-ufw | PASS | AUTO | `df39ea406ae6` | `c8b4ced32ee8` | 2026-11-06T23:18:35Z | 1 | `0b7c51fcc923` |
+| S2-host-repo | PASS | AUTO | `df39ea406ae6` | `c8139c89ad60` | 2026-11-06T23:50:29Z | 2 | `dfa34b746385` |
+| S6-userlua | PASS | AUTO | `df39ea406ae6` | `ac815910729e` | 2026-11-07T00:08:48Z | 1 | `b32e8ead20f4` |
+| S7-result | PASS | AUTO | `df39ea406ae6` | `ac815910729e` | 2026-11-07T00:11:03Z | 1 | `151f45b4f452` |

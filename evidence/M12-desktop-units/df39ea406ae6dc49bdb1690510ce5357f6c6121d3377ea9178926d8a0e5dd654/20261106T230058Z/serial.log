@@ -1,0 +1,351 @@
+BdsDxe: loading Boot0004 "Linux Boot Manager" from HD(1,GPT,8AAC7489-5C31-4FA1-8EC2-545051C6DEEA,0x800,0x200000)/\EFI\systemd\systemd-bootx64.efi
+BdsDxe: starting Boot0004 "Linux Boot Manager" from HD(1,GPT,8AAC7489-5C31-4FA1-8EC2-545051C6DEEA,0x800,0x200000)/\EFI\systemd\systemd-bootx64.efi
+             SecLegion OS               Reboot Into Firmware Interface                                                                             Boot in 3s.                                                                          ──────────────────────────────────────────                                                                          Boot in 2s.                                                                          ──────────────────────────────────────────                                                                          Boot in 1s.                                                                          ──────────────────────────────────────────[    0.372303] virt/tdx: TDX not supported by the host platform
+:: running early hook [udev]
+Starting systemd-udevd version 262-1-arch
+:: running hook [udev]
+:: Triggering uevents...
+:: running hook [keymap]
+:: Loading keymap...kbd_mode: KDSKBMODE: Inappropriate ioctl for device
+%Gdone.
+:: running hook [consolefont]
+:: Loading console font...a Couldn't open /dev/console
+done.
+:: performing fsck on 'PARTUUID=30be5ab7-06df-4e36-adf2-c09e987f0f01'
+:: mounting 'PARTUUID=30be5ab7-06df-4e36-adf2-c09e987f0f01' on real root
+:: running cleanup hook [udev]
++q6E616D6578
+Welcome to SecLegion OS!
+
+[  OK  ] Created slice Slice /system/dirmngr.
+[  OK  ] Created slice Slice /system/getty.
+[  OK  ] Created slice Slice /system/gpg-agent.
+[  OK  ] Created slice Slice /system/gpg-agent-browser.
+[  OK  ] Created slice Slice /system/gpg-agent-extra.
+[  OK  ] Created slice Slice /system/gpg-agent-ssh.
+[  OK  ] Created slice Slice /system/keyboxd.
+[  OK  ] Created slice Slice /system/modprobe.
+[  OK  ] Created slice Slice /system/serial-getty.
+[  OK  ] Created slice Slice /system/systemd-zram-setup.
+[  OK  ] Created slice User and Session Slice.
+[  OK  ] Started Dispatch Password Requests to Console Directory Watch.
+[  OK  ] Started Forward Password Requests to Wall Directory Watch.
+[  OK  ] Set up automount Arbitrary Executa…ormats File System Automount Point.
+         Expecting device /dev/disk/by-uuid…8efa-47c4-4a7f-aa63-283cb73feaa6...
+         Expecting device /dev/disk/by-uuid/AB0C-A975...
+         Expecting device /dev/ttyS0...
+         Expecting device /dev/zram0...
+[  OK  ] Reached target Local dm-clone Devices.
+[  OK  ] Reached target Image Downloads.
+[  OK  ] Reached target Local Integrity Protected Volumes.
+[  OK  ] Reached target Path Units.
+[  OK  ] Reached target Remote File Systems.
+[  OK  ] Reached target Slice Units.
+[  OK  ] Reached target Local Verity Protected Volumes.
+[  OK  ] Listening on Device-mapper event daemon FIFOs.
+[  OK  ] Listening on Query the User Interactively for a Password.
+[  OK  ] Listening on Process Core Dump Socket.
+[  OK  ] Listening on Credential Encryption/Decryption.
+[  OK  ] Listening on Disk Encryption Enrollment Service Socket.
+[  OK  ] Listening on Factory Reset Management.
+[  OK  ] Listening on Hostname Service Socket.
+[  OK  ] Listening on Journal Socket (/dev/log).
+[  OK  ] Listening on Journal Sockets.
+[  OK  ] Listening on Console Output Muting Service Socket.
+[  OK  ] Listening on Disk Repartitioning Service Socket.
+[  OK  ] Listening on Simple Block Device Backed Storage Provider.
+[  OK  ] Listening on Simple File System Backed Storage Provider.
+[  OK  ] Listening on System Install Tool.
+[  OK  ] Listening on System Updates.
+[  OK  ] Listening on udev Kernel Socket.
+[  OK  ] Listening on udev Varlink Socket.
+[  OK  ] Listening on User Database Manager Socket.
+         Mounting Huge Pages File System...
+         Mounting POSIX Message Queue File System...
+         Mounting Kernel Debug File System...
+         Mounting Kernel Trace File System...
+         Starting Create List of Static Device Nodes...
+         Mounting Kernel Configuration File System...
+         Mounting FUSE Control File System...
+         Starting Journal Service...
+         Starting Load Kernel Modules...
+         Starting Remount Root and Kernel File Systems...
+[  OK  ] Reached target Local Encrypted Volumes.
+         Starting Load udev Rules from Credentials...
+         Starting Coldplug All udev Devices...
+[  OK  ] Mounted Huge Pages File System.
+[  OK  ] Mounted POSIX Message Queue File System.
+[  OK  ] Mounted Kernel Debug File System.
+[  OK  ] Mounted Kernel Trace File System.
+[  OK  ] Finished Create List of Static Device Nodes.
+[  OK  ] Mounted Kernel Configuration File System.
+[  OK  ] Mounted FUSE Control File System.
+         Starting Create Static Device Nodes in /dev gracefully...
+[  OK  ] Finished Load udev Rules from Credentials.
+[  OK  ] Finished Load Kernel Modules.
+         Starting Apply Kernel Variables...
+[  OK  ] Started Journal Service.
+[  OK  ] Finished Remount Root and Kernel File Systems.
+[  OK  ] Finished Apply Kernel Variables.
+         Starting Load/Save OS Random Seed...
+         Starting User Database Manager...
+         Starting CLI Netfilter Manager...
+[  OK  ] Finished Coldplug All udev Devices.
+[  OK  ] Finished Load/Save OS Random Seed.
+[  OK  ] Started User Database Manager.
+[  OK  ] Finished Create Static Device Nodes in /dev gracefully.
+         Starting Create System Users...
+[  OK  ] Finished Create System Users.
+         Starting Journal Log Access Socket...
+         Starting Network Time Synchronization...
+         Starting Create Static Device Nodes in /dev...
+[  OK  ] Listening on Journal Log Access Socket.
+[  OK  ] Finished Create Static Device Nodes in /dev.
+[  OK  ] Reached target Preparation for Local File Systems.
+         Starting Rule-based Manager for Device Events and Files...
+[  OK  ] Started Network Time Synchronization.
+[  OK  ] Reached target System Time Set.
+[  OK  ] Started Rule-based Manager for Device Events and Files.
+[  OK  ] Finished CLI Netfilter Manager.
+[  OK  ] Found device /dev/zram0.
+         Starting Create swap on /dev/zram0...
+[  OK  ] Finished Create swap on /dev/zram0.
+         Activating swap Compressed Swap on /dev/zram0...
+[  OK  ] Found device /dev/ttyS0.
+[  OK  ] Activated swap Compressed Swap on /dev/zram0.
+[  OK  ] Reached target Swaps.
+[  OK  ] Found device QEMU_HARDDISK 1.
+[  OK  ] Found device QEMU_HARDDISK 2.
+         Starting Virtual Console Setup...
+[  OK  ] Finished Virtual Console Setup.
+         Mounting /.snapshots...
+         Mounting /boot...
+         Mounting /home...
+         Mounting Temporary Directory /tmp...
+         Mounting /var/cache/pacman/pkg...
+[  OK  ] Listening on Disk Image Download Service Socket.
+         Mounting /var/log...
+[  OK  ] Mounted /.snapshots.
+[  OK  ] Mounted Temporary Directory /tmp.
+[  OK  ] Mounted /home.
+[  OK  ] Mounted /var/cache/pacman/pkg.
+[  OK  ] Mounted /var/log.
+         Starting Flush Journal to Persistent Storage...
+[  OK  ] Mounted /boot.
+[  OK  ] Reached target Local File Systems.
+[  OK  ] Listening on Boot Loader Control Service Socket.
+[  OK  ] Listening on System Extension Image Management.
+         Starting Update Boot Loader Random Seed...
+         Starting Load JSON user/group Records from Credentials...
+[  OK  ] Finished Load JSON user/group Records from Credentials.
+[  OK  ] Finished Flush Journal to Persistent Storage.
+         Starting Create System Files and Directories...
+[  OK  ] Finished Update Boot Loader Random Seed.
+[  OK  ] Finished Create System Files and Directories.
+         Starting Rebuild Dynamic Linker Cache...
+         Starting Rebuild Journal Catalog...
+         Starting Record System Boot/Shutdown in UTMP...
+[  OK  ] Finished Record System Boot/Shutdown in UTMP.
+[  OK  ] Finished Rebuild Journal Catalog.
+[*     ] A start job is running for Rebuild …namic Linker Cache (3s / no limit)
+[  OK  ] Finished Rebuild Dynamic Linker Cache.
+         Starting Update is Completed...
+[  OK  ] Finished Update is Completed.
+[  OK  ] Reached target System Initialization.
+[  OK  ] Started Refresh existing PGP keys of archlinux-keyring regularly.
+[  OK  ] Started Discard unused filesystem blocks once a week.
+[  OK  ] Started Daily verification of password and group files.
+[  OK  ] Started Hourly Cleanup of Snapper Snapshots.
+[  OK  ] Started Daily Cleanup of Temporary Directories.
+[  OK  ] Reached target Timer Units.
+[  OK  ] Listening on D-Bus System Message Bus Socket.
+[  OK  ] Listening on GnuPG network certifi…ent daemon for /etc/pacman.d/gnupg.
+         Starting Docker Socket for the API...
+[  OK  ] Listening on GnuPG cryptographic a… browsers) for /etc/pacman.d/gnupg.
+[  OK  ] Listening on GnuPG cryptographic a…estricted) for /etc/pacman.d/gnupg.
+[  OK  ] Listening on GnuPG cryptographic a…emulation) for /etc/pacman.d/gnupg.
+[  OK  ] Listening on GnuPG cryptographic a…rase cache for /etc/pacman.d/gnupg.
+[  OK  ] Listening on GnuPG public key mana…nt service for /etc/pacman.d/gnupg.
+[  OK  ] Listening on Authorization Manager Agent Helper.
+[  OK  ] Listening on User Login Management Varlink Socket.
+[  OK  ] Listening on Virtual Machine and C…tainer Registration Service Socket.
+         Starting D-Bus System Message Bus...
+[  OK  ] Listening on Docker Socket for the API.
+[  OK  ] Reached target Socket Units.
+[  OK  ] Started D-Bus System Message Bus.
+[  OK  ] Reached target Basic System.
+         Starting Network Manager...
+         Starting SecLegion OS first boot setup...
+         Starting User Login Management...
+         Starting Hostname Service...
+[  OK  ] Started User Login Management.
+[  OK  ] Started Hostname Service.
+[  OK  ] Listening on Load/Save RF Kill Switch Status /dev/rfkill Watch.
+         Starting Network Manager Script Dispatcher Service...
+[  OK  ] Started Network Manager.
+[  OK  ] Reached target Network.
+         Starting Network Manager Wait Online...
+         Starting containerd container runtime...
+         Starting Permit User Sessions...
+[  OK  ] Started Network Manager Script Dispatcher Service.
+[  OK  ] Finished Permit User Sessions.
+[  OK  ] Started Greeter daemon.
+[  OK  ] Started Serial Getty on ttyS0.
+[  OK  ] Reached target Login Prompts.
+         Starting DBus interface for snapper...
+[  OK  ] Finished Network Manager Wait Online.
+[  OK  ] Reached target Network is Online.
+[  OK  ] Started DBus interface for snapper.
+[  OK  ] Created slice User Slice of UID 963.
+         Starting User Runtime Directory /run/user/963...
+[  OK  ] Finished SecLegion OS first boot setup.
+[  OK  ] Finished User Runtime Directory /run/user/963.
+         Starting User Manager for UID 963...
+[  OK  ] Started containerd container runtime.
+         Starting Docker Application Container Engine...
+[  OK  ] Started User Manager for UID 963.
+[  OK  ] Started Session 1 of User greeter.
+[  OK  ] Stopped Virtual Console Setup.
+         Stopping Virtual Console Setup...
+         Starting Virtual Console Setup...
+[  OK  ] Finished Virtual Console Setup.
+         Starting Accounts Service...
+[  OK  ] Started Docker Application Container Engine.
+[  OK  ] Reached target Multi-User System.
+[  OK  ] Reached target Graphical Interface.
+         Starting Power Profiles daemon...
+         Starting Authorization Manager...
+[  OK  ] Started Authorization Manager.
+[  OK  ] Started Accounts Service.
+[  OK  ] Started Power Profiles daemon.
+7878+q6E616D65
+SecLegion OS 7.2.9-arch1-1 (ttyS0)
+
+seclegion login: 
+seclegion login: tester
+Password: 
+[tester@seclegion ~]$ pacman -Q seclegion-wifi seclegion-sysmon seclegion-settings seclegion-desktop seclegion-branding libnm python-psutil 2>&1; echo M12''RC1:$?
+warning: database file for 'core' does not exist (use '-Sy' to download)
+warning: database file for 'extra' does not exist (use '-Sy' to download)
+seclegion-wifi 0.1.0-1
+seclegion-sysmon 0.1.0-1
+seclegion-settings 0.1.0-2
+seclegion-desktop 0.1.0-4
+seclegion-branding 0.1.0-2
+libnm 1.58.1-2
+python-psutil 7.2.2-1
+M12RC1:0
+[tester@seclegion ~]$ echo M12''-PKGS wifi sysmon settings desktop branding libnm psutil installed; echo M12''RC2:$?
+M12-PKGS wifi sysmon settings desktop branding libnm psutil installed
+M12RC2:0
+stat -c 'MODE %U %G %a' /usr/bin/seclegion-root-apply; echo M12''RC3:$?
+[tester@seclegion ~]$ stat -c 'MODE %U %G %a' /usr/bin/seclegion-root-apply; echo M12''RC3:$?
+MODE root root 755
+M12RC3:0
+grep -c 'action id="org.seclegion.settings.root-apply"' /usr/share/polkit-1/actions/org.seclegion.settings.policy; echo M12''RC4:$?
+[tester@seclegion ~]$ grep -c 'action id="org.seclegion.settings.root-apply"' /usr/share/polkit-1/actions/org.seclegion.settings.policy; echo M12''RC4:$?
+1
+M12RC4:0
+pkaction --action-id org.seclegion.settings.root-apply; echo M12''RC5:$?
+[tester@seclegion ~]$ pkaction --action-id org.seclegion.settings.root-apply; echo M12''RC5:$?
+org.seclegion.settings.root-apply
+M12RC5:0
+echo M12''-HELPER root 755 polkit action registered; echo M12''RC6:$?
+[tester@seclegion ~]$ echo M12''-HELPER root 755 polkit action registered; echo M12''RC6:$?
+M12-HELPER root 755 polkit action registered
+M12RC6:0
+sudo -k; sudo -v
+[tester@seclegion ~]$ sudo -k; sudo -v
+
+We trust you have received the usual lecture from the local System
+Administrator. It usually boils down to these three things:
+
+    #1) Respect the privacy of others.
+    #2) Think before you type.
+    #3) With great power comes great responsibility.
+
+For security reasons, the password you type will not be visible.
+
+[sudo] password for tester: 
+[tester@seclegion ~]$ sudo -n /usr/bin/seclegion-root-apply --dry-run region.timezone Europe/Berlin; echo M12''RC7:$?
+would run: /usr/bin/timedatectl set-timezone Europe/Berlin
+M12RC7:0
+sudo -n /usr/bin/seclegion-root-apply region.timezone Europe/Berlin; echo M12''RC8:$?
+[tester@seclegion ~]$ sudo -n /usr/bin/seclegion-root-apply region.timezone Europe/Berlin; echo M12''RC8:$?
+running: /usr/bin/timedatectl set-timezone Europe/Berlin
+M12RC8:0
+readlink /etc/localtime; echo M12''RC9:$?
+[tester@seclegion ~]$ readlink /etc/localtime; echo M12''RC9:$?
+../usr/share/zoneinfo/Europe/Berlin
+M12RC9:0
+sha256sum /etc/passwd; echo M12''RC10:$?
+[tester@seclegion ~]$ sha256sum /etc/passwd; echo M12''RC10:$?
+d40f401c704ebb15490d2b1034ea52d5dd273222ec1d22d95755285a277b0130  /etc/passwd
+M12RC10:0
+sudo -n /usr/bin/seclegion-root-apply region.timezone ../../etc/passwd; echo M12''RC11:$?
+[tester@seclegion ~]$ sudo -n /usr/bin/seclegion-root-apply region.timezone ../../etc/passwd; echo M12''RC11:$?
+seclegion-root-apply: region.timezone: '../../etc/passwd' is not a valid value
+M12RC11:2
+readlink /etc/localtime; echo M12''RC12:$?
+[tester@seclegion ~]$ readlink /etc/localtime; echo M12''RC12:$?
+../usr/share/zoneinfo/Europe/Berlin
+M12RC12:0
+sha256sum /etc/passwd; echo M12''RC13:$?
+[tester@seclegion ~]$ sha256sum /etc/passwd; echo M12''RC13:$?
+d40f401c704ebb15490d2b1034ea52d5dd273222ec1d22d95755285a277b0130  /etc/passwd
+M12RC13:0
+echo M12''-ROOTAPPLY dry-run then real timezone set bad value refused; echo M12''RC14:$?
+[tester@seclegion ~]$ echo M12''-ROOTAPPLY dry-run then real timezone set bad value refused; echo M12''RC14:$?
+M12-ROOTAPPLY dry-run then real timezone set bad value refused
+M12RC14:0
+stat -c 'MODE %a' /etc/snapper/configs/root; echo M12''RC15:$?
+[tester@seclegion ~]$ stat -c 'MODE %a' /etc/snapper/configs/root; echo M12''RC15:$?
+MODE 644
+M12RC15:0
+test -r /etc/snapper/configs/root; echo M12''RC16:$?
+[tester@seclegion ~]$ test -r /etc/snapper/configs/root; echo M12''RC16:$?
+M12RC16:0
+echo M12''-SNAPPER config mode 644 readable; echo M12''RC17:$?
+[tester@seclegion ~]$ echo M12''-SNAPPER config mode 644 readable; echo M12''RC17:$?
+M12-SNAPPER config mode 644 readable
+M12RC17:0
+test -f /usr/lib/systemd/user/seclegion-displayd.service; echo M12''RC18:$?
+[tester@seclegion ~]$ test -f /usr/lib/systemd/user/seclegion-displayd.service; echo M12''RC18:$?
+M12RC18:0
+readlink /usr/lib/systemd/user/graphical-session.target.wants/seclegion-displayd.service; echo M12''RC19:$?
+[tester@seclegion ~]$ readlink /usr/lib/systemd/user/graphical-session.target.wants/seclegion-displayd.service; echo M12''RC19:$?
+/usr/lib/systemd/user/seclegion-displayd.service
+M12RC19:0
+test -f /usr/lib/systemd/user/seclegion-wallpaper.service; echo M12''RC20:$?
+[tester@seclegion ~]$ test -f /usr/lib/systemd/user/seclegion-wallpaper.service; echo M12''RC20:$?
+M12RC20:0
+readlink /usr/lib/systemd/user/graphical-session.target.wants/seclegion-wallpaper.service; echo M12''RC21:$?
+[tester@seclegion ~]$ readlink /usr/lib/systemd/user/graphical-session.target.wants/seclegion-wallpaper.service; echo M12''RC21:$?
+/usr/lib/systemd/user/seclegion-wallpaper.service
+M12RC21:0
+test -s /usr/share/backgrounds/seclegion/default.png; echo M12''RC22:$?
+[tester@seclegion ~]$ test -s /usr/share/backgrounds/seclegion/default.png; echo M12''RC22:$?
+M12RC22:0
+test -x /usr/bin/seclegion-display-menu; echo M12''RC23:$?
+[tester@seclegion ~]$ test -x /usr/bin/seclegion-display-menu; echo M12''RC23:$? ?
+M12RC23:0
+test -x /usr/bin/seclegion-sysmon; echo M12''RC24:$?
+[tester@seclegion ~]$ test -x /usr/bin/seclegion-sysmon; echo M12''RC24:$?
+M12RC24:0
+test -x /usr/bin/seclegion-wifi; echo M12''RC25:$?
+[tester@seclegion ~]$ test -x /usr/bin/seclegion-wifi; echo M12''RC25:$?
+M12RC25:0
+echo M12''-UNITS displayd wallpaper enabled launchers executable; echo M12''RC26:$?
+[tester@seclegion ~]$ echo M12''-UNITS displayd wallpaper enabled launchers executable; echo M12''RC26:$?
+M12-UNITS displayd wallpaper enabled launchers executable
+M12RC26:0
+python3 -I -c 'import sys; sys.path.insert(0, "/usr/lib/seclegion/python"); import seclegion_wifi.data, seclegion_sysmon.data; print(seclegion_wifi.data.__file__); print(seclegion_sysmon.data.__file__)'; echo M12''RC27:$?
+[tester@seclegion ~]$ python3 -I -c 'import sys; sys.path.insert(0, "/usr/lib/seclegion/python"); import seclegion_wifi.data, seclegion_sysmon.data; print(seclegion_wifi.data.__file__); print(seclegion_sysmon.data.__file__)'; echo M12''RC27:$?
+/usr/lib/seclegion/python/seclegion_wifi/data.py
+/usr/lib/seclegion/python/seclegion_sysmon/data.py
+M12RC27:0
+echo M12''-IMPORTS wifi sysmon data modules import; echo M12''RC28:$?
+[tester@seclegion ~]$ echo M12''-IMPORTS wifi sysmon data modules import; echo M12''RC28:$?
+M12-IMPORTS wifi sysmon data modules import
+M12RC28:0
+[tester@seclegion ~]$ 

@@ -1,0 +1,26 @@
+{
+  "actual": "Memtest86+ started and printed its title bar on serial",
+  "artifacts": {
+    "screen.png": "8005763fc959329662bc57f0c12802e597e62f3f66db7397ce2d44149ce4a74d",
+    "serial.log": "af796bec03fe6a77f11ce359a67a2b132eb84919ac2706ba557ae0c32e5a1636"
+  },
+  "class": "AUTO",
+  "command": "qemu-system-x86_64 -name seclegion-harness -machine q35,accel=kvm -cpu host -smp 2 -m 4096 -display none -vga std -nic none -no-reboot -drive if=pflash,format=raw,readonly=on,file=/usr/share/edk2/x64/OVMF_CODE.4m.fd -drive if=pflash,format=raw,file=evidence/M1-memtest/df39ea406ae6dc49bdb1690510ce5357f6c6121d3377ea9178926d8a0e5dd654/20261106T233821Z/OVMF_VARS.fd -drive file=out/seclegion-2026.11.06-x86_64.iso,if=none,id=cd0,media=cdrom,readonly=on -device virtio-scsi-pci,id=scsi0 -device scsi-cd,drive=cd0,bus=scsi0.0 -chardev socket,id=ser0,fd=12,logfile=evidence/M1-memtest/df39ea406ae6dc49bdb1690510ce5357f6c6121d3377ea9178926d8a0e5dd654/20261106T233821Z/serial.log -serial chardev:ser0 -chardev socket,id=qmp0,fd=14 -mon chardev=qmp0,mode=control",
+  "commit": "c8139c89ad6082a02745910acc7ef3cf983d8cf1",
+  "env": {
+    "host": "Linux 7.2.11-arch1-1",
+    "kvm": true,
+    "ocr": "OK"
+  },
+  "exit_code": 0,
+  "expected": "Memory Test boots Memtest86+: its banner is on serial",
+  "iso_sha256": "df39ea406ae6dc49bdb1690510ce5357f6c6121d3377ea9178926d8a0e5dd654",
+  "schema": 1,
+  "serial_patterns": [
+    "Memory Test \\(Memtest86\\+\\)",
+    "Memtest86\\+ v\\d+\\.\\d+"
+  ],
+  "status": "PASS",
+  "test_id": "M1-memtest",
+  "timestamp": "2026-11-06T23:38:21Z"
+}

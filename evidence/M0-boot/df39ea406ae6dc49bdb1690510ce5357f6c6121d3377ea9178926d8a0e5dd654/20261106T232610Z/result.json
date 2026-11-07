@@ -1,0 +1,26 @@
+{
+  "actual": "serial showed the archiso UEFI boot entry in the systemd-boot menu, then a login prompt; screendump written",
+  "artifacts": {
+    "screen.png": "4972d256b311bbc2e0de6ee235ebfe4b027fcc91fa07eb62eada24b28f7faef8",
+    "serial.log": "7d76d37572d80551df9ffa3a171ff8d210d7f618c42cc3dd694e70477e281946"
+  },
+  "class": "AUTO",
+  "command": "qemu-system-x86_64 -name seclegion-harness -machine q35,accel=kvm -cpu host -smp 2 -m 4096 -display none -vga std -nic none -no-reboot -drive if=pflash,format=raw,readonly=on,file=/usr/share/edk2/x64/OVMF_CODE.4m.fd -drive if=pflash,format=raw,file=evidence/M0-boot/df39ea406ae6dc49bdb1690510ce5357f6c6121d3377ea9178926d8a0e5dd654/20261106T232610Z/OVMF_VARS.fd -drive file=out/seclegion-2026.11.06-x86_64.iso,if=none,id=cd0,media=cdrom,readonly=on -device virtio-scsi-pci,id=scsi0 -device scsi-cd,drive=cd0,bus=scsi0.0 -chardev socket,id=ser0,fd=12,logfile=evidence/M0-boot/df39ea406ae6dc49bdb1690510ce5357f6c6121d3377ea9178926d8a0e5dd654/20261106T232610Z/serial.log -serial chardev:ser0 -chardev socket,id=qmp0,fd=14 -mon chardev=qmp0,mode=control",
+  "commit": "c8139c89ad6082a02745910acc7ef3cf983d8cf1",
+  "env": {
+    "host": "Linux 7.2.11-arch1-1",
+    "kvm": true,
+    "ocr": "OK"
+  },
+  "exit_code": 0,
+  "expected": "serial matches /Install SecLegion OS/ then /seclegion login:|root@seclegion/ within 600s; screendump taken",
+  "iso_sha256": "df39ea406ae6dc49bdb1690510ce5357f6c6121d3377ea9178926d8a0e5dd654",
+  "schema": 1,
+  "serial_patterns": [
+    "Install SecLegion OS",
+    "seclegion login:|root@seclegion"
+  ],
+  "status": "PASS",
+  "test_id": "M0-boot",
+  "timestamp": "2026-11-06T23:26:10Z"
+}

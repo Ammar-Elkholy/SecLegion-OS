@@ -287,3 +287,24 @@ name = "checkpoint E: hardware, AI, virtualisation"
 tier = "1.1"
 weight = 3
 status = "todo"
+
+[[item]]
+id = "I12"
+name = "install flow gaps G1-G4, G7, G12 core + partition mode (ISO #12, all VM gates PASS)"
+tier = "1.0"
+weight = 9
+status = "done"
+
+[[item]]
+id = "I13"
+name = "install progress stages (G5), G12 scroll/icons, no-NIC install-mode gate"
+tier = "1.0"
+weight = 5
+status = "todo"
+
+[[item]]
+id = "I14"
+name = "live Install launcher (G6), Arabic installer text (G8)"
+tier = "1.1"
+weight = 5.5
+status = "todo"

@@ -1,0 +1,34 @@
+{
+  "actual": "wrong and ara-group passwords start nothing, the right one starts Hyprland",
+  "artifacts": {
+    "screen.png": "c2f1fb04f5932f3762c5dd299bf6382e3c5a8c812aea96f8db53fcf09d9fd581",
+    "serial.log": "b17e561bc07d5cda33ac01d5f82413e214c817902e21178f47d993104281abd8"
+  },
+  "class": "AUTO",
+  "command": "qemu-system-x86_64 -name seclegion-harness -machine q35,accel=kvm -cpu host -smp 2 -m 4096 -display none -vga std -nic none -no-reboot -drive if=pflash,format=raw,readonly=on,file=/usr/share/edk2/x64/OVMF_CODE.4m.fd -drive if=pflash,format=raw,file=/var/tmp/seclegion-build/vm/i2-ofdl5oua/boot/OVMF_VARS.fd -drive file=out/seclegion-2026.11.06-x86_64.iso,if=none,id=cd0,media=cdrom,readonly=on -device virtio-scsi-pci,id=scsi0 -device scsi-cd,drive=cd0,bus=scsi0.0 -drive file=/var/tmp/seclegion-build/vm/i2-ofdl5oua/target.qcow2,if=none,id=d1,format=qcow2 -device scsi-hd,drive=d1,bus=scsi0.0,serial=SLTARGET,bootindex=0 -chardev socket,id=ser0,fd=12,logfile=/var/tmp/seclegion-build/vm/i2-ofdl5oua/boot/serial.log -serial chardev:ser0 -chardev socket,id=qmp0,fd=14 -mon chardev=qmp0,mode=control",
+  "commit": "ac815910729e7beec8ac613e4657b2893939ac74",
+  "env": {
+    "host": "Linux 7.2.11-arch1-1",
+    "kvm": true,
+    "ocr": "OK"
+  },
+  "exit_code": 0,
+  "expected": "the installed greeter prompts for the user's password, exactly one session file (Hyprland) exists, a wrong password and the ara-group keys start nothing, the right one starts Hyprland (the Session row is shown: open owner decision)",
+  "iso_sha256": "df39ea406ae6dc49bdb1690510ce5357f6c6121d3377ea9178926d8a0e5dd654",
+  "schema": 1,
+  "serial_patterns": [
+    "SECLEGION-INSTALL-OK",
+    "DL-INSTALL 0",
+    "\\[phase installed-boot\\][\\s\\S]*?Started .*(?:greetd|[Gg]reeter)",
+    "\\[tester@\\S+ ~\\]\\$ ",
+    "G41-BEFORE-RC1\\b",
+    "G41-SESSIONFILE-RC0\\b",
+    "G41-WRONG-RC1\\b",
+    "G41-ARA-RC1\\b",
+    "G41-RIGHT-RC0\\b",
+    "G41-OCR-OK\\b"
+  ],
+  "status": "PASS",
+  "test_id": "M6-greeter",
+  "timestamp": "2026-11-07T00:00:58Z"
+}

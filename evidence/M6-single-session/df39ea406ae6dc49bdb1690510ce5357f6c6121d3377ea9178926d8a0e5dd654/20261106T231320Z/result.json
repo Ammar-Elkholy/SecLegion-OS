@@ -1,0 +1,26 @@
+{
+  "actual": "no GNOME/gdm/other-desktop package, wayland-sessions holds only Hyprland",
+  "artifacts": {
+    "serial.log": "06f6fb41f25e9f0c38a39688d59d851ce44720f4db6b6c9584ccecf7d2b49a90"
+  },
+  "class": "AUTO",
+  "command": "qemu-system-x86_64 -name seclegion-harness -machine q35,accel=kvm -cpu host -smp 2 -m 4096 -display none -vga std -nic none -drive if=pflash,format=raw,readonly=on,file=/usr/share/edk2/x64/OVMF_CODE.4m.fd -drive if=pflash,format=raw,file=/var/tmp/seclegion-build/vm/m6t-dekycck0/boot/OVMF_VARS.fd -drive file=out/seclegion-2026.11.06-x86_64.iso,if=none,id=cd0,media=cdrom,readonly=on -device virtio-scsi-pci,id=scsi0 -device scsi-cd,drive=cd0,bus=scsi0.0 -drive file=/var/tmp/seclegion-build/vm/m6t-dekycck0/overlay.qcow2,if=none,id=d1,format=qcow2 -device scsi-hd,drive=d1,bus=scsi0.0,serial=SLTARGET,bootindex=0 -chardev socket,id=ser0,fd=12,logfile=/var/tmp/seclegion-build/vm/m6t-dekycck0/boot/serial.log -serial chardev:ser0 -chardev socket,id=qmp0,fd=14 -mon chardev=qmp0,mode=control",
+  "commit": "c8b4ced32ee872e4a50edf6da247b4137f6bf072",
+  "env": {
+    "host": "Linux 7.2.11-arch1-1",
+    "kvm": true,
+    "ocr": "n/a"
+  },
+  "exit_code": 0,
+  "expected": "no GNOME session, gdm or gnome-shell on the target, and `/usr/share/wayland-sessions/` holds only the Hyprland entry",
+  "iso_sha256": "df39ea406ae6dc49bdb1690510ce5357f6c6121d3377ea9178926d8a0e5dd654",
+  "schema": 1,
+  "serial_patterns": [
+    "Started .*(?:greetd|[Gg]reeter)",
+    "\\nM6-SINGLE no gnome gdm gnome-shell",
+    "\\nM6-SINGLE wayland-sessions only hyprland"
+  ],
+  "status": "PASS",
+  "test_id": "M6-single-session",
+  "timestamp": "2026-11-06T23:13:20Z"
+}

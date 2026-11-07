@@ -1,0 +1,24 @@
+{
+  "actual": "19 mutants, all caught",
+  "artifacts": {
+    "serial.log": "c22280926e9e48ebfd868f040bfdc1b6021515ae9bcca6af51bfac07cfec4b30"
+  },
+  "class": "AUTO",
+  "command": "run_mutant over tests/mutation/install ALL",
+  "commit": "c8b4ced32ee872e4a50edf6da247b4137f6bf072",
+  "env": {
+    "host": "Linux 7.2.11-arch1-1",
+    "kvm": true,
+    "ocr": "n/a"
+  },
+  "exit_code": 0,
+  "expected": "every install mutant is caught (MUTANTS <n> GREEN 0)",
+  "iso_sha256": "df39ea406ae6dc49bdb1690510ce5357f6c6121d3377ea9178926d8a0e5dd654",
+  "schema": 1,
+  "serial_patterns": [
+    "MUTANTS \\d+ GREEN 0\\b"
+  ],
+  "status": "PASS",
+  "test_id": "M4-mutation",
+  "timestamp": "2026-11-06T23:02:05Z"
+}

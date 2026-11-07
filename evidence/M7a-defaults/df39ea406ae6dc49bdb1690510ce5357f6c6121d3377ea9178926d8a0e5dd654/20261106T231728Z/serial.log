@@ -1,0 +1,283 @@
+BdsDxe: loading Boot0004 "Linux Boot Manager" from HD(1,GPT,8AAC7489-5C31-4FA1-8EC2-545051C6DEEA,0x800,0x200000)/\EFI\systemd\systemd-bootx64.efi
+BdsDxe: starting Boot0004 "Linux Boot Manager" from HD(1,GPT,8AAC7489-5C31-4FA1-8EC2-545051C6DEEA,0x800,0x200000)/\EFI\systemd\systemd-bootx64.efi
+             SecLegion OS               Reboot Into Firmware Interface                                                                             Boot in 3s.                                                                          ──────────────────────────────────────────                                                                          Boot in 2s.                                                                          ──────────────────────────────────────────                                                                          Boot in 1s.                                                                          ──────────────────────────────────────────[    0.247195] virt/tdx: TDX not supported by the host platform
+:: running early hook [udev]
+Starting systemd-udevd version 262-1-arch
+:: running hook [udev]
+:: Triggering uevents...
+:: running hook [keymap]
+:: Loading keymap...kbd_mode: KDSKBMODE: Inappropriate ioctl for device
+%Gdone.
+:: running hook [consolefont]
+:: Loading console font...a Couldn't open /dev/console
+done.
+:: performing fsck on 'PARTUUID=30be5ab7-06df-4e36-adf2-c09e987f0f01'
+:: mounting 'PARTUUID=30be5ab7-06df-4e36-adf2-c09e987f0f01' on real root
+:: running cleanup hook [udev]
++q6E616D6578
+Welcome to SecLegion OS!
+
+[  OK  ] Created slice Slice /system/dirmngr.
+[  OK  ] Created slice Slice /system/getty.
+[  OK  ] Created slice Slice /system/gpg-agent.
+[  OK  ] Created slice Slice /system/gpg-agent-browser.
+[  OK  ] Created slice Slice /system/gpg-agent-extra.
+[  OK  ] Created slice Slice /system/gpg-agent-ssh.
+[  OK  ] Created slice Slice /system/keyboxd.
+[  OK  ] Created slice Slice /system/modprobe.
+[  OK  ] Created slice Slice /system/serial-getty.
+[  OK  ] Created slice Slice /system/systemd-zram-setup.
+[  OK  ] Created slice User and Session Slice.
+[  OK  ] Started Dispatch Password Requests to Console Directory Watch.
+[  OK  ] Started Forward Password Requests to Wall Directory Watch.
+[  OK  ] Set up automount Arbitrary Executa…ormats File System Automount Point.
+         Expecting device /dev/disk/by-uuid…8efa-47c4-4a7f-aa63-283cb73feaa6...
+         Expecting device /dev/disk/by-uuid/AB0C-A975...
+         Expecting device /dev/ttyS0...
+         Expecting device /dev/zram0...
+[  OK  ] Reached target Local dm-clone Devices.
+[  OK  ] Reached target Image Downloads.
+[  OK  ] Reached target Local Integrity Protected Volumes.
+[  OK  ] Reached target Path Units.
+[  OK  ] Reached target Remote File Systems.
+[  OK  ] Reached target Slice Units.
+[  OK  ] Reached target Local Verity Protected Volumes.
+[  OK  ] Listening on Device-mapper event daemon FIFOs.
+[  OK  ] Listening on Query the User Interactively for a Password.
+[  OK  ] Listening on Process Core Dump Socket.
+[  OK  ] Listening on Credential Encryption/Decryption.
+[  OK  ] Listening on Disk Encryption Enrollment Service Socket.
+[  OK  ] Listening on Factory Reset Management.
+[  OK  ] Listening on Hostname Service Socket.
+[  OK  ] Listening on Journal Socket (/dev/log).
+[  OK  ] Listening on Journal Sockets.
+[  OK  ] Listening on Console Output Muting Service Socket.
+[  OK  ] Listening on Disk Repartitioning Service Socket.
+[  OK  ] Listening on Simple Block Device Backed Storage Provider.
+[  OK  ] Listening on Simple File System Backed Storage Provider.
+[  OK  ] Listening on System Install Tool.
+[  OK  ] Listening on System Updates.
+[  OK  ] Listening on udev Kernel Socket.
+[  OK  ] Listening on udev Varlink Socket.
+[  OK  ] Listening on User Database Manager Socket.
+         Mounting Huge Pages File System...
+         Mounting POSIX Message Queue File System...
+         Mounting Kernel Debug File System...
+         Mounting Kernel Trace File System...
+         Starting Create List of Static Device Nodes...
+         Mounting Kernel Configuration File System...
+         Mounting FUSE Control File System...
+         Starting Journal Service...
+         Starting Load Kernel Modules...
+         Starting Remount Root and Kernel File Systems...
+[  OK  ] Reached target Local Encrypted Volumes.
+         Starting Load udev Rules from Credentials...
+         Starting Coldplug All udev Devices...
+[  OK  ] Mounted Huge Pages File System.
+[  OK  ] Mounted POSIX Message Queue File System.
+[  OK  ] Mounted Kernel Debug File System.
+[  OK  ] Mounted Kernel Trace File System.
+[  OK  ] Finished Create List of Static Device Nodes.
+[  OK  ] Mounted Kernel Configuration File System.
+[  OK  ] Mounted FUSE Control File System.
+         Starting Create Static Device Nodes in /dev gracefully...
+[  OK  ] Finished Load Kernel Modules.
+[  OK  ] Started Journal Service.
+         Starting Apply Kernel Variables...
+[  OK  ] Finished Load udev Rules from Credentials.
+[  OK  ] Finished Apply Kernel Variables.
+         Starting User Database Manager...
+         Starting CLI Netfilter Manager...
+[  OK  ] Finished Remount Root and Kernel File Systems.
+[  OK  ] Finished Coldplug All udev Devices.
+         Starting Load/Save OS Random Seed...
+[  OK  ] Started User Database Manager.
+[  OK  ] Finished Load/Save OS Random Seed.
+[  OK  ] Finished Create Static Device Nodes in /dev gracefully.
+         Starting Create System Users...
+[  OK  ] Finished Create System Users.
+         Starting Journal Log Access Socket...
+         Starting Network Time Synchronization...
+         Starting Create Static Device Nodes in /dev...
+[  OK  ] Listening on Journal Log Access Socket.
+[  OK  ] Finished Create Static Device Nodes in /dev.
+[  OK  ] Reached target Preparation for Local File Systems.
+         Starting Rule-based Manager for Device Events and Files...
+[  OK  ] Started Network Time Synchronization.
+[  OK  ] Reached target System Time Set.
+[  OK  ] Started Rule-based Manager for Device Events and Files.
+[  OK  ] Finished CLI Netfilter Manager.
+[  OK  ] Found device /dev/zram0.
+         Starting Create swap on /dev/zram0...
+[  OK  ] Finished Create swap on /dev/zram0.
+[  OK  ] Found device /dev/ttyS0.
+         Activating swap Compressed Swap on /dev/zram0...
+[  OK  ] Activated swap Compressed Swap on /dev/zram0.
+[  OK  ] Reached target Swaps.
+[  OK  ] Found device QEMU_HARDDISK 1.
+[  OK  ] Found device QEMU_HARDDISK 2.
+         Starting Virtual Console Setup...
+[  OK  ] Finished Virtual Console Setup.
+         Mounting /.snapshots...
+         Mounting /boot...
+         Mounting /home...
+         Mounting Temporary Directory /tmp...
+         Mounting /var/cache/pacman/pkg...
+[  OK  ] Listening on Disk Image Download Service Socket.
+         Mounting /var/log...
+[  OK  ] Mounted /.snapshots.
+[  OK  ] Mounted /var/cache/pacman/pkg.
+[  OK  ] Mounted /var/log.
+[  OK  ] Mounted /boot.
+[  OK  ] Mounted /home.
+[  OK  ] Mounted Temporary Directory /tmp.
+[  OK  ] Reached target Local File Systems.
+[  OK  ] Listening on Boot Loader Control Service Socket.
+[  OK  ] Listening on System Extension Image Management.
+         Starting Update Boot Loader Random Seed...
+         Starting Flush Journal to Persistent Storage...
+         Starting Load JSON user/group Records from Credentials...
+[  OK  ] Finished Load JSON user/group Records from Credentials.
+[  OK  ] Finished Update Boot Loader Random Seed.
+[  OK  ] Finished Flush Journal to Persistent Storage.
+         Starting Create System Files and Directories...
+[  OK  ] Finished Create System Files and Directories.
+         Starting Rebuild Dynamic Linker Cache...
+         Starting Rebuild Journal Catalog...
+         Starting Record System Boot/Shutdown in UTMP...
+[  OK  ] Finished Rebuild Journal Catalog.
+[  OK  ] Finished Record System Boot/Shutdown in UTMP.
+[  OK  ] Finished Rebuild Dynamic Linker Cache.
+         Starting Update is Completed...
+[  OK  ] Finished Update is Completed.
+[  OK  ] Reached target System Initialization.
+[  OK  ] Started Refresh existing PGP keys of archlinux-keyring regularly.
+[  OK  ] Started Discard unused filesystem blocks once a week.
+[  OK  ] Started Daily verification of password and group files.
+[  OK  ] Started Hourly Cleanup of Snapper Snapshots.
+[  OK  ] Started Daily Cleanup of Temporary Directories.
+[  OK  ] Reached target Timer Units.
+[  OK  ] Listening on D-Bus System Message Bus Socket.
+[  OK  ] Listening on GnuPG network certifi…ent daemon for /etc/pacman.d/gnupg.
+         Starting Docker Socket for the API...
+[  OK  ] Listening on GnuPG cryptographic a… browsers) for /etc/pacman.d/gnupg.
+[  OK  ] Listening on GnuPG cryptographic a…estricted) for /etc/pacman.d/gnupg.
+[  OK  ] Listening on GnuPG cryptographic a…emulation) for /etc/pacman.d/gnupg.
+[  OK  ] Listening on GnuPG cryptographic a…rase cache for /etc/pacman.d/gnupg.
+[  OK  ] Listening on GnuPG public key mana…nt service for /etc/pacman.d/gnupg.
+[  OK  ] Listening on Authorization Manager Agent Helper.
+[  OK  ] Listening on User Login Management Varlink Socket.
+[  OK  ] Listening on Virtual Machine and C…tainer Registration Service Socket.
+         Starting D-Bus System Message Bus...
+[  OK  ] Listening on Docker Socket for the API.
+[  OK  ] Reached target Socket Units.
+[  OK  ] Started D-Bus System Message Bus.
+[  OK  ] Reached target Basic System.
+         Starting Network Manager...
+         Starting SecLegion OS first boot setup...
+         Starting User Login Management...
+[  OK  ] Started User Login Management.
+         Starting Hostname Service...
+[  OK  ] Started Hostname Service.
+[  OK  ] Listening on Load/Save RF Kill Switch Status /dev/rfkill Watch.
+         Starting DBus interface for snapper...
+         Starting Network Manager Script Dispatcher Service...
+[  OK  ] Started Network Manager.
+[  OK  ] Reached target Network.
+         Starting Network Manager Wait Online...
+         Starting containerd container runtime...
+         Starting Permit User Sessions...
+[  OK  ] Started DBus interface for snapper.
+[  OK  ] Started Network Manager Script Dispatcher Service.
+[  OK  ] Finished Permit User Sessions.
+[  OK  ] Started Greeter daemon.
+[  OK  ] Started Serial Getty on ttyS0.
+[  OK  ] Reached target Login Prompts.
+[  OK  ] Finished Network Manager Wait Online.
+[  OK  ] Reached target Network is Online.
+[  OK  ] Finished SecLegion OS first boot setup.
+[  OK  ] Created slice User Slice of UID 963.
+         Starting User Runtime Directory /run/user/963...
+[  OK  ] Finished User Runtime Directory /run/user/963.
+         Starting User Manager for UID 963...
+[  OK  ] Started User Manager for UID 963.
+[  OK  ] Started Session 1 of User greeter.
+[  OK  ] Started containerd container runtime.
+         Starting Docker Application Container Engine...
+[  OK  ] Stopped Virtual Console Setup.
+         Stopping Virtual Console Setup...
+         Starting Virtual Console Setup...
+[  OK  ] Finished Virtual Console Setup.
+         Starting Accounts Service...
+         Starting Authorization Manager...
+[  OK  ] Started Authorization Manager.
+[  OK  ] Started Accounts Service.
+[  OK  ] Started Docker Application Container Engine.
+[  OK  ] Reached target Multi-User System.
+[  OK  ] Reached target Graphical Interface.
+         Starting Power Profiles daemon...
+[  OK  ] Started Power Profiles daemon.
+7878+q6E616D65
+SecLegion OS 7.2.9-arch1-1 (ttyS0)
+
+seclegion login: 
+seclegion login: tester
+Password: 
+[tester@seclegion ~]$ sudo -k; sudo -v
+
+We trust you have received the usual lecture from the local System
+Administrator. It usually boils down to these three things:
+
+    #1) Respect the privacy of others.
+    #2) Think before you type.
+    #3) With great power comes great responsibility.
+
+For security reasons, the password you type will not be visible.
+
+[sudo] password for tester: 
+[tester@seclegion ~]$ test -e /var/lib/seclegion/firstboot.done; echo M7A''RC1:$?
+M7ARC1:0
+sudo -n ufw status verbose; echo M7A''RC2:$?
+[tester@seclegion ~]$ sudo -n ufw status verbose; echo M7A''RC2:$?
+Status: active
+Logging: on (low)
+Default: deny (incoming), allow (outgoing), deny (routed)
+New profiles: skip
+M7ARC2:0
+systemctl is-active ufw.service; echo M7A''RC3:$?
+[tester@seclegion ~]$ systemctl is-active ufw.service; echo M7A''RC3:$?
+active
+M7ARC3:0
+echo M7A''-UFW deny-incoming; echo M7A''RC4:$?
+[tester@seclegion ~]$ echo M7A''-UFW deny-incoming; echo M7A''RC4:$?
+M7A-UFW deny-incoming
+M7ARC4:0
+readlink /etc/systemd/system/sshd.service /etc/systemd/system/sshd.socket /etc/systemd/system/sshd@.service /etc/systemd/system/sshd-unix-local.socket; echo M7A''RC5:$?
+[tester@seclegion ~]$ readlink /etc/systemd/system/sshd.service /etc/systemd/system/sshd.socket /etc/systemd/system/sshd@.service /etc/systemd/system/sshd-unix-local.socket; echo M7A''RC5:$?
+/dev/null
+/dev/null
+/dev/null
+/dev/null
+M7ARC5:0
+systemctl is-active sshd.service sshd.socket sshd-unix-local.socket; echo M7A''RC6:$?
+[tester@seclegion ~]$ systemctl is-active sshd.service sshd.socket sshd-unix-local.socket; echo M7A''RC6:$?
+inactive
+inactive
+inactive
+M7ARC6:3
+echo M7A''-SSHD masked inactive; echo M7A''RC7:$?
+[tester@seclegion ~]$ echo M7A''-SSHD masked inactive; echo M7A''RC7:$?
+M7A-SSHD masked inactive
+M7ARC7:0
+sudo -n snapper -c root list --columns number,description; echo M7A''RC8:$?
+[tester@seclegion ~]$ sudo -n snapper -c root list --columns number,description; echo M7A''RC8:$?
+# │ Description
+──┼───────────────────
+0 │ current
+1 │ seclegion-baseline
+M7ARC8:0
+echo M7A''-BASELINE 1; echo M7A''RC9:$?
+[tester@seclegion ~]$ echo M7A''-BASELINE 1; echo M7A''RC9:$?
+M7A-BASELINE 1
+M7ARC9:0
+300

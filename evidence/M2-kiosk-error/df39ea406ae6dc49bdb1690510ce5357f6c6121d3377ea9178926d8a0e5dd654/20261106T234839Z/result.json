@@ -1,0 +1,27 @@
+{
+  "actual": "cage killed: the kiosk unit failed, the error unit is active, the log exists and tty1 shows the error screen",
+  "artifacts": {
+    "screen.png": "b852a1d7946c69ec7361b6bda70e0b98d43fa0ab7c079570a559df7de91498e8",
+    "serial.log": "c3fd56e50e863b203542605f58f78c992bee68c241ad3c002642c9013a80505f"
+  },
+  "class": "AUTO",
+  "command": "qemu-system-x86_64 -name seclegion-harness -machine q35,accel=kvm -cpu host -smp 2 -m 4096 -display none -vga std -nic none -no-reboot -drive if=pflash,format=raw,readonly=on,file=/usr/share/edk2/x64/OVMF_CODE.4m.fd -drive if=pflash,format=raw,file=/var/tmp/seclegion-build/vm/m2-j57by0b8/install-kill-kiosk/OVMF_VARS.fd -drive file=out/seclegion-2026.11.06-x86_64.iso,if=none,id=cd0,media=cdrom,readonly=on -device virtio-scsi-pci,id=scsi0 -device scsi-cd,drive=cd0,bus=scsi0.0 -chardev socket,id=ser0,fd=12,logfile=/var/tmp/seclegion-build/vm/m2-j57by0b8/install-kill-kiosk/serial.log -serial chardev:ser0 -chardev socket,id=qmp0,fd=14 -mon chardev=qmp0,mode=control -smbios type=11,value=io.systemd.credential:seclegion.selftest=kill-kiosk",
+  "commit": "c8139c89ad6082a02745910acc7ef3cf983d8cf1",
+  "env": {
+    "host": "Linux 7.2.11-arch1-1",
+    "kvm": true,
+    "ocr": "OK"
+  },
+  "exit_code": 0,
+  "expected": "a killed kiosk shows the error screen with the log path",
+  "iso_sha256": "df39ea406ae6dc49bdb1690510ce5357f6c6121d3377ea9178926d8a0e5dd654",
+  "schema": 1,
+  "serial_patterns": [
+    "SECLEGION-MODE=install",
+    "SECLEGION-KIOSK-ERROR log=/var/log/seclegion/kiosk\\.log",
+    "SECLEGION-SELFTEST \\{\"section\": \"kiosk_error\", \"mode\": \"install\"[^\\n]*?\"killed\": true"
+  ],
+  "status": "PASS",
+  "test_id": "M2-kiosk-error",
+  "timestamp": "2026-11-06T23:48:39Z"
+}

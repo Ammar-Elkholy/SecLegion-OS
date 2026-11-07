@@ -1,9 +1,26 @@
 <!-- SPDX-License-Identifier: MIT -->
 # SecLegion OS: status
 
-Updated 2026-10-31 (ISO #11). Progress 81% (1.0 = 80%). Branch `clean-room-rebuild`, HEAD before this file: `9f30657`.
+Updated 2026-11-07 (ISO #12). Progress 78% (1.0 = 80%; I13 added as open 1.0 work). Branch `clean-room-rebuild`.
 History before 2026-11-01 was wiped from GitHub on the owner's word; it is kept in
 `/mnt/Dev_Lab/iso-artifacts/seclegion-git-history-2026-11-01.bundle`. Commit ids below refer to that bundle.
+
+## ISO #12 (2026-11-07): ready to flash
+- ISO `seclegion-2026.11.06-x86_64.iso`, sha256 `df39ea406ae6dc49bdb1690510ce5357f6c6121d3377ea9178926d8a0e5dd654`,
+  built from c8b4ced; archived in `/mnt/Dev_Lab/iso-artifacts/iso12/` (release parts in `release/`, join
+  verified).
+- Gaps landed (plan `docs/superpowers/plans/2026-11-04-install-flow-gaps.md`): G1 bluetooth + fstrim enabled
+  (7a144a6), G7 partition mode defaults LUKS on, G2 time zone page, G4 retry re-gathers facts + Rescan disks
+  (c8b4ced), G3 header Reboot/Power off/About + polkit login1 rule, G12 Next hidden on progress/finished,
+  empty partition group hidden (c1f5ffd). G10 needs no change (the CSS warning is the host theme).
+- All 38 VM gate ids PASS on ISO #12 (39 tests: 18 install, 18 iso, 3 desktop), including the new
+  M4-partition (ESP and data partition byte-identical after the install). Its two earlier FAIL runs were
+  harness bugs (QMP typer charset; answers on the read-only installer image), fixed in c8139c8/ac81591.
+  `verify-evidence --iso` OK (40 results). ISO #11 records archived to
+  `/mnt/Dev_Lab/iso-artifacts/evidence-archive-2026-11-07-iso11/`. Unit suite 1735 passed, lint green.
+- Not flashed: writing the USB needs root (owner). Command in `/mnt/Dev_Lab/iso-artifacts/iso12/FLASH.txt`.
+- Left (meter I13/I14): G5 progress stages, G12 scroll-into-view + symbolic icons, gather-facts no-NIC
+  gate; 1.1: G6 live Install launcher, G8 Arabic text, G9 Plymouth (U2-U4).
 
 ## ISO #12 work (2026-11-04; plan `docs/superpowers/plans/2026-11-04-iso12-plan.md`)
 - Metal findings on ISO #11: Try Live booted stock Hyprland; the installer refused every disk with
