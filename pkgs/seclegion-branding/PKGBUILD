@@ -21,10 +21,16 @@ sha256sums=('SKIP')  # generated for the build from tracked files (tools/pkg-sou
 package() {
     install -Dm644 "$srcdir/desktop/branding/seclegion-logo.png" \
         "$pkgdir/usr/share/seclegion/branding/seclegion-logo.png"
-    for n in 64 128 256 512 1024; do
-        install -Dm644 "$srcdir/desktop/branding/seclegion-logo-$n.png" \
-            "$pkgdir/usr/share/seclegion/branding/seclegion-logo-$n.png"
-    done
+    install -Dm644 "$srcdir/desktop/branding/seclegion-logo-64.png" \
+        "$pkgdir/usr/share/seclegion/branding/seclegion-logo-64.png"
+    install -Dm644 "$srcdir/desktop/branding/seclegion-logo-128.png" \
+        "$pkgdir/usr/share/seclegion/branding/seclegion-logo-128.png"
+    install -Dm644 "$srcdir/desktop/branding/seclegion-logo-256.png" \
+        "$pkgdir/usr/share/seclegion/branding/seclegion-logo-256.png"
+    install -Dm644 "$srcdir/desktop/branding/seclegion-logo-512.png" \
+        "$pkgdir/usr/share/seclegion/branding/seclegion-logo-512.png"
+    install -Dm644 "$srcdir/desktop/branding/seclegion-logo-1024.png" \
+        "$pkgdir/usr/share/seclegion/branding/seclegion-logo-1024.png"
     install -Dm644 "$srcdir/desktop/branding/default.png" \
         "$pkgdir/usr/share/backgrounds/seclegion/default.png"
     install -Dm644 "$srcdir/LICENSES/LicenseRef-SecLegion-Branding.txt" \
